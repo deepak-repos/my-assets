@@ -673,7 +673,7 @@ function settingsPage(sub) {
       ${item('#/settings/keys', '🔑', '#ff9f0a', 'Add Keys', remote() ? 'Connected' : 'Not connected')}
       ${item('#/settings/lock', '🔒', '#34c759', 'App Lock', store.get('lock') ? 'On' : 'Off')}</div>` };
   if (sub === 'appearance') return { title: 'Appearance', back: '#/settings', large: 'Appearance', tab: 'more',
-    html: `<div class="seg">${['auto', 'light', 'dark'].map(x => `<button class="${theme === x ? 'on' : ''}" data-theme="${x}">${x[0].toUpperCase() + x.slice(1)}</button>`).join('')}</div>
+    html: `<div class="seg">${['auto', 'light', 'dark'].map(x => `<button class="${theme === x ? 'on' : ''}" data-pick="${x}">${x[0].toUpperCase() + x.slice(1)}</button>`).join('')}</div>
       <div class="gfoot">Auto follows your phone's light/dark setting.</div>` };
   if (sub === 'keys') return { title: 'Add Keys', back: '#/settings', large: 'Add Keys', tab: 'more',
     html: `<form id="f"><div class="group">
@@ -777,11 +777,11 @@ document.addEventListener('visibilitychange', () => {
    Global events
    --------------------------------------------------------------------- */
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-act],[data-del],[data-theme],#moreBtn,#sheet');
+  const t = e.target.closest('[data-act],[data-del],[data-pick],#moreBtn,#sheet');
   if (!t) return;
   if (t.id === 'moreBtn') return openSheet();
   if (t.id === 'sheet') { if (e.target === t) closeSheet(); return; }
-  if (t.dataset.theme) { store.set('theme', t.dataset.theme); applyTheme(); return render(); }
+  if (t.dataset.pick) { store.set('theme', t.dataset.pick); applyTheme(); return render(); }
   if (t.dataset.del) {
     if (!confirm('Delete this asset? This cannot be undone.')) return;
     if (await run(async () => { await removeAsset(t.dataset.del); return true; })) { toast('Deleted'); render(); }
