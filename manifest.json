@@ -8,7 +8,7 @@
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f2f2f7",
-  "theme_color": "#007aff",
+  "theme_color": "#000000",
   "categories": [
     "finance",
     "productivity"
