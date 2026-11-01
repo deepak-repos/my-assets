@@ -1,0 +1,47 @@
+/* My Asset – service worker
+   - Pre-caches the app shell so the app opens offline.
+   - Network-first for the shell (you always get new code when online), cache fallback offline.
+   - Never touches the Google Apps Script API or any other cross-origin request,
+     so your financial data is never stored by the service worker.
+   Bump CACHE when you want to force-refresh old caches. */
+const CACHE = 'my-asset-v1';
+const SHELL = [
+  './',
+  './index.html',
+  './styles.css',
+  './app.js',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;   // API calls pass straight through
+
+  event.respondWith(
+    fetch(req)
+      .then(res => {
+        if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+        return res;
+      })
+      .catch(() =>
+        caches.match(req).then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()))
+      )
+  );
+});
