@@ -186,6 +186,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   background:rgba(40,40,42,.94);color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;max-width:86vw;text-align:center;
   opacity:0;pointer-events:none;transition:.25s}
 #toast.show{opacity:1;transform:translate(-50%,0)}
+.row .v{flex:1;text-align:right;color:var(--sub)}
+.row b.v{color:var(--text);font-weight:600}
+.row input[type=checkbox]{-webkit-appearance:auto;appearance:auto;flex:none;width:24px;height:24px;margin:0 0 0 auto;padding:0;accent-color:var(--blue)}
+.txs{display:flex;flex-direction:column;gap:8px}
+.txrow{display:flex;gap:8px;align-items:center}
+.row .txrow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
+.row .txrow input.ta{text-align:right}
+.txdel{flex:none;width:32px;height:32px;border-radius:50%;background:rgba(255,59,48,.14);color:var(--red);font-size:20px;line-height:1}
+.txadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
+.txsum{color:var(--sub);font-size:13px}
+.xirr.up{color:var(--green)}.xirr.dn{color:var(--red)}
+.acard .ttl small.xirr{font-weight:600}
+.acard .ttl small.xirr.up{color:var(--green)}
+.acard .ttl small.xirr.dn{color:var(--red)}
+.txlist{max-height:200px;overflow:auto;padding-left:12px}
+.txlist .kv{font-size:14px}
+.summary .gain{display:flex;justify-content:space-between;gap:10px}
+.summary .gain em{font-style:normal;font-weight:600;font-size:13px}
 </style>
 </head>
 <body>
@@ -245,6 +263,7 @@ const dt = (k, l, o) => ({ k, l, t:'date', ...o });
 const sel = (k, l, opts, o) => ({ k, l, t:'select', opts, ...o });
 const NOTES = { k:'notes', l:'Notes', t:'textarea' };
 const DOCS  = { k:'_docs', l:'Documents', t:'file' };
+const TXS   = { k:'tx', l:'Investments', t:'txs' };   // list of {date, amt}
 
 const premiumFields = [
   tx('provider','Policy Provider',{req:1}), tx('policyNo','Policy Number'),
@@ -261,7 +280,7 @@ const T = {
     fields:[
       tx('fundType','Fund Type',{list:['Equity','Debt','Hybrid','Index','ELSS','Liquid','Other']}),
       tx('fundGroup','Fund Group'), tx('fundHouse','Fund House',{req:1}),
-      m('invested','Invested Amount'), m('current','Current Amount',{req:1}),
+      TXS, m('current','Current Amount',{req:1}),
       tx('folio','Folio Number'), tx('purpose','Purpose'),
       sel('freq','Contribution Frequency',['Monthly','Adhoc','Once']),
       m('monthlyAmt','Monthly Contribution Amount',{show:d => d.freq === 'Monthly'}),
@@ -284,18 +303,18 @@ const T = {
   epf: { cat:'investment', label:'EPF', ico:'🧾', c:'#34c759',
     title:() => 'EPF', sub:d => d.accountNo || '',
     fields:[
-      tx('accountNo','Account Number'), m('current','Current Amount',{req:1}), dt('maturityDate','Maturity Date'),
+      tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}), dt('maturityDate','Maturity Date'),
       tx('purpose','Purpose'), m('monthly','Monthly Contribution Amount'), NOTES, DOCS ] },
   ppf: { cat:'investment', label:'PPF', ico:'🏛️', c:'#ff6482',
     title:d => ((d.bank || '') + ' PPF').trim(), sub:d => d.accountNo || '',
     fields:[
-      tx('bank','Bank Name'), tx('accountNo','Account Number'), m('invested','Investment Amount'),
+      tx('bank','Bank Name'), tx('accountNo','Account Number'), TXS,
       m('current','Current Amount',{req:1}), dt('maturityDate','Maturity Date'), tx('purpose','Purpose'),
       m('yearly','Yearly Contribution Amount'), sel('contribMonth','Contribution Month',MONTHS), NOTES, DOCS ] },
   nps: { cat:'investment', label:'NPS', ico:'🌅', c:'#af52de',
     title:() => 'NPS', sub:d => d.accountNo || '',
     fields:[
-      tx('accountNo','Account Number'), m('invested','Investment Amount'), m('current','Current Amount',{req:1}),
+      tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}),
       dt('maturityDate','Maturity Date'), tx('purpose','Purpose'), m('monthly','Monthly Contribution Amount'), NOTES, DOCS ] },
   gratuity: { cat:'investment', label:'Gratuity', ico:'🎁', c:'#64d2ff',
     title:() => 'Gratuity', sub:d => d.companyId ? 'Company ID ' + d.companyId : '',
@@ -316,11 +335,11 @@ const T = {
 
   /* ---- Self use ---- */
   house: { cat:'selfuse', label:'House', ico:'🏠', c:'#ff9f0a', title:d => d.name || 'House', sub:d => d.location || '',
-    fields:[tx('name','House Name',{req:1}), m('purchase','Purchase Amount'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
+    fields:[tx('name','House Name',{req:1}), m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
   land:  { cat:'selfuse', label:'Land',  ico:'🌳', c:'#34c759', title:d => d.name || 'Land', sub:d => d.location || '',
-    fields:[tx('name','Land Name',{req:1}), m('purchase','Purchase Amount'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
+    fields:[tx('name','Land Name',{req:1}), m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
   gold:  { cat:'selfuse', label:'Gold',  ico:'🪙', c:'#ffcc00', title:() => 'Gold', sub:() => '',
-    fields:[m('purchase','Purchase Amount'), m('current','Approx Current Value',{req:1}), DOCS] }
+    fields:[m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), DOCS] }
 };
 const ORDER = {
   investment:['mf','fd','sa','epf','ppf','nps','gratuity'],
@@ -347,15 +366,81 @@ const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
 const subOf = a => { const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
 
-function fdValue(d) {
-  const inv = num(d.invested), mat = num(d.maturityAmt);
-  const s = new Date(d.investDate), e = new Date(d.maturityDate);
-  if (!mat || isNaN(s) || isNaN(e) || e <= s) return inv;
-  const f = Math.min(1, Math.max(0, (Date.now() - s) / (e - s)));
-  return inv + (mat - inv) * f;           // accrued value, straight-line to maturity
+function fdValue(d, at) {
+  // Quarterly compounding on the interest rate; simple interest on the part-quarter, like bank accrual.
+  const P = num(d.invested), r = num(d.rate) / 100;
+  const s = new Date(d.investDate), e = new Date(d.maturityDate), now = at || new Date();
+  if (isNaN(s)) return P;
+  let days = (now - s) / 864e5;
+  if (!isNaN(e) && e > s) days = Math.min(days, (e - s) / 864e5);   // stops growing at maturity
+  if (days <= 0) return P;
+  if (r > 0) {
+    const Q = 365 / 4, n = Math.floor(days / Q), rem = days - n * Q, q = r / 4;
+    const v = P * Math.pow(1 + q, n);
+    return v + v * q * (rem / Q);
+  }
+  const mat = num(d.maturityAmt);                       // no rate given: straight line to maturity amount
+  if (!mat || isNaN(e) || e <= s) return P;
+  return P + (mat - P) * Math.min(1, Math.max(0, (now - s) / (e - s)));
 }
 const curVal = a => a.type === 'fd' ? fdValue(a.data) : num(a.data.current);
-const invVal = a => num(a.data.invested ?? a.data.purchase);
+const INV_TYPES = ['mf', 'epf', 'ppf', 'nps'];           // investments entered as dated splits
+const CONTRIB = {                                          // standing contribution field per type
+  mf:  { k: 'monthlyAmt', lab: 'Monthly SIP' },
+  epf: { k: 'monthly',    lab: 'Monthly contribution' },
+  nps: { k: 'monthly',    lab: 'Monthly contribution' },
+  ppf: { k: 'yearly',     lab: 'Yearly contribution' }
+};
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const pct = v => (v * 100).toFixed(1) + '%';
+const byDate = (x, y) => (x.date || '') < (y.date || '') ? -1 : (x.date || '') > (y.date || '') ? 1 : 0;
+
+/* Dated money-in list for an asset: [{date:'YYYY-MM-DD' or '', amt}] */
+function txOf(a) {
+  const d = a.data;
+  if (INV_TYPES.includes(a.type)) {
+    if (Array.isArray(d.tx)) return d.tx.map(z => ({ date: z.date || '', amt: num(z.amt) })).filter(z => z.amt > 0);
+    return num(d.invested) > 0 ? [{ date: '', amt: num(d.invested) }] : [];     // older asset saved before dates existed
+  }
+  if (a.type === 'fd') return num(d.invested) > 0 ? [{ date: d.investDate || '', amt: num(d.invested) }] : [];
+  if (T[a.type].cat === 'selfuse') return num(d.purchase) > 0 ? [{ date: d.purchaseDate || '', amt: num(d.purchase) }] : [];
+  return [];
+}
+const invVal = a => txOf(a).reduce((t, z) => t + z.amt, 0);
+
+/* XIRR: annualised rate r where sum(v / (1+r)^(days/365)) = 0. Needs 30+ days of history. */
+function xirr(flows) {
+  const f = flows.filter(x => isFinite(x.v) && x.v !== 0 && isFinite(x.t));
+  if (f.length < 2 || !f.some(x => x.v < 0) || !f.some(x => x.v > 0)) return null;
+  const t0 = Math.min(...f.map(x => x.t)), t1 = Math.max(...f.map(x => x.t));
+  if (t1 - t0 < 30 * 864e5) return null;
+  const npv = r => f.reduce((s, x) => s + x.v / Math.pow(1 + r, (x.t - t0) / (365 * 864e5)), 0);
+  let lo = -0.9999, hi = 10, flo = npv(lo), fhi = npv(hi);
+  while (flo * fhi > 0 && hi < 1e6) { hi *= 10; fhi = npv(hi); }
+  if (!(flo * fhi <= 0)) return null;
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2, fm = npv(mid);
+    if (flo * fm <= 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+  }
+  return (lo + hi) / 2;
+}
+function endDate(a) {                                        // an FD stops earning at maturity
+  if (a.type === 'fd') { const e = new Date(a.data.maturityDate); if (!isNaN(e) && e < new Date()) return e; }
+  return new Date();
+}
+function flowsOf(a) {
+  const list = txOf(a);
+  if (!list.length || list.some(z => !z.date)) return null;  // undated money-in: can't compute
+  const out = list.map(z => ({ t: new Date(z.date).getTime(), v: -z.amt }));
+  out.push({ t: endDate(a).getTime(), v: curVal(a) });
+  return out;
+}
+const assetXirr = a => { const f = flowsOf(a); return f ? xirr(f) : null; };
+function groupXirr(items) {
+  const all = [];
+  items.forEach(a => { const f = flowsOf(a); if (f) all.push(...f); });
+  return all.length ? xirr(all) : null;
+}
 const ofTypes = types => S.assets.filter(a => types.includes(a.type));
 const sum = (list, fn) => list.reduce((t, a) => t + fn(a), 0);
 const byCat = c => S.assets.filter(a => T[a.type].cat === c);
@@ -500,12 +585,12 @@ function home() {
 }
 
 function summaryTile(items, types) {
-  const hasInv = types.some(t => T[t].fields.some(f => f.k === 'invested' || f.k === 'purchase'));
+  const hasInv = types.some(t => INV_TYPES.includes(t) || T[t].fields.some(f => f.k === 'invested' || f.k === 'purchase'));
   const inv = sum(items, invVal), cur = sum(items, curVal);
   if (!hasInv) return `<div class="summary one"><div><span>Current Value</span><b>${money(cur)}</b></div></div>`;
-  const g = cur - inv, p = inv ? (g / inv * 100) : 0;
+  const g = cur - inv, p = inv ? (g / inv * 100) : 0, x = groupXirr(items);
   return `<div class="summary"><div><span>Invested</span><b>${money(inv)}</b></div><div><span>Current Value</span><b>${money(cur)}</b></div>
-    ${inv ? `<div class="gain">${g >= 0 ? '▲' : '▼'} ${money(Math.abs(g))} (${p.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</div>` : ''}</div>`;
+    ${inv ? `<div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${money(Math.abs(g))} (${p.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
 }
 function showVal(f, v) {
   if (f.t === 'number') return f.pre ? money(num(v)) : v + (f.suf || '');
@@ -513,13 +598,20 @@ function showVal(f, v) {
   return v;
 }
 function card(a) {
-  const t = typeOf(a), d = a.data;
-  const right = t.cat === 'insurance' ? (num(d.cover) ? money(num(d.cover)) : '') : money(curVal(a));
-  const rows = t.fields.filter(f => f.t !== 'file' && d[f.k] !== '' && d[f.k] != null)
-    .map(f => `<div class="kv"><span>${esc(f.l)}</span><b>${esc(showVal(f, d[f.k]))}</b></div>`).join('');
-  const docs = (a.docs || []).filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="doc" href="${esc(x.url)}" target="_blank" rel="noopener">📎 ${esc(x.name)}</a>`).join('');
+  const t = typeOf(a), d = a.data, ins = t.cat === 'insurance';
+  const right = ins ? (num(d.cover) ? money(num(d.cover)) : '') : money(curVal(a));
+  const kv = (l, v) => `<div class="kv"><span>${esc(l)}</span><b>${esc(v)}</b></div>`;
+  const list = ins ? [] : txOf(a), x = ins ? null : assetXirr(a), sub = subOf(a);
+  const xl = x == null ? '' : `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>`;
+  let rows = t.fields.filter(f => f.t !== 'file' && f.t !== 'txs' && d[f.k] !== '' && d[f.k] != null)
+    .map(f => kv(f.l, showVal(f, d[f.k]))).join('');
+  if (INV_TYPES.includes(a.type) && list.length)
+    rows += kv('Total invested', money(invVal(a))) +
+      `<div class="kv"><span>Investments (${list.length})</span><b></b></div><div class="txlist">${[...list].sort(byDate).map(z => kv(z.date ? fmtDate(z.date) : 'No date', money(z.amt))).join('')}</div>`;
+  if (list.length) rows += kv('XIRR', x != null ? pct(x) : (list.some(z => !z.date) ? 'Add dates to see XIRR' : 'Needs 30+ days of history'));
+  const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
-    <span class="ttl"><b>${esc(ttl(a))}</b><small>${esc(subOf(a))}</small></span><span class="val">${esc(right)}</span></summary>
+    <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}${xl}</span><span class="val">${esc(right)}</span></summary>
     <div class="body">${rows}${docs}<div class="acts"><a class="btn sm" href="#/form/${a.type}/${a.id}">Edit</a>
     <button class="btn sm danger" data-del="${a.id}">Delete</button></div></div></details>`;
 }
@@ -558,17 +650,52 @@ function updatePage(key) {
   const items = ofTypes(GROUPS[key]);
   const title = key === 'realestate' ? 'Real Estate & Gold' : T[key].label;
   const back = key === 'realestate' ? '#/realestate' : '#/list/' + key;
-  const h = `<div class="large">Update Values</div><div class="gtitle">${esc(title)} – current value</div>
-    <form id="f"><div class="group">${items.map(a => `<label class="upd"><span class="t"><b>${esc(ttl(a))}</b><small>Was ${money(curVal(a))}</small></span>
-      <input name="${a.id}" type="number" inputmode="decimal" step="any" value="${esc(a.data.current ?? '')}" placeholder="0"></label>`).join('')}</div>
-      <div class="gfoot">Each update is saved as a dated snapshot so Analytics can show your trend.</div></form>`;
-  return { title: 'Update', back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
+  const today = todayISO();
+  const blocks = items.map(a => {
+    const c = CONTRIB[a.type], inv = invVal(a), sip = c ? num(a.data[c.k]) : 0;
+    const field = (lab, name, val, type) => `<label class="row"><span class="l">${lab}</span>${type === 'number' ? '<span class="pre">₹</span>' : ''}<input name="${a.id}__${name}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any" placeholder="0"' : ''} value="${esc(val)}"></label>`;
+    let rows = '';
+    if (c) rows += `<div class="row"><span class="l">Invested so far</span><span class="v">${money(inv)}</span></div>`
+      + field(c.lab, 'sip', sip || '', 'number')
+      + `<label class="row"><span class="l">Add to investments</span><input type="checkbox" name="${a.id}__add" ${sip > 0 ? 'checked' : ''}></label>`
+      + field('Investment date', 'date', today, 'date')
+      + `<div class="row"><span class="l">Total investment</span><b class="v" data-tot>${money(inv + sip)}</b></div>`;
+    else if (T[a.type].cat === 'selfuse') rows += `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>`;
+    rows += field('Current value', 'cur', a.data.current ?? '', 'number');
+    return `<div class="gtitle">${esc(ttl(a))} · now ${money(curVal(a))}</div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
+  }).join('');
+  const h = `<div class="large">Update Values</div><form id="f">${blocks}
+    <div class="gfoot">“Add to investments” records the amount above as a new dated investment, so XIRR stays accurate. Untick it if you skipped this month. Every update is also saved as a dated snapshot for Analytics.</div></form>`;
+  return { title: 'Update ' + title, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
-      $('#f').addEventListener('submit', async e => {
+      const f = $('#f');
+      const recalc = () => f.querySelectorAll('.group[data-id]').forEach(g => {
+        const tot = g.querySelector('[data-tot]'); if (!tot) return;
+        const sip = num(g.querySelector('[name$="__sip"]').value), add = g.querySelector('[name$="__add"]').checked;
+        tot.textContent = money(num(g.dataset.inv) + (add && sip > 0 ? sip : 0));
+      });
+      f.addEventListener('input', recalc); f.addEventListener('change', recalc);
+      f.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(e.target), changed = [];
-        items.forEach(a => { const v = fd.get(a.id); if (v !== '' && v !== null && String(v) !== String(a.data.current ?? '')) changed.push({ ...a, data: { ...a.data, current: Number(v) } }); });
-        if (!changed.length) { toast('Nothing changed'); return; }
+        for (const a of items) {
+          const c = CONTRIB[a.type], data = { ...a.data };
+          let dirty = false;
+          const cur = fd.get(a.id + '__cur');
+          if (cur !== null && cur !== '' && Number(cur) !== num(a.data.current)) { data.current = Number(cur); dirty = true; }
+          if (c) {
+            const sip = num(fd.get(a.id + '__sip')), add = fd.get(a.id + '__add') !== null, date = fd.get(a.id + '__date');
+            if (sip !== num(a.data[c.k])) { data[c.k] = sip; dirty = true; if (a.type === 'mf' && sip > 0) data.freq = 'Monthly'; }
+            if (add && sip > 0) {
+              if (!date) return toast('Pick an investment date for ' + ttl(a));
+              const list = txOf(a).map(z => ({ ...z }));
+              list.push({ date, amt: sip }); list.sort(byDate);
+              data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0); dirty = true;
+            }
+          }
+          if (dirty) changed.push({ ...a, data });
+        }
+        if (!changed.length) return toast('Nothing changed');
         if (await run(async () => { await bulkSave(changed); return true; })) { toast('Values updated'); location.hash = back; }
       });
     } };
@@ -586,6 +713,7 @@ function addPage(a, b) {
     html: `<div class="group">${list.map(t => item('#/form/' + t, T[t].ico, T[t].c, T[t].label)).join('')}</div>` };
 }
 
+const txRow = x => `<div class="txrow"><input type="date" class="td" value="${esc(x.date || '')}" aria-label="Date"><input type="number" inputmode="decimal" step="any" class="ta" placeholder="Amount ₹" value="${esc(x.amt ?? '')}" aria-label="Amount"><button type="button" class="txdel" aria-label="Remove">−</button></div>`;
 function fieldHTML(f, v) {
   const val = v ?? '';
   const row = (inner, cls = '') => `<div class="row ${cls}" data-k="${f.k}"${f.show ? ' data-cond="1"' : ''}>${inner}</div>`;
@@ -596,6 +724,10 @@ function fieldHTML(f, v) {
     case 'months': {
       const on = String(val).split(',').map(s => s.trim()).filter(Boolean);
       return row(`${lbl}<div class="chips">${MONTHS.map(mo => `<button type="button" class="chip ${on.includes(mo) ? 'on' : ''}" data-chip="${mo}">${mo}</button>`).join('')}</div><input type="hidden" name="months" value="${esc(on.join(','))}">`, 'col');
+    }
+    case 'txs': {
+      const list = Array.isArray(v) && v.length ? v : [{ date: todayISO(), amt: '' }];
+      return row(`${lbl}<div class="txs">${list.map(txRow).join('')}</div><button type="button" class="txadd">＋ Add investment</button><div class="txsum"></div>`, 'col');
     }
     case 'file': return row(`${lbl}<input type="file" name="_docs" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">`, 'col');
     default: {
@@ -610,12 +742,13 @@ function formPage(type, id) {
   const existing = id ? S.assets.find(a => a.id === id) : null;
   if (id && !existing) return notFound();
   const d = existing ? existing.data : {};
+  const initTx = existing ? txOf(existing) : [];
   const back = existing ? (t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? '#/realestate' : '#/list/' + type) : '#/add';
   const home = t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? '#/realestate' : '#/list/' + type;
   const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
   const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
   const h = `<div class="large">${existing ? 'Edit' : 'Add'} ${esc(label)}</div>
-    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, d[f.k])).join('')}</div>${docs}
+    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : d[f.k])).join('')}</div>${docs}
     ${existing ? '' : ''}</form>${remote() ? '' : '<div class="gfoot">Local mode: document uploads need Google Drive keys (Settings › Add Keys).</div>'}`;
   return { title: label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
@@ -623,7 +756,17 @@ function formPage(type, id) {
       const raw = () => { const o = {}; new FormData(form).forEach((v, k) => { if (k !== '_docs') o[k] = v; }); return o; };
       const cond = () => { const r = raw(); t.fields.forEach(f => { if (f.show) { const el = form.querySelector(`[data-k="${f.k}"]`); const vis = f.show(r); el.hidden = !vis; } }); };
       form.addEventListener('input', cond); form.addEventListener('change', cond); cond();
+      const box = form.querySelector('.txs'), sumEl = form.querySelector('.txsum');
+      const calc = () => { if (!box) return; sumEl.textContent = 'Total invested ' + money([...box.querySelectorAll('.ta')].reduce((tt, i) => tt + num(i.value), 0)); };
+      calc(); if (box) box.addEventListener('input', calc);
       form.addEventListener('click', e => {
+        if (e.target.closest('.txadd')) { box.insertAdjacentHTML('beforeend', txRow({ date: todayISO(), amt: '' })); calc(); return; }
+        const del = e.target.closest('.txdel');
+        if (del) {
+          if (box.children.length > 1) del.parentElement.remove();
+          else del.parentElement.querySelectorAll('input').forEach(i => { i.value = ''; });
+          calc(); return;
+        }
         const c = e.target.closest('[data-chip]'); if (!c) return;
         c.classList.toggle('on');
         form.elements.months.value = MONTHS.filter(mo => form.querySelector(`[data-chip="${mo}"]`)?.classList.contains('on')).join(',');
@@ -632,12 +775,18 @@ function formPage(type, id) {
         e.preventDefault();
         const r = raw(), data = {};
         t.fields.forEach(f => {
-          if (f.t === 'file') return;
+          if (f.t === 'file' || f.t === 'txs') return;
           let v = r[f.k] ?? '';
           if (f.show && !f.show(r)) v = '';
           if (f.t === 'number' && v !== '') v = Number(v);
           data[f.k] = typeof v === 'string' ? v.trim() : v;
         });
+        if (t.fields.some(f => f.t === 'txs')) {
+          const list = [...form.querySelectorAll('.txrow')].map(rw => ({ date: rw.querySelector('.td').value, amt: num(rw.querySelector('.ta').value) })).filter(z => z.amt > 0);
+          if (list.some(z => !z.date)) return toast('Add a date for every investment');
+          list.sort(byDate);
+          data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0);
+        }
         const files = [...(form.elements._docs?.files || [])];
         const ok = await run(async () => {
           const docsOut = existing ? [...(existing.docs || [])] : [];
