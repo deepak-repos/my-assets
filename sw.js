@@ -4,11 +4,11 @@
    - Never touches the Google Apps Script API or any other cross-origin request,
      so your financial data is never stored by the service worker.
    Bump CACHE when you want to force-refresh old caches. */
-const CACHE = 'my-asset-v2';
+const CACHE = 'my-asset-v3';
 const SHELL = [
   './',
   './index.html',
-  './manifest.webmanifest',
+  './manifest.json',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
@@ -16,7 +16,12 @@ const SHELL = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache each file separately so one missing file can never block installation
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {}))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
