@@ -33,10 +33,12 @@
 html,body{margin:0;background:var(--bg);color:var(--text);
   font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   -webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{display:flex;flex-direction:column;height:100dvh}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-#app{max-width:600px;margin:0 auto;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
-.page{animation:in .22s ease}
+#app{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none}
+.page{max-width:600px;margin:0 auto;padding-bottom:calc(24px + env(safe-area-inset-bottom));animation:in .22s ease}
 @keyframes in{from{opacity:0}to{opacity:1}}
 .page.noanim{animation:none}
 
@@ -78,9 +80,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .dtile{padding:0}
 .dtile>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;font-size:14px;font-weight:600}
 .dtile>summary::-webkit-details-marker{display:none}
-.dtile .dl{flex:1;min-width:0;color:var(--sub)}
-.dtile>summary::after{content:"";width:8px;height:8px;flex:none;border-top:2px solid var(--sub);border-right:2px solid var(--sub);transform:rotate(45deg);transition:transform .3s}
-.dtile[open]>summary::after{transform:rotate(135deg)}
+.dtile .dl{flex:1;min-width:0;color:var(--sub);font-weight:700}
+.dtile .dr{flex:none}
 .dtile .body{padding:0 16px 14px;border-top:.5px solid var(--sep)}
 .card .empty{color:var(--sub);font-size:14px;padding:4px 0}
 .li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--sep)}
@@ -167,7 +168,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .soon-page .big{font-size:56px}.soon-page h2{color:var(--text);margin:10px 0 6px}
 
 /* tab bar */
-#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;
+#tabbar{position:relative;flex:none;z-index:30;display:flex;justify-content:center;
   padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--blur);border-top:.5px solid var(--sep);
   -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
 #tabbar>*{flex:1;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--sub);font-size:11px;font-weight:500;padding:4px 0}
@@ -203,9 +204,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .row b.v{color:var(--text);font-weight:600}
 .row.sp{justify-content:space-between;gap:10px}
 .row .lft{display:flex;align-items:center;flex:none;gap:6px}
-.row input.sipin{flex:none;width:104px;text-align:left;background:var(--fill);border-radius:10px;padding:9px 10px}
-.row input.curin{flex:1;min-width:0;text-align:right;background:var(--fill);border-radius:10px;padding:10px 12px}
-.row.sp input.curin{flex:none;width:104px;padding:9px 10px;text-align:right}
+.row input.sipin{flex:none;width:92px;text-align:left;background:var(--fill);border-radius:10px;padding:6px 9px;font-size:14px}
+.row input.curin{flex:1;min-width:0;text-align:right;background:var(--fill);border-radius:10px;padding:8px 10px;font-size:14px}
+.row.sp input.curin{flex:none;width:92px;padding:6px 9px;font-size:14px;text-align:right}
 .row input.chk{-webkit-appearance:none;appearance:none;flex:none;width:20px;height:20px;min-width:20px;padding:0;margin:0 4px 0 0;border-radius:7px;
   border:1.5px solid var(--sub);background:transparent;cursor:pointer;transition:background .18s,border-color .18s,transform .12s}
 .row input.chk:active{transform:scale(.86)}
@@ -236,7 +237,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .group.solo{margin-bottom:12px}
 .ghead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 32px 6px}
 .ghead .gl{font-size:13px;color:var(--blue);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ghead .gr{font-size:16px;color:var(--sub);flex:none}
+.ghead .gr{font-size:13px;color:var(--sub);flex:none;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -621,16 +622,17 @@ function home() {
   h += `<section class="hero"><button class="eye" data-act="eye" aria-label="${S.hide ? 'Show amounts' : 'Hide amounts'}">${S.hide ? eyeOff : eyeOn}</button><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>
     <div class="cols"><div><span>Property &amp; Gold</span><b>${C(real)}</b></div><div><span>Total Funds</span><b>${C(funds)}</b></div><div><span>Liquid Funds</span><b>${C(liquid)}</b></div></div></section>`;
 
+  const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
+  h += `<details class="card dtile"><summary><span class="dl">Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
+    `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('') +
+    `<div class="tot"><span>Total</span><span>${M(npTot)}</span></div>`
+    : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
+
   const up = upcomingPremiums(90);
-  h += `<div class="card"><h3>Insurance premiums · next 90 days</h3>` + (up.length ? up.map(u =>
-    `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>Due ${esc(fmtDate(u.date))}</small></div>
+  h += `<div class="card"><h3>Insurance Premiums Due - next 90 days</h3>` + (up.length ? up.map(u =>
+    `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? M(u.amt) : '—'}<small><span class="pill ${u.diff <= 7 ? 'soon' : u.diff <= 30 ? 'next' : ''}">${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</span></small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div>`;
-
-  const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
-  h += `<details class="card dtile"><summary><span class="dl">Investment in ${np.month}</span><span>Total ${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
-    `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
-    : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
 
   const solo = (...args) => `<div class="group solo">${item(...args)}</div>`;      // every menu sits in its own tile
   const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
@@ -721,9 +723,8 @@ function updatePage(key) {
     else rows = (T[a.type].cat === 'selfuse' ? `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>` : '') + `<div class="row">${cur}</div>`;
     return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gr">Now ${money(curVal(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
   }).join('');
-  const h = `<form id="f">${blocks}
-    <div class="gfoot">Tick the box to add the amount next to it as a new investment on the date chosen with the calendar. Untick it if you skipped this month. Type the new current value in the box on the right (leave it empty to keep the old one). Each update is also saved as a dated snapshot for Analytics.</div></form>`;
-  return { title: 'Update ' + title, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
+  const h = `<form id="f">${blocks}<button class="btn" type="submit">Save</button></form>`;
+  return { title: 'Update ' + title, back, html: h, notabs: true,
     after() {
       const f = $('#f');
       const recalc = () => f.querySelectorAll('.group[data-id]').forEach(g => {
@@ -953,15 +954,15 @@ function view(p) {
   }
 }
 function render(goTo) {
-  const y = goTo === undefined ? window.scrollY : goTo;
+  const y = goTo === undefined ? $('#app').scrollTop : goTo;
   const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const v = view(p);
-  const bar = v.nobar ? '' : `<div class="bar">${v.back ? `<a class="back" href="${v.back}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>` : ''}<div class="bt">${esc(v.title || '')}</div><div class="right">${v.right || ''}</div></div>`;
+  const bar = v.nobar ? '' : `<div class="bar"><a class="back" href="${v.back || '#/home'}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a><div class="bt">${esc(v.title || '')}</div><div class="right">${v.right || ''}</div></div>`;
   $('#app').innerHTML = `<div class="page${goTo === undefined ? ' noanim' : ''}">${bar}${v.html}</div>`;
   // list pages already include their own large title in html
   document.querySelectorAll('#tabbar [data-tab]').forEach(el => el.classList.toggle('on', el.dataset.tab === v.tab));
   $('#tabbar').classList.toggle('off', !!v.notabs);
-  window.scrollTo(0, y);
+  $('#app').scrollTop = y;
   v.after && v.after();
 }
 
@@ -1061,7 +1062,7 @@ let prevHash = '', curHash = location.hash;
 const navStack = [{ hash: location.hash, y: 0 }];                // remembers where each page was scrolled to
 window.addEventListener('hashchange', () => {
   const h = location.hash, top = navStack[navStack.length - 1], before = navStack[navStack.length - 2];
-  top.y = window.scrollY;
+  top.y = $('#app').scrollTop;
   let y = 0;
   if (before && before.hash === h) { navStack.pop(); y = before.y; }   // going back → restore position
   else { navStack.push({ hash: h, y: 0 }); if (navStack.length > 60) navStack.shift(); }
