@@ -64,9 +64,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.hero .top{display:flex;justify-content:center;align-items:baseline;gap:8px;padding:0 12px;margin-bottom:14px;white-space:nowrap}
-.hero .lbl{font-size:clamp(18px,6vw,30px);font-weight:500;letter-spacing:-.8px;opacity:.85}
-.hero .amt{font-size:clamp(18px,6vw,30px);font-weight:700;letter-spacing:-.8px;margin:0}
+.hero .top{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 12px;margin-bottom:14px;white-space:nowrap}
+.hero .lbl{font-size:30px;font-weight:500;letter-spacing:-.8px;opacity:.85}
+.hero .amt{font-size:30px;font-weight:700;letter-spacing:-.8px;margin:0}
 .hero .cols{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.25)}
 .hero .cols>*{display:block;padding:24px 8px 25px;color:inherit;text-decoration:none}
 .hero .cols>*+*{border-left:1px solid rgba(255,255,255,.25)}
@@ -130,14 +130,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .group{margin:0 16px 22px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
 .gsec{display:flex;justify-content:space-between;align-items:center;margin:20px 32px 10px;font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--sub)}
 .gsec span{display:flex;align-items:center;gap:8px}.gsec i{width:10px;height:10px;border-radius:50%}.gsec em{font-style:normal;font-weight:600}
-.ggrp>summary{list-style:none;display:flex;align-items:center;gap:10px;margin:0 16px 14px;padding:16px;border-radius:18px;color:#fff;cursor:pointer;
-  background:linear-gradient(135deg,var(--g1),var(--g2));font-size:17px;font-weight:700;box-shadow:var(--shadow)}
+.ggrp{display:flow-root}
+.ggrp>summary{list-style:none;display:flex;align-items:center;gap:10px;margin:0 16px 14px;padding:16px;border-radius:18px;background:var(--card);color:var(--text);
+  cursor:pointer;font-size:17px;font-weight:700;box-shadow:var(--shadow)}
 .ggrp>summary::-webkit-details-marker{display:none}
-.ggrp>summary svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ggrp>summary svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--g1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ggrp>summary .gn{flex:1;min-width:0}
-.ggrp>summary em{font-style:normal;font-size:13px;font-weight:600;background:rgba(255,255,255,.25);border-radius:99px;padding:2px 9px}
-.ggrp>summary::after{content:"";width:8px;height:8px;border-right:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(45deg);margin:-3px 4px 0 2px;transition:transform .2s;flex:none}
+.ggrp>summary em{font-style:normal;font-size:17px;font-weight:700;color:var(--text)}
+.ggrp>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--sub);border-bottom:2px solid var(--sub);transform:rotate(45deg);margin:-3px 4px 0 2px;transition:transform .3s;flex:none}
 .ggrp[open]>summary::after{transform:rotate(-135deg);margin-top:3px}
+.gbody{display:flow-root}
 .goal{position:relative;display:flex;align-items:center;gap:14px;margin:0 16px 14px;padding:16px;border-radius:20px;background:var(--card);box-shadow:var(--shadow);color:inherit;overflow:hidden}
 .g-ring{position:relative;width:92px;height:92px;flex:none}
 .g-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
@@ -1003,8 +1005,7 @@ function goalCard(g, c1, c2) {
     <div class="g-info"><div class="g-name">${esc(g.name)}</div>
       <div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></a>`;
 }
-const GOPEN = new Set();                                   // goal groups stay open across re-renders, collapsed by default
-window.gToggle = (n, o) => { if (o) GOPEN.add(n); else GOPEN.delete(n); };
+let GOPEN = '';                                            // the one open goal group (kept across re-renders); collapsed by default
 const GICON = {
   'Long Term': '<svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><path d="M9 10V4l5 2-5 2"/></svg>',
   'Mid Term': '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
@@ -1016,8 +1017,9 @@ const goals = () => {
   GOAL_TYPES.forEach(([tn, c1, c2]) => {
     const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
     if (!list.length) return;
-    h += `<details class="ggrp" style="--g1:${c1};--g2:${c2}" ${GOPEN.has(tn) ? 'open' : ''} ontoggle="gToggle('${tn}',this.open)"><summary>${GICON[tn]}<span class="gn">${tn}</span><em>${list.length}</em></summary>` + list.map(g => goalCard(g, c1, c2)).join('') + `</details>`;
+    h += `<details class="ggrp" data-t="${tn}" style="--g1:${c1};--g2:${c2}" ${GOPEN === tn ? 'open' : GOPEN ? 'hidden' : ''}><summary>${GICON[tn]}<span class="gn">${tn}</span><em>${list.length}</em></summary><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></details>`;
   });
+  if (!h) GOPEN = '';
   if (!h) h = `<div class="soon-page"><div class="big">🎯</div><h2>No goals yet</h2><p>Tap + to set a target and link it to your investments.</p></div>`;
   return { title: 'Goals', large: 'Goals', tab: 'goals', right: `<a class="plus" href="#/goal/new" aria-label="Add goal">+</a>`, html: h };
 };
@@ -1227,6 +1229,30 @@ function openSheet() {
 }
 function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; }
 window.closeSheet = closeSheet;
+
+document.addEventListener('click', e => {                       // goal groups: one open at a time, the open one takes the whole page
+  const sm = e.target.closest('.ggrp > summary'); if (!sm) return;
+  e.preventDefault();
+  const d = sm.parentElement, body = d.querySelector('.gbody');
+  if (d._busy) return;
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches, dur = reduce ? 0 : 320, ease = 'cubic-bezier(.32,.72,0,1)';
+  const opening = !d.open, sibs = [...d.parentElement.querySelectorAll('.ggrp')].filter(x => x !== d);
+  d._busy = true; body.style.overflow = 'hidden';
+  GOPEN = opening ? d.dataset.t : '';
+  sibs.forEach(x => {
+    let from, to;
+    if (opening) { from = { height: x.offsetHeight + 'px', opacity: 1 }; to = { height: '0px', opacity: 0 }; }
+    else { x.hidden = false; from = { height: '0px', opacity: 0 }; to = { height: x.offsetHeight + 'px', opacity: 1 }; }
+    x.style.overflow = 'hidden';
+    const a = x.animate([from, to], { duration: dur, easing: ease, fill: 'forwards' });
+    a.onfinish = () => { if (opening) x.hidden = true; a.cancel(); x.style.overflow = ''; };
+  });
+  if (opening) { d.open = true; $('#app').scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }
+  const cs = getComputedStyle(body);
+  const full = { height: body.offsetHeight + 'px', opacity: 1 }, shut = { height: '0px', opacity: 0 };
+  const an = body.animate(opening ? [shut, full] : [full, shut], { duration: dur, easing: ease, fill: 'forwards' });
+  an.onfinish = () => { if (!opening) d.open = false; an.cancel(); body.style.overflow = ''; d._busy = false; };
+});
 
 document.addEventListener('click', e => {                       // smooth open / close for asset cards
   const sm = e.target.closest('.acard > summary, .dtile > summary'); if (!sm) return;
