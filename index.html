@@ -127,6 +127,25 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 /* grouped list */
 .group{margin:0 16px 22px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.gsec{display:flex;justify-content:space-between;align-items:center;margin:20px 32px 10px;font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--sub)}
+.gsec span{display:flex;align-items:center;gap:8px}.gsec i{width:10px;height:10px;border-radius:50%}.gsec em{font-style:normal;font-weight:600}
+.goal{position:relative;display:flex;align-items:center;gap:14px;margin:0 16px 14px;padding:16px;border-radius:20px;background:var(--card);box-shadow:var(--shadow);color:inherit;overflow:hidden}
+.goal::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:linear-gradient(90deg,var(--g1),var(--g2))}
+.g-ring{position:relative;width:92px;height:92px;flex:none}
+.g-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.g-ring .trk{fill:none;stroke:var(--fill);stroke-width:10}
+.g-ring .prg{fill:none;stroke-width:10;stroke-linecap:round;animation:ring 1.1s cubic-bezier(.4,0,.2,1)}
+@keyframes ring{from{stroke-dashoffset:var(--c)}}
+.g-pct{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font-size:20px;font-weight:700;letter-spacing:-.4px}
+.g-pct small{display:block;font-size:10px;font-weight:500;letter-spacing:0;color:var(--sub);margin-top:-1px}
+.g-info{flex:1;min-width:0}
+.g-name{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:10px}
+.g-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.g-stats span{display:block;font-size:11px;color:var(--sub);margin-bottom:2px}
+.g-stats b{display:block;font-size:14px;font-weight:600;white-space:nowrap}
+.srcnote{white-space:pre-line}
+.srcdel{width:100%;text-align:center;color:var(--red);font-weight:600;padding:13px 0}
+button.btn{width:calc(100% - 32px)}
 .gtitle{margin:0 32px 6px;font-size:13px;color:var(--sub);text-transform:uppercase}
 .gfoot{margin:-14px 32px 22px;font-size:13px;color:var(--sub)}
 .item{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:52px;width:100%;text-align:left}
@@ -426,9 +445,9 @@ const CAT_META = {
 /* ---------------------------------------------------------------------
    State & persistence
    --------------------------------------------------------------------- */
-const S = { hide: !!store.get('hide', false), assets: store.get('assets', []), history: store.get('history', []), cfg: store.get('cfg', null) };
+const S = { hide: !!store.get('hide', false), assets: store.get('assets', []), goals: store.get('goals', []), history: store.get('history', []), cfg: store.get('cfg', null) };
 const remote = () => !!(S.cfg && S.cfg.url && S.cfg.key);
-const persist = () => { store.set('assets', S.assets); store.set('history', S.history); };
+const persist = () => { store.set('assets', S.assets); store.set('history', S.history); store.set('goals', S.goals); };
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
@@ -548,7 +567,7 @@ async function sync(quiet) {
   if (!remote()) return;
   try {
     const r = await api('list');
-    S.assets = r.assets || []; S.history = r.history || []; persist();
+    S.assets = r.assets || []; S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals; persist();
     if (!/^#\/(form|update)/.test(location.hash)) render();
     if (!quiet) toast('Synced');
   } catch (e) { toast(quiet ? 'Offline – showing saved data' : e.message); }
@@ -571,6 +590,17 @@ async function bulkSave(list) {
   if (remote()) await api('bulk', { assets: list, history: h });
   list.forEach(a => { const i = S.assets.findIndex(x => x.id === a.id); if (i >= 0) S.assets[i] = a; });
   S.history.push(...h); persist();
+}
+async function saveGoal(g) {
+  g.updated = new Date().toISOString(); g.created = g.created || g.updated;
+  let note = '';
+  if (remote()) { try { await api('goalsave', { goal: g }); } catch (e) { if (/Unknown action/i.test(e.message)) note = 'Saved on this device – update Code.gs to sync goals'; else throw e; } }
+  const i = S.goals.findIndex(x => x.id === g.id); if (i >= 0) S.goals[i] = g; else S.goals.push(g);
+  persist(); return note;
+}
+async function removeGoal(id) {
+  if (remote()) { try { await api('goaldelete', { id }); } catch (e) { if (!/Unknown action/i.test(e.message)) throw e; } }
+  S.goals = S.goals.filter(x => x.id !== id); persist();
 }
 async function removeAsset(id) {
   if (remote()) await api('delete', { id });
@@ -937,8 +967,103 @@ const morePage = () => ({ title: 'More', tab: 'more',
 const analytics = () => ({ title: 'Analytics', large: 'Analytics', tab: 'analytics',
   html: `<div class="soon-page"><div class="big">📊</div><h2>Coming next</h2><p>Trends for net worth, funds, premiums and property values will appear here.</p>
     <p><b>${S.history.length}</b> value snapshot${S.history.length === 1 ? '' : 's'} recorded so far – every update you make is being saved with its date.</p></div>` });
-const goals = () => ({ title: 'Goals', large: 'Goals', tab: 'goals',
-  html: `<div class="soon-page"><div class="big">🎯</div><h2>Coming next</h2><p>Set targets and link them to your investments.</p></div>` });
+/* ---- Goals ---- */
+const GOAL_TYPES = [['Long Term', '#0a84ff', '#5e5ce6'], ['Mid Term', '#2bd2c3', '#34c759'], ['Short Term', '#ff9f0a', '#ff453a'], ['Fund Collection', '#bf5af2', '#ff375f']];
+const GOAL_CATS = [['mf', 'Mutual Fund'], ['fd', 'Fixed Deposit'], ['ppf', 'PPF'], ['epf', 'EPF'], ['nps', 'NPS'], ['sa', 'Saving'], ['gratuity', 'Gratuity']];
+const invAssets = () => S.assets.filter(a => T[a.type] && T[a.type].cat === 'investment');
+const purposeOf = a => String(a.data.purpose || '').trim().toLowerCase();
+const purposeList = () => { const seen = new Map(); invAssets().forEach(a => { const p = String(a.data.purpose || '').trim(); if (p && !seen.has(p.toLowerCase())) seen.set(p.toLowerCase(), p); }); return [...seen.values()].sort((x, y) => x.localeCompare(y)); };
+const srcAssets = src => {
+  const L = invAssets();
+  if (src.mode === 'category') return L.filter(a => a.type === src.ref);
+  if (src.mode === 'purpose') return L.filter(a => purposeOf(a) === String(src.ref || '').trim().toLowerCase());
+  return src.ref === '__all' ? L : L.filter(a => a.id === src.ref);
+};
+const srcAmount = src => src.ref ? sum(srcAssets(src), curVal) : 0;
+function goalStats(g) {
+  const target = num(g.target), achieved = sum(g.sources || [], s => srcAmount(s) * num(s.pct) / 100);
+  return { target, achieved, remaining: Math.max(target - achieved, 0), pct: target > 0 ? achieved / target * 100 : 0 };
+}
+let gradSeq = 0;
+function goalCard(g, c1, c2) {
+  const st = goalStats(g), R = 46, C = 2 * Math.PI * R, shown = Math.max(0, Math.min(st.pct, 100)), id = 'gg' + (++gradSeq);
+  return `<a class="goal" href="#/goal/${esc(g.id)}" style="--g1:${c1};--g2:${c2}">
+    <div class="g-ring"><svg viewBox="0 0 108 108"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
+      <circle class="trk" cx="54" cy="54" r="${R}"/><circle class="prg" cx="54" cy="54" r="${R}" stroke="url(#${id})" stroke-dasharray="${C.toFixed(2)}" style="--c:${C.toFixed(2)};stroke-dashoffset:${(C * (1 - shown / 100)).toFixed(2)}"/></svg>
+      <div class="g-pct">${st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0)}%<small>achieved</small></div></div>
+    <div class="g-info"><div class="g-name">${esc(g.name)}</div>
+      <div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></a>`;
+}
+const goals = () => {
+  let h = '';
+  GOAL_TYPES.forEach(([tn, c1, c2]) => {
+    const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
+    if (!list.length) return;
+    h += `<div class="gsec"><span><i style="background:linear-gradient(135deg,${c1},${c2})"></i>${tn}</span><em>${list.length}</em></div>` + list.map(g => goalCard(g, c1, c2)).join('');
+  });
+  if (!h) h = `<div class="soon-page"><div class="big">🎯</div><h2>No goals yet</h2><p>Tap + to set a target and link it to your investments.</p></div>`;
+  return { title: 'Goals', large: 'Goals', tab: 'goals', right: `<a class="plus" href="#/goal/new" aria-label="Add goal">+</a>`, html: h };
+};
+function goalForm(id) {
+  const existing = id && id !== 'new' ? S.goals.find(g => g.id === id) : null;
+  if (id && id !== 'new' && !existing) return notFound();
+  const g0 = existing || { name: '', type: 'Long Term', target: '', sources: [] };
+  const blank = () => ({ mode: 'all', ref: '', pct: 100 });
+  const sources = (g0.sources && g0.sources.length ? g0.sources : [blank()]).map(x => ({ ...x }));
+  const optsFor = x => x.mode === 'category' ? GOAL_CATS
+    : x.mode === 'purpose' ? purposeList().map(p => [p, p])
+    : [['__all', 'All investments (combined)'], ...invAssets().map(a => [a.id, `${ttl(a)} · ${fmtCr(curVal(a))}`])];
+  const srcHTML = (x, i) => `<div class="gtitle">What counts towards it${sources.length > 1 ? ' · ' + (i + 1) : ''}</div><div class="group" data-i="${i}">
+      <div class="row"><span class="l">Counts</span><select data-f="mode">${[['all', 'All Investment'], ['category', 'Investment Category'], ['purpose', 'Purpose Wise']].map(([v, l]) => `<option value="${v}" ${v === x.mode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">Choose</span><select data-f="ref"><option value="">${x.mode === 'purpose' && !purposeList().length ? 'No purposes added yet' : 'Select'}</option>${optsFor(x).map(([v, l]) => `<option value="${esc(v)}" ${v === x.ref ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">% share</span><input data-f="pct" type="number" inputmode="decimal" step="any" min="0" max="100" value="${esc(x.pct)}" placeholder="100"><span class="suf">%</span></div>
+      ${sources.length > 1 ? `<div class="row"><button type="button" class="srcdel">Delete Source</button></div>` : ''}</div><div class="gfoot srcnote"></div>`;
+  const h = `<form id="f" autocomplete="off"><div class="group">
+      <div class="row"><span class="l">Goal Name</span><input name="name" value="${esc(g0.name)}" placeholder="e.g. Child education" required></div>
+      <div class="row"><span class="l">Goal Type</span><select name="type">${GOAL_TYPES.map(([t]) => `<option ${t === g0.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">Target Amount</span><span class="pre">₹</span><input name="target" type="number" inputmode="decimal" step="any" value="${esc(g0.target)}" placeholder="0" required></div></div>
+    <div id="srcs"></div>
+    <button type="button" class="btn plain srcadd">Add a Source</button>
+    <button class="btn" type="submit">Save Goal</button>${existing ? '<button type="button" class="btn redtxt goaldel">Delete Goal</button>' : ''}</form>`;
+  return { title: existing ? 'Edit Goal' : 'Add Goal', back: '#/goals', html: h, notabs: true,
+    after() {
+      const form = $('#f'), box = $('#srcs');
+      const notes = () => box.querySelectorAll('.srcnote').forEach((el, i) => {
+        const x = sources[i]; if (!x) return;
+        if (!x.ref) { el.textContent = 'Choose what should count towards this goal.'; return; }
+        const full = srcAmount(x);
+        let t = `Now ${money(full)} × ${num(x.pct)}% = ${money(full * num(x.pct) / 100)}`;
+        if (x.mode === 'purpose') t = 'Cards: ' + (srcAssets(x).map(ttl).join(', ') || 'none') + '\n' + t;
+        el.textContent = t;
+      });
+      const draw = () => { box.innerHTML = sources.map(srcHTML).join(''); notes(); };
+      draw();
+      box.addEventListener('change', e => {
+        const f = e.target.dataset.f; if (!f) return;
+        const i = +e.target.closest('.group').dataset.i, x = sources[i];
+        if (f === 'mode') { x.mode = e.target.value; x.ref = ''; draw(); } else if (f === 'ref') { x.ref = e.target.value; notes(); }
+      });
+      box.addEventListener('input', e => { if (e.target.dataset.f === 'pct') { sources[+e.target.closest('.group').dataset.i].pct = e.target.value; notes(); } });
+      form.addEventListener('click', e => {
+        if (e.target.closest('.srcadd')) { sources.push(blank()); draw(); box.lastElementChild?.previousElementSibling?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+        const del = e.target.closest('.srcdel');
+        if (del) { sources.splice(+del.closest('.group').dataset.i, 1); draw(); return; }
+        if (e.target.closest('.goaldel') && confirm('Delete this goal?')) run(async () => { await removeGoal(existing.id); return true; }).then(ok => { if (ok) { toast('Goal deleted'); location.hash = '#/goals'; } });
+      });
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(form), name = String(fd.get('name') || '').trim(), type = fd.get('type'), target = num(fd.get('target'));
+        if (!name) return toast('Enter a goal name');
+        if (!(target > 0)) return toast('Enter a target amount');
+        const kept = sources.filter(x => x.ref);
+        if (kept.some(x => !(num(x.pct) > 0 && num(x.pct) <= 100))) return toast('% share must be between 1 and 100');
+        const goal = { id: existing ? existing.id : uid(), name, type, target, created: existing?.created,
+          sources: kept.map(x => ({ mode: x.mode, ref: x.ref, pct: num(x.pct) })) };
+        const note = await run(() => saveGoal(goal));
+        if (note !== null) { toast(note || 'Goal saved'); location.hash = '#/goals'; }
+      });
+    } };
+}
 const notFound = () => ({ title: 'Not found', back: '#/home', html: `<div class="soon-page"><div class="big">🤷</div><h2>Page not found</h2></div>`, tab: 'home' });
 
 /* ---- Settings ---- */
@@ -996,6 +1121,7 @@ function view(p) {
     case 'more': return morePage();
     case 'analytics': return analytics();
     case 'goals': return goals();
+    case 'goal': return goalForm(b);
     case 'list': return listPage(b);
     case 'insurance': return b ? insuranceList(b) : insuranceMenu();
     case 'realestate': return listPage('realestate');
