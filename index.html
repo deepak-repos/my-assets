@@ -79,16 +79,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .card.warm{--card:#f6ece1;--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);--fill:rgba(78,53,36,.10);background:var(--card);color:var(--text)}
 .card.warm .dl{color:var(--text)}
 .card.warm{--glow:rgba(185,119,47,.6)}
-.tglow{--glow:rgba(185,119,47,.85);animation:tglow 3s ease-in-out infinite}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tglow{--glow:rgba(255,190,110,.8)}}
-:root[data-theme=dark] .tglow{--glow:rgba(255,190,110,.8)}
-@keyframes tglow{0%,62%,100%{text-shadow:0 0 0 rgba(0,0,0,0)}80%{text-shadow:0 0 9px var(--glow),0 0 3px var(--glow)}}
-@keyframes iglow{0%,62%,100%{filter:none}80%{filter:drop-shadow(0 0 4px var(--glow))}}
+.tglow{--glow:rgba(185,119,47,.6);animation:tglow 3s ease-in-out infinite}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tglow{--glow:rgba(255,190,110,.55)}}
+:root[data-theme=dark] .tglow{--glow:rgba(255,190,110,.55)}
+@keyframes tglow{0%,62%,100%{text-shadow:0 0 0 rgba(0,0,0,0)}80%{text-shadow:0 0 6px var(--glow),0 0 2px var(--glow)}}
+@keyframes iglow{0%,62%,100%{filter:none}80%{filter:drop-shadow(0 0 3px var(--glow))}}
 .tglow svg{animation:iglow 3s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.tglow,.tglow svg{animation:none}}
-.card.outer{background:#f6ece1;padding:0;overflow:hidden}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22}}
-:root[data-theme=dark] .card.outer{background:#3a2c22}
+.card.outer{background:#f6ece1;padding:0;overflow:hidden;border-radius:10px;border:1px solid rgba(185,119,47,.35);box-shadow:0 2px 10px rgba(78,53,36,.08),inset 0 0 0 1px rgba(255,255,255,.55)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22;border-color:rgba(232,164,92,.35);box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.05)}}
+:root[data-theme=dark] .card.outer{background:#3a2c22;border-color:rgba(232,164,92,.35);box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.05)}
 .dtile.in{background:transparent;border-radius:0;box-shadow:none}
 .dtile.in+.dtile.in{border-top:.5px solid rgba(78,53,36,.22)}
 .dtile.prem{--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);color:var(--text)}
