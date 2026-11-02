@@ -77,11 +77,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* cards */
 .card{margin:0 16px 16px;background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
 .card.warm{--card:#f6ece1;--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);--fill:rgba(78,53,36,.10);background:var(--card);color:var(--text)}
-.card.warm h3{color:var(--text);font-weight:700}
+.card.warm .dl{color:var(--text)}
+.card.warm{--glow:#b9772f}
+.card.glow{animation:glow 3s ease-in-out infinite}
+@keyframes glow{0%,62%,100%{box-shadow:0 0 0 0 rgba(0,0,0,0),inset 0 0 0 1.5px rgba(0,0,0,0)}
+  80%{box-shadow:0 0 16px 2px var(--glow),inset 0 0 0 1.5px var(--glow)}}
+@media (prefers-reduced-motion:reduce){.card.glow{animation:none;box-shadow:inset 0 0 0 1.5px var(--glow)}}
 .card.warm .pill.next{background:rgba(154,91,0,.14);color:#9a5b00}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12);--glow:#e8a45c}
   :root:not([data-theme=light]) .card.warm .pill.next{background:rgba(255,159,10,.18);color:#ffb340}}
-:root[data-theme=dark] .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12)}
+:root[data-theme=dark] .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12);--glow:#e8a45c}
 :root[data-theme=dark] .card.warm .pill.next{background:rgba(255,159,10,.18);color:#ffb340}
 .card h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--sub);letter-spacing:0}
 .dtile{padding:0}
@@ -636,11 +641,12 @@ function home() {
     `<div class="tot"><span>Total</span><span>${M(npTot)}</span></div>`
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
 
-  const up = upcomingPremiums(90);
-  h += `<div class="card warm"><h3>Insurance Premiums Due - next 90 days</h3>` + (up.length ? up.map(u =>
+  const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
+  h += `<details class="card dtile warm${upTot > 0 ? ' glow' : ''}"><summary><span class="dl">Premiums Due (in 90 days)</span><span class="dr">${M(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
     `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
-     <div class="r">${u.amt ? M(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
-    : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div>`;
+     <div class="r">${u.amt ? M(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('') +
+    `<div class="tot"><span>Total</span><span>${M(upTot)}</span></div>`
+    : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
 
   const solo = (...args) => `<div class="group solo">${item(...args)}</div>`;      // every menu sits in its own tile
   const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
