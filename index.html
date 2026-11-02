@@ -39,16 +39,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .page{animation:in .22s ease}
 @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* top bar */
-.bar{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
-  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--blur);
-  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
-.bar .back{color:var(--blue);font-size:17px;justify-self:start}
-.bar .bt{font-weight:600;font-size:17px;max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* top bar: back / centred title / action, no tile behind it */
+.bar{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;margin-bottom:10px;background:var(--bg)}
+.bar .back{color:var(--blue);font-size:17px;justify-self:start;white-space:nowrap}
+.bar .bt{font-weight:600;font-size:17px;max-width:58vw;text-align:center;line-height:1.2;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .bar .right{justify-self:end;color:var(--blue);font-size:17px;display:flex;gap:14px;align-items:center}
 .bar .right .link{color:var(--blue);font-weight:600}
 .bar .right .plus{font-size:28px;line-height:1;font-weight:300}
-.large{font-size:32px;font-weight:700;letter-spacing:-.5px;margin:6px 20px 14px}
 .head{padding:calc(18px + env(safe-area-inset-top)) 20px 14px;display:flex;justify-content:space-between;align-items:flex-start}
 .head h1{margin:0;font-size:32px;font-weight:700;letter-spacing:-.6px}
 .head small{display:block;color:var(--sub);font-size:13px;margin-top:2px}
@@ -56,17 +55,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* hero */
-.hero{margin:0 16px 16px;padding:22px 20px 16px;border-radius:24px;color:#fff;
+.hero{margin:0 16px 16px;padding:22px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
   background:linear-gradient(135deg,#0a84ff 0%,#5e5ce6 60%,#bf5af2 120%);box-shadow:0 10px 30px rgba(10,132,255,.28)}
 .hero .lbl{font-size:14px;opacity:.85}
-.hero .amt{font-size:38px;font-weight:700;letter-spacing:-1px;margin:2px 0 16px}
-.hero .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.22)}
+.hero .amt{font-size:38px;font-weight:700;letter-spacing:-1px;margin:2px 0 18px}
+.hero .cols{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,.25)}
+.hero .cols>div{padding:14px 8px}
+.hero .cols>div+div{border-left:1px solid rgba(255,255,255,.25)}
 .hero .cols span,.hero .rw span{display:block;font-size:13px;opacity:.85}
-.hero .cols b{font-size:20px;font-weight:600}
-.hero .rw{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:12px 14px;
-  background:rgba(255,255,255,.16);border-radius:14px}
-.hero .rw span{font-size:14px;opacity:1}
-.hero .rw b{font-size:17px}
+.hero .cols b{display:block;font-size:20px;font-weight:600}
+.hero .rw{padding:14px 8px 16px;border-top:1px solid rgba(255,255,255,.25)}
+.hero .rw b{display:block;font-size:20px;font-weight:600}
 
 /* cards */
 .card{margin:0 16px 16px;background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
@@ -188,12 +187,28 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #toast.show{opacity:1;transform:translate(-50%,0)}
 .row .v{flex:1;text-align:right;color:var(--sub)}
 .row b.v{color:var(--text);font-weight:600}
-.row input[type=checkbox]{-webkit-appearance:auto;appearance:auto;flex:none;width:24px;height:24px;margin:0 0 0 auto;padding:0;accent-color:var(--blue)}
+.row.sp{justify-content:space-between;gap:10px}
+.row .lft{display:flex;align-items:center;flex:none;gap:6px}
+.row input.sipin{flex:none;width:104px;text-align:left;background:var(--fill);border-radius:10px;padding:9px 10px}
+.row input.curin{flex:1;min-width:0;text-align:right;background:var(--fill);border-radius:10px;padding:10px 12px}
+.row.sp input.curin{flex:0 1 58%}
+.row input.chk{-webkit-appearance:none;appearance:none;flex:none;width:20px;height:20px;min-width:20px;padding:0;margin:0 0 0 8px;border-radius:7px;
+  border:1.5px solid var(--sub);background:transparent;cursor:pointer;transition:background .18s,border-color .18s,transform .12s}
+.row input.chk:active{transform:scale(.86)}
+.row input.chk:checked{border-color:transparent;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.4l2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat,linear-gradient(135deg,#0a84ff,#5e5ce6);box-shadow:0 2px 6px rgba(10,132,255,.35)}
+.dpick{position:relative;display:flex;align-items:center;gap:8px;flex:none;color:var(--blue);font-weight:500;font-size:15px;padding:6px 0}
+.dpick svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.row .dpick input[type=date]{position:absolute;inset:0;width:100%;height:100%;min-width:0;opacity:0;padding:0;margin:0;cursor:pointer}
+.dpick input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.pds{display:flex;flex-direction:column;gap:8px}
+.pdrow{display:flex;gap:8px;align-items:center}
+.row .pdrow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
+.pdadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
 .txs{display:flex;flex-direction:column;gap:8px}
 .txrow{display:flex;gap:8px;align-items:center}
 .row .txrow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
 .row .txrow input.ta{text-align:right}
-.txdel{flex:none;width:32px;height:32px;border-radius:50%;background:rgba(255,59,48,.14);color:var(--red);font-size:20px;line-height:1}
+.txdel,.pddel{flex:none;width:32px;height:32px;border-radius:50%;background:rgba(255,59,48,.14);color:var(--red);font-size:20px;line-height:1}
 .txadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
 .txsum{color:var(--sub);font-size:13px}
 .xirr.up{color:var(--green)}.xirr.dn{color:var(--red)}
@@ -204,6 +219,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .txlist .kv{font-size:14px}
 .summary .gain{display:flex;justify-content:space-between;gap:10px}
 .summary .gain em{font-style:normal;font-weight:600;font-size:13px}
+.group.solo{margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -268,7 +284,7 @@ const TXS   = { k:'tx', l:'Investments', t:'txs' };   // list of {date, amt}
 const premiumFields = [
   tx('provider','Policy Provider',{req:1}), tx('policyNo','Policy Number'),
   m('cover','Cover Amount'), m('premium','Premium Amount'),
-  { k:'months', l:'Premium Months', t:'months' }, NOTES, DOCS
+  { k:'pdates', l:'Premium Dates', t:'dates' }, NOTES, DOCS
 ];
 const companyBase = [tx('provider','Policy Provider',{req:1}), tx('companyId','Company ID'), m('cover','Cover Amount')];
 
@@ -407,6 +423,19 @@ function txOf(a) {
   return [];
 }
 const invVal = a => txOf(a).reduce((t, z) => t + z.amt, 0);
+const fmtShort = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? 'Date' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }); };
+const fmtDay = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); };
+
+/* Premium dates (yearly recurring) of a personal policy as ['YYYY-MM-DD'].
+   Policies saved earlier with only months are converted: due on the 1st (or today if it is this month). */
+function pdatesOf(a) {
+  const d = a.data;
+  if (Array.isArray(d.pdates)) return d.pdates.filter(Boolean);
+  if (!d.months) return [];
+  const now = new Date(), iso = (y, m, dd) => y + '-' + String(m + 1).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+  return String(d.months).split(',').map(x => MONTHS.indexOf(x.trim())).filter(i => i >= 0).map(i =>
+    i === now.getMonth() ? todayISO() : iso(i > now.getMonth() ? now.getFullYear() : now.getFullYear() + 1, i, 1));
+}
 
 /* XIRR: annualised rate r where sum(v / (1+r)^(days/365)) = 0. Needs 30+ days of history. */
 function xirr(flows) {
@@ -519,16 +548,22 @@ const item = (href, ico, c, title, val, sub) =>
 /* ---------------------------------------------------------------------
    Date logic: upcoming premiums & next-month contributions
    --------------------------------------------------------------------- */
-function upcomingPremiums() {
-  const now = new Date(), cm = now.getMonth(), out = [];
-  byCat('insurance').forEach(a => {
-    const d = a.data; let ms = [];
-    if (d.months) ms = d.months.split(',').map(s => MONTHS.indexOf(s.trim())).filter(i => i >= 0);
-    else if (d.renewal) ms = [MONTHS.indexOf(d.renewal)].filter(i => i >= 0);
-    if (!ms.length) return;
-    const diff = Math.min(...ms.map(i => (i - cm + 12) % 12));
-    const idx = (cm + diff) % 12, yr = now.getFullYear() + (cm + diff > 11 ? 1 : 0);
-    out.push({ a, diff, when: MONTHS[idx] + ' ' + yr, amt: num(d.premium), renewal: !d.months });
+function nextOccurrence(iso, from) {                  // next yearly occurrence of a date, on or after `from`
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!m || !d) return null;
+  const at = yr => new Date(yr, m - 1, Math.min(d, new Date(yr, m, 0).getDate()));
+  let dt = at(from.getFullYear());
+  if (dt < from) dt = at(from.getFullYear() + 1);
+  return dt;
+}
+function upcomingPremiums(days = 90) {                // personal policies only, due within `days`
+  const now = new Date(), from = new Date(now.getFullYear(), now.getMonth(), now.getDate()), out = [];
+  ofTypes(ORDER.personal).forEach(a => {
+    let best = null;
+    pdatesOf(a).forEach(iso => { const dt = nextOccurrence(iso, from); if (dt && (!best || dt < best)) best = dt; });
+    if (!best) return;
+    const diff = Math.round((best - from) / 864e5);
+    if (diff <= days) out.push({ a, diff, date: best, amt: num(a.data.premium) });
   });
   return out.sort((x, y) => x.diff - y.diff);
 }
@@ -564,11 +599,11 @@ function home() {
     <div class="cols"><div><span>Total Funds</span><b>${money(funds)}</b></div><div><span>Liquid Funds</span><b>${money(liquid)}</b></div></div>
     <div class="rw"><span>Real Estate &amp; Gold</span><b>${money(real)}</b></div></section>`;
 
-  const up = upcomingPremiums().slice(0, 6);
-  h += `<div class="card"><h3>Upcoming Insurance Premiums</h3>` + (up.length ? up.map(u =>
-    `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${u.renewal ? 'Renewal' : 'Due'} ${esc(u.when)}</small></div>
-     <div class="r">${u.amt ? money(u.amt) : '—'}<small><span class="pill ${u.diff === 0 ? 'soon' : u.diff === 1 ? 'next' : ''}">${u.diff === 0 ? 'This month' : u.diff === 1 ? 'Next month' : 'In ' + u.diff + ' months'}</span></small></div></div>`).join('')
-    : `<div class="empty">No premium months added yet.</div>`) + `</div>`;
+  const up = upcomingPremiums(90);
+  h += `<div class="card"><h3>Insurance premiums · next 90 days</h3>` + (up.length ? up.map(u =>
+    `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>Due ${esc(fmtDate(u.date))}</small></div>
+     <div class="r">${u.amt ? money(u.amt) : '—'}<small><span class="pill ${u.diff <= 7 ? 'soon' : u.diff <= 30 ? 'next' : ''}">${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</span></small></div></div>`).join('')
+    : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div>`;
 
   const np = nextMonthPayments();
   h += `<div class="card"><h3>Investments due in ${np.month}</h3>` + (np.items.length ? np.items.map(p =>
@@ -576,11 +611,13 @@ function home() {
     `<div class="tot"><span>Total</span><span>${money(sum(np.items, x => x.amt))}</span></div>`
     : `<div class="empty">No contributions scheduled.</div>`) + `</div>`;
 
+  const solo = (...args) => `<div class="group solo">${item(...args)}</div>`;      // every menu sits in its own tile
   const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
-    item('#/list/' + t, T[t].ico, T[t].c, T[t].label, money(sum(ofTypes([t]), curVal)), ofTypes([t]).length + (ofTypes([t]).length > 1 ? ' items' : ' item'))).join('');
-  if (rows) h += `<div class="gtitle">Investments</div><div class="group">${rows}</div>`;
-  h += `<div class="group">${item('#/insurance', '🛡️', '#ff375f', 'Insurance', '', byCat('insurance').length + ' policies')}
-    ${item('#/realestate', '🏡', '#ff9f0a', 'Real Estate & Gold', money(real))}</div>`;
+    solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, money(sum(ofTypes([t]), curVal)), ofTypes([t]).length + (ofTypes([t]).length > 1 ? ' items' : ' item'))).join('');
+  const cover = sum(ofTypes(['term', 'pmed']), a => num(a.data.cover));
+  h += rows
+    + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', cover ? money(cover) : '', cover ? 'Term + medical cover' : byCat('insurance').length + ' policies')
+    + solo('#/realestate', '🏡', '#ff9f0a', 'Real Estate & Gold', money(real));
   return { html: h, tab: 'home', nobar: true };
 }
 
@@ -593,6 +630,7 @@ function summaryTile(items, types) {
     ${inv ? `<div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${money(Math.abs(g))} (${p.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
 }
 function showVal(f, v) {
+  if (f.t === 'dates') return v.map(fmtDay).join(', ');
   if (f.t === 'number') return f.pre ? money(num(v)) : v + (f.suf || '');
   if (f.t === 'date') return fmtDate(v);
   return v;
@@ -603,8 +641,9 @@ function card(a) {
   const kv = (l, v) => `<div class="kv"><span>${esc(l)}</span><b>${esc(v)}</b></div>`;
   const list = ins ? [] : txOf(a), x = ins ? null : assetXirr(a), sub = subOf(a);
   const xl = x == null ? '' : `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>`;
-  let rows = t.fields.filter(f => f.t !== 'file' && f.t !== 'txs' && d[f.k] !== '' && d[f.k] != null)
-    .map(f => kv(f.l, showVal(f, d[f.k]))).join('');
+  const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); });
+  let rows = t.fields.filter(f => f.t !== 'file' && f.t !== 'txs' && dd[f.k] !== '' && dd[f.k] != null && !(Array.isArray(dd[f.k]) && !dd[f.k].length))
+    .map(f => kv(f.l, showVal(f, dd[f.k]))).join('');
   if (INV_TYPES.includes(a.type) && list.length)
     rows += kv('Total invested', money(invVal(a))) +
       `<div class="kv"><span>Investments (${list.length})</span><b></b></div><div class="txlist">${[...list].sort(byDate).map(z => kv(z.date ? fmtDate(z.date) : 'No date', money(z.amt))).join('')}</div>`;
@@ -623,7 +662,7 @@ function listPage(key) {
   const title = key === 'realestate' ? 'Real Estate & Gold' : T[key].label;
   const back = '#/home';
   const addHref = key === 'realestate' ? '#/add/selfuse' : '#/form/' + key;
-  let h = `<div class="large">${esc(title)}</div>` + (items.length ? summaryTile(items, types) + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
+  let h = '' + (items.length ? summaryTile(items, types) + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
   if (items.length && UPDATABLE.includes(key)) h += `<a class="btn" href="#/update/${key}">Update Current Values</a>`;
   return { title, back, right: `<a class="plus" href="${addHref}" aria-label="Add">+</a>`, html: h, tab: 'home' };
 }
@@ -638,10 +677,10 @@ function insuranceList(group) {
   if (!['personal', 'company'].includes(group)) return notFound();
   const items = ofTypes(ORDER[group]);
   const cover = sum(items, a => num(a.data.cover));
-  const annual = sum(items, a => num(a.data.premium) * (a.data.months ? a.data.months.split(',').filter(Boolean).length : 0));
+  const annual = sum(items, a => num(a.data.premium) * pdatesOf(a).length);
   let h = items.length ? `<div class="summary ${group === 'company' ? 'one' : ''}"><div><span>Total Cover</span><b>${money(cover)}</b></div>${group === 'personal' ? `<div><span>Yearly Premium</span><b>${money(annual)}</b></div>` : ''}</div>` + items.map(card).join('')
     : `<div class="card"><div class="empty">No policies added yet.</div></div>`;
-  return { title: group === 'personal' ? 'Personal' : 'Company', back: '#/insurance', large: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance',
+  return { title: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance', back: '#/insurance', large: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance',
     right: `<a class="plus" href="#/add/insurance/${group}">+</a>`, html: h, tab: 'home' };
 }
 
@@ -651,30 +690,31 @@ function updatePage(key) {
   const title = key === 'realestate' ? 'Real Estate & Gold' : T[key].label;
   const back = key === 'realestate' ? '#/realestate' : '#/list/' + key;
   const today = todayISO();
+  const cal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
   const blocks = items.map(a => {
     const c = CONTRIB[a.type], inv = invVal(a), sip = c ? num(a.data[c.k]) : 0;
-    const field = (lab, name, val, type) => `<label class="row"><span class="l">${lab}</span>${type === 'number' ? '<span class="pre">₹</span>' : ''}<input name="${a.id}__${name}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any" placeholder="0"' : ''} value="${esc(val)}"></label>`;
-    let rows = '';
-    if (c) rows += `<div class="row"><span class="l">Invested so far</span><span class="v">${money(inv)}</span></div>`
-      + field(c.lab, 'sip', sip || '', 'number')
-      + `<label class="row"><span class="l">Add to investments</span><input type="checkbox" name="${a.id}__add" ${sip > 0 ? 'checked' : ''}></label>`
-      + field('Investment date', 'date', today, 'date')
-      + `<div class="row"><span class="l">Total investment</span><b class="v" data-tot>${money(inv + sip)}</b></div>`;
-    else if (T[a.type].cat === 'selfuse') rows += `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>`;
-    rows += field('Current value', 'cur', a.data.current ?? '', 'number');
+    const cur = `<input class="curin" name="${a.id}__cur" type="number" inputmode="decimal" step="any" placeholder="Current value" aria-label="Current value">`;
+    let rows;
+    if (c) rows = `<div class="row"><span class="l">Invested so far</span><span class="v">${money(inv)}</span></div>
+      <div class="row sp"><div class="lft"><span class="pre">₹</span><input class="sipin" name="${a.id}__sip" type="number" inputmode="decimal" step="any" placeholder="${a.type === 'mf' ? 'SIP' : 'Amount'}" value="${sip || ''}" aria-label="${esc(c.lab)}"><input class="chk" type="checkbox" name="${a.id}__add" ${sip > 0 ? 'checked' : ''} aria-label="Add to investments"></div>
+        <b class="v" data-tot>${money(inv + sip)}</b></div>
+      <div class="row sp"><label class="dpick" title="Investment date">${cal}<span class="dtxt">${esc(fmtShort(today))}</span><input type="date" name="${a.id}__date" value="${today}" aria-label="Investment date"></label>${cur}</div>`;
+    else rows = (T[a.type].cat === 'selfuse' ? `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>` : '') + `<div class="row">${cur}</div>`;
     return `<div class="gtitle">${esc(ttl(a))} · now ${money(curVal(a))}</div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
   }).join('');
-  const h = `<div class="large">Update Values</div><form id="f">${blocks}
-    <div class="gfoot">“Add to investments” records the amount above as a new dated investment, so XIRR stays accurate. Untick it if you skipped this month. Every update is also saved as a dated snapshot for Analytics.</div></form>`;
+  const h = `<form id="f">${blocks}
+    <div class="gfoot">Tick the box to add the amount on the left as a new investment on the date chosen with the calendar. Untick it if you skipped this month. Type the new current value in the box on the right (leave it empty to keep the old one). Each update is also saved as a dated snapshot for Analytics.</div></form>`;
   return { title: 'Update ' + title, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
       const f = $('#f');
       const recalc = () => f.querySelectorAll('.group[data-id]').forEach(g => {
+        const dt = g.querySelector('.dtxt'); if (dt) dt.textContent = fmtShort(g.querySelector('[name$="__date"]').value);
         const tot = g.querySelector('[data-tot]'); if (!tot) return;
         const sip = num(g.querySelector('[name$="__sip"]').value), add = g.querySelector('[name$="__add"]').checked;
         tot.textContent = money(num(g.dataset.inv) + (add && sip > 0 ? sip : 0));
       });
       f.addEventListener('input', recalc); f.addEventListener('change', recalc);
+      f.addEventListener('click', e => { const d = e.target.closest('.dpick'); if (d) { try { d.querySelector('input').showPicker(); } catch (x) {} } });
       f.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(e.target), changed = [];
@@ -713,6 +753,7 @@ function addPage(a, b) {
     html: `<div class="group">${list.map(t => item('#/form/' + t, T[t].ico, T[t].c, T[t].label)).join('')}</div>` };
 }
 
+const pdRow = v => `<div class="pdrow"><input type="date" class="pd" value="${esc(v || '')}" aria-label="Premium date"><button type="button" class="pddel" aria-label="Remove">−</button></div>`;
 const txRow = x => `<div class="txrow"><input type="date" class="td" value="${esc(x.date || '')}" aria-label="Date"><input type="number" inputmode="decimal" step="any" class="ta" placeholder="Amount ₹" value="${esc(x.amt ?? '')}" aria-label="Amount"><button type="button" class="txdel" aria-label="Remove">−</button></div>`;
 function fieldHTML(f, v) {
   const val = v ?? '';
@@ -724,6 +765,10 @@ function fieldHTML(f, v) {
     case 'months': {
       const on = String(val).split(',').map(s => s.trim()).filter(Boolean);
       return row(`${lbl}<div class="chips">${MONTHS.map(mo => `<button type="button" class="chip ${on.includes(mo) ? 'on' : ''}" data-chip="${mo}">${mo}</button>`).join('')}</div><input type="hidden" name="months" value="${esc(on.join(','))}">`, 'col');
+    }
+    case 'dates': {
+      const list = Array.isArray(v) && v.length ? v : [''];
+      return row(`${lbl}<div class="pds">${list.map(pdRow).join('')}</div><button type="button" class="pdadd">＋ Add premium date</button><div class="txsum">Repeats every year on each date.</div>`, 'col');
     }
     case 'txs': {
       const list = Array.isArray(v) && v.length ? v : [{ date: todayISO(), amt: '' }];
@@ -743,14 +788,15 @@ function formPage(type, id) {
   if (id && !existing) return notFound();
   const d = existing ? existing.data : {};
   const initTx = existing ? txOf(existing) : [];
+  const initPd = existing ? pdatesOf(existing) : [];
   const back = existing ? (t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? '#/realestate' : '#/list/' + type) : '#/add';
   const home = t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? '#/realestate' : '#/list/' + type;
   const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
   const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
-  const h = `<div class="large">${existing ? 'Edit' : 'Add'} ${esc(label)}</div>
-    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : d[f.k])).join('')}</div>${docs}
+  const h = `
+    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : d[f.k])).join('')}</div>${docs}
     ${existing ? '' : ''}</form>${remote() ? '' : '<div class="gfoot">Local mode: document uploads need Google Drive keys (Settings › Add Keys).</div>'}`;
-  return { title: label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
+  return { title: (existing ? 'Edit ' : 'Add ') + label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
       const form = $('#f');
       const raw = () => { const o = {}; new FormData(form).forEach((v, k) => { if (k !== '_docs') o[k] = v; }); return o; };
@@ -760,6 +806,9 @@ function formPage(type, id) {
       const calc = () => { if (!box) return; sumEl.textContent = 'Total invested ' + money([...box.querySelectorAll('.ta')].reduce((tt, i) => tt + num(i.value), 0)); };
       calc(); if (box) box.addEventListener('input', calc);
       form.addEventListener('click', e => {
+        if (e.target.closest('.pdadd')) { form.querySelector('.pds').insertAdjacentHTML('beforeend', pdRow('')); return; }
+        const pdd = e.target.closest('.pddel');
+        if (pdd) { const pb = form.querySelector('.pds'); if (pb.children.length > 1) pdd.parentElement.remove(); else pdd.parentElement.querySelector('input').value = ''; return; }
         if (e.target.closest('.txadd')) { box.insertAdjacentHTML('beforeend', txRow({ date: todayISO(), amt: '' })); calc(); return; }
         const del = e.target.closest('.txdel');
         if (del) {
@@ -775,7 +824,7 @@ function formPage(type, id) {
         e.preventDefault();
         const r = raw(), data = {};
         t.fields.forEach(f => {
-          if (f.t === 'file' || f.t === 'txs') return;
+          if (f.t === 'file' || f.t === 'txs' || f.t === 'dates') return;
           let v = r[f.k] ?? '';
           if (f.show && !f.show(r)) v = '';
           if (f.t === 'number' && v !== '') v = Number(v);
@@ -787,6 +836,7 @@ function formPage(type, id) {
           list.sort(byDate);
           data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0);
         }
+        if (t.fields.some(f => f.t === 'dates')) data.pdates = [...new Set([...form.querySelectorAll('.pd')].map(i => i.value).filter(Boolean))].sort();
         const files = [...(form.elements._docs?.files || [])];
         const ok = await run(async () => {
           const docsOut = existing ? [...(existing.docs || [])] : [];
@@ -882,7 +932,7 @@ function render() {
   const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const v = view(p);
   const bar = v.nobar ? '' : `<div class="bar"><a class="back" href="${v.back || '#/home'}" ${v.back ? '' : 'style="visibility:hidden"'}>‹ Back</a><div class="bt">${esc(v.title || '')}</div><div class="right">${v.right || ''}</div></div>`;
-  $('#app').innerHTML = `<div class="page">${bar}${v.large ? `<div class="large">${esc(v.large)}</div>` : ''}${v.html}</div>`;
+  $('#app').innerHTML = `<div class="page">${bar}${v.html}</div>`;
   // list pages already include their own large title in html
   document.querySelectorAll('#tabbar [data-tab]').forEach(el => el.classList.toggle('on', el.dataset.tab === v.tab));
   $('#tabbar').classList.toggle('off', !!v.notabs);
