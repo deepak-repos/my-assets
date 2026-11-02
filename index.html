@@ -60,15 +60,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* hero */
-.hero{position:relative;margin:0 16px 16px;padding:22px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
+.hero{position:relative;margin:0 16px 16px;padding:15px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
   background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .hero .lbl{font-size:14px;opacity:.85}
-.hero .amt{font-size:38px;font-weight:700;letter-spacing:-1px;margin:2px 0 18px}
+.hero .amt{font-size:38px;font-weight:700;letter-spacing:-1px;margin:0 0 8px}
 .hero .cols{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.25)}
-.hero .cols>div{padding:24px 8px 25px}
-.hero .cols>div+div{border-left:1px solid rgba(255,255,255,.25)}
+.hero .cols>*{display:block;padding:24px 8px 25px;color:inherit;text-decoration:none}
+.hero .cols>*+*{border-left:1px solid rgba(255,255,255,.25)}
 .hero .cols span,.hero .rw span{display:block;font-size:13px;opacity:.85}
 .hero .cols b{display:block;font-size:17px;font-weight:600}
 .hero .rw{padding:14px 8px 16px;border-top:1px solid rgba(255,255,255,.25)}
@@ -79,10 +79,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .card.warm{--card:#f6ece1;--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);--fill:rgba(78,53,36,.10);background:var(--card);color:var(--text)}
 .card.warm .dl{color:var(--text)}
 .card.warm{--glow:rgba(185,119,47,.6)}
-.card.glow{animation:glow 3s ease-in-out infinite}
+.dtile.glow{--glow:rgba(185,119,47,.6);animation:glow 3s ease-in-out infinite}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .dtile.glow{--glow:rgba(232,164,92,.55)}}
+:root[data-theme=dark] .dtile.glow{--glow:rgba(232,164,92,.55)}
+.card.outer{background:#f6ece1;padding:10px;display:flex;flex-direction:column;gap:8px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22}}
+:root[data-theme=dark] .card.outer{background:#3a2c22}
+.dtile.in{background:var(--card);border-radius:0;box-shadow:none}
+.dtile.in>summary{padding:13px 14px}
+.dtile.in .body{padding:0 14px 12px}
 @keyframes glow{0%,62%,100%{box-shadow:0 0 0 0 rgba(0,0,0,0),inset 0 0 0 1.5px rgba(0,0,0,0)}
   80%{box-shadow:0 0 10px 0 var(--glow),inset 0 0 0 1px var(--glow)}}
-@media (prefers-reduced-motion:reduce){.card.glow{animation:none;box-shadow:inset 0 0 0 1.5px var(--glow)}}
+@media (prefers-reduced-motion:reduce){.dtile.glow{animation:none;box-shadow:inset 0 0 0 1.5px var(--glow)}}
 .card.warm .pill.next{background:rgba(154,91,0,.14);color:#9a5b00}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12);--glow:rgba(232,164,92,.55)}
   :root:not([data-theme=light]) .card.warm .pill.next{background:rgba(255,159,10,.18);color:#ffb340}}
@@ -252,6 +260,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .savetile{display:block;width:100%;margin:8px 0 0;padding:16px;background:var(--card);color:var(--blue);font-size:17px;font-weight:600;text-align:center;border-top:.5px solid var(--sep);border-bottom:.5px solid var(--sep)}
 .ghead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 32px 6px}
 .ghead .gl{font-size:13px;color:var(--blue);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ghead .gr .gn{font-size:13px}
 .ghead .gr{font-size:12px;color:var(--sub);flex:none;text-transform:uppercase}
 </style>
 </head>
@@ -385,11 +394,11 @@ const T = {
   cother: { cat:'insurance', group:'company', label:'Others',             ico:'📄', c:'#8e8e93', fields:[...companyBase, NOTES, DOCS] },
 
   /* ---- Self use ---- */
-  house: { cat:'selfuse', label:'House', ico:'🏠', c:'#ff9f0a', title:d => d.name || 'House', sub:d => d.location || '',
+  house: { cat:'selfuse', label:'House', ico:'🏠', c:'#ff9f0a', title:d => d.name || 'House', sub:d => num(d.purchase) > 0 ? 'Purchased ' + money(num(d.purchase)) : '',
     fields:[tx('name','House Name',{req:1}), m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
-  land:  { cat:'selfuse', label:'Land',  ico:'🌳', c:'#34c759', title:d => d.name || 'Land', sub:d => d.location || '',
+  land:  { cat:'selfuse', label:'Land',  ico:'🌳', c:'#34c759', title:d => d.name || 'Land', sub:d => num(d.purchase) > 0 ? 'Purchased ' + money(num(d.purchase)) : '',
     fields:[tx('name','Land Name',{req:1}), m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
-  gold:  { cat:'selfuse', label:'Gold',  ico:'🪙', c:'#ffcc00', title:() => 'Gold', sub:() => '',
+  gold:  { cat:'selfuse', label:'Gold',  ico:'🪙', c:'#ffcc00', title:() => 'Gold', sub:d => num(d.purchase) > 0 ? 'Purchased ' + money(num(d.purchase)) : '',
     fields:[m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), DOCS] }
 };
 const ORDER = {
@@ -635,20 +644,22 @@ function home() {
   }
 
   h += `<section class="hero"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>
-    <div class="cols"><div><span>Property &amp; Gold</span><b>${C(real)}</b></div><div><span>Total Funds</span><b>${C(funds)}</b></div><div><span>Liquid Funds</span><b>${C(liquid)}</b></div></div></section>`;
+    <div class="cols"><a href="#/realestate"><span>Property &amp; Gold</span><b>${C(real)}</b></a><a href="#/funds"><span>Total Funds</span><b>${C(funds)}</b></a><a href="#/liquid"><span>Liquid Funds</span><b>${C(liquid)}</b></a></div></section>`;
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
-  h += `<details class="card dtile warm${upTot > 0 ? ' glow' : ''}"><summary><span class="dl">Premiums Due (in 90 days)</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
+  h += '<div class="card outer">';
+  h += `<details class="dtile in${upTot > 0 ? ' glow' : ''}"><summary><span class="dl">Premiums Due (in 90 days)</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
     `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('') +
     `<div class="tot"><span>Total</span><span>${money(upTot)}</span></div>`
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
 
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
-  h += `<details class="card dtile"><summary><span class="dl">Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
+  h += `<details class="dtile in"><summary><span class="dl">Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('') +
     `<div class="tot"><span>Total</span><span>${M(npTot)}</span></div>`
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
+  h += '</div>';
 
   const solo = (...args) => `<div class="group solo">${item(...args)}</div>`;      // every menu sits in its own tile
   const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
@@ -693,6 +704,19 @@ function card(a) {
     <button class="btn sm danger" data-del="${a.id}">Delete</button></div></div></details>`;
 }
 
+function fundsPage(kind) {
+  const liq = kind === 'liquid';
+  const types = liq ? ['mf', 'fd', 'sa'] : ORDER.investment;
+  const items = types.flatMap(t => ofTypes([t]));
+  let h;
+  if (items.length) {
+    const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
+    const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
+    h = `<div class="summary"><div><span>Invested</span><b>${money(inv)}</b></div><div><span>Current Value</span><b>${money(cur)}</b></div>
+      <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${money(Math.abs(g))} (${pc.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
+  } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
+  return { title: liq ? 'Liquid Funds' : 'Total Funds', back: '#/home', html: h, tab: 'home' };
+}
 const UPDATABLE = ['mf', 'sa', 'epf', 'ppf', 'nps', 'gratuity', 'realestate'];
 function listPage(key) {
   const types = GROUPS[key]; if (!types) return notFound();
@@ -737,7 +761,7 @@ function updatePage(key) {
         <b class="v" data-tot>${money(inv + sip)}</b></div>
       <div class="row sp"><label class="dpick" title="Investment date">${cal}<span class="dtxt">${esc(fmtShort(today))}</span><input type="date" name="${a.id}__date" value="${today}" aria-label="Investment date"></label>${cur}</div>`;
     else rows = (T[a.type].cat === 'selfuse' ? `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>` : '') + `<div class="row">${cur}</div>`;
-    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gr">Now - ${money(curVal(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
+    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gr">Now - <span class="gn">${money(curVal(a))}</span></span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
   }).join('');
   const h = `<form id="f">${blocks}<button class="savetile" type="submit">Save Current Value</button></form>`;
   return { title: 'Update ' + title, back, html: h, notabs: true,
@@ -967,6 +991,8 @@ function view(p) {
     case 'list': return listPage(b);
     case 'insurance': return b ? insuranceList(b) : insuranceMenu();
     case 'realestate': return listPage('realestate');
+    case 'funds': return fundsPage('funds');
+    case 'liquid': return fundsPage('liquid');
     case 'update': return updatePage(b);
     case 'add': return addPage(b, c);
     case 'form': return formPage(b, c);
