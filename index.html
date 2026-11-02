@@ -261,7 +261,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .acard .ttl small.xirr.dn{color:var(--red)}
 .txlist{max-height:200px;overflow:auto;padding-left:12px}
 .txlist .kv{font-size:14px}
-.summary .gain{display:flex;justify-content:space-between;gap:10px}
+.summary .gain{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
 .summary .gain em{font-style:normal;font-weight:600;font-size:13px}
 .group.solo{margin-bottom:12px}
 .savetile{display:block;width:100%;margin:8px 0 0;padding:16px;background:var(--card);color:var(--blue);font-size:17px;font-weight:600;text-align:center;border-top:.5px solid var(--sep);border-bottom:.5px solid var(--sep)}
@@ -683,10 +683,10 @@ function home() {
 function summaryTile(items, types) {
   const hasInv = types.some(t => INV_TYPES.includes(t) || T[t].fields.some(f => f.k === 'invested' || f.k === 'purchase'));
   const inv = sum(items, invVal), cur = sum(items, curVal);
-  if (!hasInv) return `<div class="summary one"><div><span>Current Value</span><b>${money(cur)}</b></div></div>`;
+  if (!hasInv) return `<div class="summary one"><div><span>Current Value</span><b>${fmtCr(cur)}</b></div></div>`;
   const g = cur - inv, p = inv ? (g / inv * 100) : 0, x = groupXirr(items);
-  return `<div class="summary"><div><span>Invested</span><b>${money(inv)}</b></div><div><span>Current Value</span><b>${money(cur)}</b></div>
-    ${inv ? `<div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${money(Math.abs(g))} (${p.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
+  return `<div class="summary"><div><span>Invested</span><b>${fmtCr(inv)}</b></div><div><span>Current Value</span><b>${fmtCr(cur)}</b></div>
+    ${inv ? `<div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${p.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
 }
 function showVal(f, v) {
   if (f.t === 'dates') return v.map(fmtDay).join(', ');
@@ -721,8 +721,8 @@ function fundsPage(kind) {
   if (items.length) {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
-    h = `<div class="summary"><div><span>Invested</span><b>${money(inv)}</b></div><div><span>Current Value</span><b>${money(cur)}</b></div>
-      <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${money(Math.abs(g))} (${pc.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
+    h = `<div class="summary"><div><span>Invested</span><b>${fmtCr(inv)}</b></div><div><span>Current Value</span><b>${fmtCr(cur)}</b></div>
+      <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%) ${g >= 0 ? 'gain' : 'loss'}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: '#/home', html: h, tab: 'home' };
 }
