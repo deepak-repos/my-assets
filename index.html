@@ -65,8 +65,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .hero .top{display:flex;justify-content:center;align-items:baseline;gap:8px;padding:0 12px;margin-bottom:14px;white-space:nowrap}
-.hero .lbl{font-size:14px;opacity:.85}
-.hero .amt{font-size:30px;font-weight:700;letter-spacing:-.8px;margin:0}
+.hero .lbl{font-size:clamp(18px,6vw,30px);font-weight:500;letter-spacing:-.8px;opacity:.85}
+.hero .amt{font-size:clamp(18px,6vw,30px);font-weight:700;letter-spacing:-.8px;margin:0}
 .hero .cols{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.25)}
 .hero .cols>*{display:block;padding:24px 8px 25px;color:inherit;text-decoration:none}
 .hero .cols>*+*{border-left:1px solid rgba(255,255,255,.25)}
@@ -112,6 +112,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .dtile .body,.dtile .body .li b,.dtile .body .li .r,.dtile .body .tot{font-size:14px}
 .dtile .body .li small{font-size:12px}
 .dtile .body{padding:0 16px 14px;border-top:.5px solid var(--sep)}
+.dtile.prem .body{padding-left:36px}
 .card .empty{color:var(--sub);font-size:14px;padding:4px 0}
 .li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--sep)}
 .li:first-of-type{border-top:0}
@@ -129,8 +130,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .group{margin:0 16px 22px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
 .gsec{display:flex;justify-content:space-between;align-items:center;margin:20px 32px 10px;font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--sub)}
 .gsec span{display:flex;align-items:center;gap:8px}.gsec i{width:10px;height:10px;border-radius:50%}.gsec em{font-style:normal;font-weight:600}
+.ggrp>summary{list-style:none;display:flex;align-items:center;gap:10px;margin:0 16px 14px;padding:16px;border-radius:18px;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,var(--g1),var(--g2));font-size:17px;font-weight:700;box-shadow:var(--shadow)}
+.ggrp>summary::-webkit-details-marker{display:none}
+.ggrp>summary svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ggrp>summary .gn{flex:1;min-width:0}
+.ggrp>summary em{font-style:normal;font-size:13px;font-weight:600;background:rgba(255,255,255,.25);border-radius:99px;padding:2px 9px}
+.ggrp>summary::after{content:"";width:8px;height:8px;border-right:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(45deg);margin:-3px 4px 0 2px;transition:transform .2s;flex:none}
+.ggrp[open]>summary::after{transform:rotate(-135deg);margin-top:3px}
 .goal{position:relative;display:flex;align-items:center;gap:14px;margin:0 16px 14px;padding:16px;border-radius:20px;background:var(--card);box-shadow:var(--shadow);color:inherit;overflow:hidden}
-.goal::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:linear-gradient(90deg,var(--g1),var(--g2))}
 .g-ring{position:relative;width:92px;height:92px;flex:none}
 .g-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .g-ring .trk{fill:none;stroke:var(--fill);stroke-width:10}
@@ -159,12 +167,12 @@ button.btn{width:calc(100% - 32px)}
 .ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:18px;flex:none;color:#fff}
 
 /* asset cards */
-.summary{text-align:center;margin:0 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px;border-radius:20px;color:#fff;
+.summary{text-align:center;margin:0 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;row-gap:24px;padding:18px;border-radius:20px;color:#fff;
   background:#2A4D75}
 .summary.one{grid-template-columns:1fr}
-.summary span{display:block;font-size:13px;opacity:.85}
+.summary span{display:block;font-size:13px;opacity:.85;margin-bottom:6px}
 .summary b{font-size:22px;font-weight:700}
-.summary .gain{grid-column:1/-1;font-size:13px;opacity:.95;padding-top:10px;border-top:1px solid rgba(255,255,255,.25)}
+.summary .gain{grid-column:1/-1;font-size:13px;opacity:.95;padding-top:18px;border-top:1px solid rgba(255,255,255,.25)}
 .acard{margin:0 16px 12px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
 .acard summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
 .acard summary::-webkit-details-marker{display:none}
@@ -282,6 +290,7 @@ button.btn{width:calc(100% - 32px)}
 .txlist{max-height:200px;overflow:auto;padding-left:12px}
 .txlist .kv{font-size:14px}
 .summary .gain{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+.summary .gain span{margin-bottom:0}
 .summary .gain em{font-style:normal;font-weight:600;font-size:13px}
 .group.solo{margin-bottom:12px}
 .savetile{display:block;width:100%;margin:8px 0 0;padding:16px;background:var(--card);color:var(--blue);font-size:17px;font-weight:600;text-align:center;border-top:.5px solid var(--sep);border-bottom:.5px solid var(--sep)}
@@ -451,7 +460,7 @@ const persist = () => { store.set('assets', S.assets); store.set('history', S.hi
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
-const subOf = a => { if (a.type === 'mf') return money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
+const subOf = a => { if (a.type === 'mf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
 
 function fdValue(d, at) {
   // Quarterly compounding on the interest rate; simple interest on the part-quarter, like bank accrual.
@@ -769,8 +778,8 @@ function listPage(key) {
 function insuranceMenu() {
   const pc = ofTypes(ORDER.personal).length, cc = ofTypes(ORDER.company).length;
   return { title: 'Insurance', back: '#/home', large: 'Insurance', tab: 'home',
-    html: `<div class="group">${item('#/insurance/personal', '👤', '#0a84ff', 'Personal', '', pc + (pc === 1 ? ' policy' : ' policies'))}
-      ${item('#/insurance/company', '🏢', '#5e5ce6', 'Company', '', cc + (cc === 1 ? ' policy' : ' policies'))}</div>` };
+    html: soloList([item('#/insurance/personal', '👤', '#0a84ff', 'Personal', '', pc + (pc === 1 ? ' policy' : ' policies')),
+      item('#/insurance/company', '🏢', '#5e5ce6', 'Company', '', cc + (cc === 1 ? ' policy' : ' policies'))]) };
 }
 function insuranceList(group) {
   if (!['personal', 'company'].includes(group)) return notFound();
@@ -990,16 +999,24 @@ function goalCard(g, c1, c2) {
   return `<a class="goal" href="#/goal/${esc(g.id)}" style="--g1:${c1};--g2:${c2}">
     <div class="g-ring"><svg viewBox="0 0 108 108"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
       <circle class="trk" cx="54" cy="54" r="${R}"/><circle class="prg" cx="54" cy="54" r="${R}" stroke="url(#${id})" stroke-dasharray="${C.toFixed(2)}" style="--c:${C.toFixed(2)};stroke-dashoffset:${(C * (1 - shown / 100)).toFixed(2)}"/></svg>
-      <div class="g-pct">${st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0)}%<small>achieved</small></div></div>
+      <div class="g-pct">${st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0)}%</div></div>
     <div class="g-info"><div class="g-name">${esc(g.name)}</div>
       <div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></a>`;
 }
+const GOPEN = new Set();                                   // goal groups stay open across re-renders, collapsed by default
+window.gToggle = (n, o) => { if (o) GOPEN.add(n); else GOPEN.delete(n); };
+const GICON = {
+  'Long Term': '<svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><path d="M9 10V4l5 2-5 2"/></svg>',
+  'Mid Term': '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  'Short Term': '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+  'Fund Collection': '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>'
+};
 const goals = () => {
   let h = '';
   GOAL_TYPES.forEach(([tn, c1, c2]) => {
     const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
     if (!list.length) return;
-    h += `<div class="gsec"><span><i style="background:linear-gradient(135deg,${c1},${c2})"></i>${tn}</span><em>${list.length}</em></div>` + list.map(g => goalCard(g, c1, c2)).join('');
+    h += `<details class="ggrp" style="--g1:${c1};--g2:${c2}" ${GOPEN.has(tn) ? 'open' : ''} ontoggle="gToggle('${tn}',this.open)"><summary>${GICON[tn]}<span class="gn">${tn}</span><em>${list.length}</em></summary>` + list.map(g => goalCard(g, c1, c2)).join('') + `</details>`;
   });
   if (!h) h = `<div class="soon-page"><div class="big">🎯</div><h2>No goals yet</h2><p>Tap + to set a target and link it to your investments.</p></div>`;
   return { title: 'Goals', large: 'Goals', tab: 'goals', right: `<a class="plus" href="#/goal/new" aria-label="Add goal">+</a>`, html: h };
@@ -1070,9 +1087,9 @@ const notFound = () => ({ title: 'Not found', back: '#/home', html: `<div class=
 function settingsPage(sub) {
   const theme = store.get('theme', 'auto');
   if (!sub) return { title: 'Settings', back: '#/more', large: 'Settings', tab: 'more',
-    html: `<div class="group">${item('#/settings/appearance', '🎨', '#5e5ce6', 'Appearance', theme[0].toUpperCase() + theme.slice(1))}
-      ${item('#/settings/keys', '🔑', '#ff9f0a', 'Add Keys', remote() ? 'Connected' : 'Not connected')}
-      ${item('#/settings/lock', '🔒', '#34c759', 'App Lock', store.get('lock') ? 'On' : 'Off')}</div>` };
+    html: soloList([item('#/settings/appearance', '🎨', '#5e5ce6', 'Appearance', theme[0].toUpperCase() + theme.slice(1)),
+      item('#/settings/keys', '🔑', '#ff9f0a', 'Add Keys', remote() ? 'Connected' : 'Not connected'),
+      item('#/settings/lock', '🔒', '#34c759', 'App Lock', store.get('lock') ? 'On' : 'Off')]) };
   if (sub === 'appearance') return { title: 'Appearance', back: '#/settings', large: 'Appearance', tab: 'more',
     html: `<div class="seg">${['auto', 'light', 'dark'].map(x => `<button class="${theme === x ? 'on' : ''}" data-pick="${x}">${x[0].toUpperCase() + x.slice(1)}</button>`).join('')}</div>
       <div class="gfoot">Auto follows your phone's light/dark setting.</div>` };
