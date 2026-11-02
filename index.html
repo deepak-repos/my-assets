@@ -52,7 +52,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar .right{margin-left:auto;flex:none;color:var(--blue);font-size:19px;display:flex;gap:14px;align-items:center}
 .bar .right .link{color:var(--blue);font-weight:600}
-.bar .right .plus{font-size:30px;line-height:1;font-weight:300}
+.bar .right .plus{position:relative;flex:none;width:36px;height:36px;border-radius:50%;background:var(--fill);color:var(--blue);font-size:0;margin-right:6px}
+.bar .right .plus::before,.bar .right .plus::after{content:"";position:absolute;left:50%;top:50%;background:currentColor;border-radius:2px;transform:translate(-50%,-50%)}
+.bar .right .plus::before{width:16px;height:2.4px}.bar .right .plus::after{width:2.4px;height:16px}
 .head{padding:calc(18px + env(safe-area-inset-top)) 20px 14px;display:flex;justify-content:space-between;align-items:flex-start}
 .head h1{margin:0;font-size:32px;font-weight:700;letter-spacing:-.6px}
 .head small{display:block;color:var(--sub);font-size:13px;margin-top:2px}
@@ -60,7 +62,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* hero */
-.hero{position:relative;margin:0 16px 16px;padding:15px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
+.hero{position:relative;margin:0 16px 16px;padding:18px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
   background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -136,7 +138,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .ggrp:first-of-type{margin-top:-22px}
 .gbody{display:flow-root;margin-top:12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
 .goal{display:block;margin:0;padding:16px;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.goal:last-child:not(.open){padding-bottom:48px}
+.goal:last-child:not(.open){padding-bottom:43px}
 .goal{transition:padding .3s}
 .g-name a{color:inherit;opacity:.55;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 .g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
@@ -809,7 +811,7 @@ function updatePage(key) {
         <b class="v" data-tot>${money(inv + sip)}</b></div>
       <div class="row sp"><label class="dpick" title="Investment date">${cal}<span class="dtxt">${esc(fmtShort(today))}</span><input type="date" name="${a.id}__date" value="${today}" aria-label="Investment date"></label>${cur}</div>`;
     else rows = (T[a.type].cat === 'selfuse' ? `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>` : '') + `<div class="row">${cur}</div>`;
-    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gr">Now - <span class="gn">${money(curVal(a))}</span></span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
+    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
   }).join('');
   const h = `<form id="f">${blocks}<button class="savetile" type="submit">Save Current Value</button></form>`;
   return { title: 'Update ' + title, back, html: h, notabs: true,
