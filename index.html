@@ -83,7 +83,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tglow{--glow:rgba(255,190,110,.8)}}
 :root[data-theme=dark] .tglow{--glow:rgba(255,190,110,.8)}
 @keyframes tglow{0%,62%,100%{text-shadow:0 0 0 rgba(0,0,0,0)}80%{text-shadow:0 0 9px var(--glow),0 0 3px var(--glow)}}
-@media (prefers-reduced-motion:reduce){.tglow{animation:none}}
+@keyframes iglow{0%,62%,100%{filter:none}80%{filter:drop-shadow(0 0 4px var(--glow))}}
+.tglow svg{animation:iglow 3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.tglow,.tglow svg{animation:none}}
 .card.outer{background:#f6ece1;padding:0;overflow:hidden}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22}}
 :root[data-theme=dark] .card.outer{background:#3a2c22}
@@ -103,7 +105,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .dtile{padding:0;border-radius:10px}
 .dtile>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;font-size:14px;font-weight:600}
 .dtile>summary::-webkit-details-marker{display:none}
-.dtile .dl{flex:1;min-width:0;color:var(--text);font-weight:700}
+.dtile .dl{flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:var(--text);font-weight:700}
+.dtile .dl svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .dtile .dr{flex:none}
 .dtile .body,.dtile .body .li b,.dtile .body .li .r,.dtile .body .tot{font-size:14px}
 .dtile .body .li small{font-size:12px}
@@ -350,7 +353,7 @@ const T = {
       NOTES, DOCS ] },
   fd: { cat:'investment', label:'Fixed Deposit', ico:'🏦', c:'#ff9f0a',
     title:d => [d.owner, d.bank].filter(Boolean).join(' · ') || 'Fixed Deposit',
-    sub:d => [d.maturityDate && 'Matures ' + fmtDate(d.maturityDate), d.accountNo && '*' + String(d.accountNo).slice(-4)].filter(Boolean).join(' · '),
+    sub:d => [d.maturityDate && fmtDate(d.maturityDate), d.accountNo && '*' + String(d.accountNo).slice(-4)].filter(Boolean).join(' · '),
     fields:[
       tx('owner','Owner'), tx('bank','Bank Name',{req:1}), tx('accountNo','Account Number'),
       m('invested','Invested Amount',{req:1}), m('maturityAmt','Maturity Amount'),
@@ -629,6 +632,8 @@ function nextMonthPayments() {
    --------------------------------------------------------------------- */
 function home() {
   const M = v => S.hide ? '••••' : money(v), C = v => S.hide ? '••••' : fmtCr(v);
+  const icoShield = '<svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6z"/></svg>';
+  const icoTrend = '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>';
   const eyeOn = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
   const eyeOff = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg>';
   const inv = byCat('investment'), selfuse = byCat('selfuse');
@@ -651,14 +656,14 @@ function home() {
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
-  h += `<details class="dtile in prem"><summary><span class="dl">Premiums Due (in 90 days)</span><span class="dr${upTot > 0 ? ' tglow' : ''}">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
+  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' tglow' : ''}">${icoShield}Premiums Due (in 90 days)</span><span class="dr${upTot > 0 ? ' tglow' : ''}">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
     `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('') +
     `<div class="tot"><span>Total</span><span>${money(upTot)}</span></div>`
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
 
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
-  h += `<details class="dtile in"><summary><span class="dl">Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
+  h += `<details class="dtile in prem"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('') +
     `<div class="tot"><span>Total</span><span>${M(npTot)}</span></div>`
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
