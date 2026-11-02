@@ -715,11 +715,11 @@ function home() {
 
   const solo = (...args) => `<div class="group solo hm">${item(...args)}</div>`;      // every menu sits in its own tile
   const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
-    solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)), ofTypes([t]).length + (ofTypes([t]).length > 1 ? ' items' : ' item'))).join('');
-  const nIns = byCat('insurance').length, nProp = selfuse.length, pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
+    solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)))).join('');
+  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
   h += rows
-    + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '', nIns + (nIns === 1 ? ' policy' : ' policies'))
-    + solo('#/realestate', '🏡', '#ff9f0a', 'Property & Gold', C(real), nProp + (nProp === 1 ? ' item' : ' items'));
+    + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')
+    + solo('#/realestate', '🏡', '#ff9f0a', 'Property & Gold', C(real));
   return { html: h, tab: 'home', nobar: true };
 }
 
@@ -781,10 +781,9 @@ function listPage(key) {
 }
 
 function insuranceMenu() {
-  const pc = ofTypes(ORDER.personal).length, cc = ofTypes(ORDER.company).length;
   return { title: 'Insurance', back: '#/home', large: 'Insurance', tab: 'home',
-    html: soloList([item('#/insurance/personal', '👤', '#0a84ff', 'Personal', '', pc + (pc === 1 ? ' policy' : ' policies')),
-      item('#/insurance/company', '🏢', '#5e5ce6', 'Company', '', cc + (cc === 1 ? ' policy' : ' policies'))]) };
+    html: soloList([item('#/insurance/personal', '👤', '#0a84ff', 'Personal', ''),
+      item('#/insurance/company', '🏢', '#5e5ce6', 'Company', '')]) };
 }
 function insuranceList(group) {
   if (!['personal', 'company'].includes(group)) return notFound();
