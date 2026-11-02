@@ -131,9 +131,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .gsec{display:flex;justify-content:space-between;align-items:center;margin:20px 32px 10px;font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--sub)}
 .gsec span{display:flex;align-items:center;gap:8px}.gsec i{width:10px;height:10px;border-radius:50%}.gsec em{font-style:normal;font-weight:600}
 .ggrp{margin:0 16px 6px}
-.ghd{display:flex;align-items:center;gap:10px;padding:18px 4px 10px;border-bottom:.5px solid var(--sep);color:var(--text);font-size:17px;font-weight:700}
+.ghd{display:flex;align-items:center;gap:10px;padding:18px 4px 0;color:var(--text);font-size:17px;font-weight:700}
 .ghd svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--g1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.gbody{display:flow-root;margin-top:14px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
+.ggrp:first-child .ghd{padding-top:2px}
+.gbody{display:flow-root;margin-top:12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
 .goal{display:block;margin:0;padding:16px;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .goal+.goal{border-top:.5px solid var(--sep)}
 .g-name a{color:inherit;opacity:.55;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
@@ -166,12 +167,12 @@ button.btn{width:calc(100% - 32px)}
 .ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:18px;flex:none;color:#fff}
 
 /* asset cards */
-.summary{text-align:center;margin:0 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;row-gap:24px;padding:18px;border-radius:20px;color:#fff;
+.summary{text-align:center;margin:0 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;row-gap:12px;padding:28px 18px;border-radius:20px;color:#fff;
   background:#2A4D75}
-.summary.one{grid-template-columns:1fr}
+.summary.one{grid-template-columns:1fr;padding:18px}
 .summary span{display:block;font-size:13px;opacity:.85;margin-bottom:6px}
 .summary b{font-size:22px;font-weight:700}
-.summary .gain{grid-column:1/-1;font-size:13px;opacity:.95;padding-top:18px;border-top:1px solid rgba(255,255,255,.25)}
+.summary .gain{grid-column:1/-1;font-size:13px;opacity:.95;padding-top:10px;border-top:1px solid rgba(255,255,255,.25)}
 .acard{margin:0 16px 12px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
 .acard summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
 .acard summary::-webkit-details-marker{display:none}
