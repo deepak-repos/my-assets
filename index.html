@@ -130,20 +130,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .group{margin:0 16px 22px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
 .gsec{display:flex;justify-content:space-between;align-items:center;margin:20px 32px 10px;font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--sub)}
 .gsec span{display:flex;align-items:center;gap:8px}.gsec i{width:10px;height:10px;border-radius:50%}.gsec em{font-style:normal;font-weight:600}
-.ggrp{margin:0 16px 14px}
-.ggrp>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:16px;background:var(--card);border-radius:18px;box-shadow:var(--shadow);color:var(--text);cursor:pointer;font-size:17px;font-weight:700}
-.ggrp>summary::-webkit-details-marker{display:none}
-.ggrp>summary svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--g1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.ggrp>summary .gn{flex:1;min-width:0}
-.ggrp>summary em{font-style:normal;font-size:17px;font-weight:700;color:var(--text)}
-.ggrp>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--sub);border-bottom:2px solid var(--sub);transform:rotate(45deg);margin:-3px 4px 0 2px;transition:transform .3s;flex:none}
-.ggrp[open]>summary::after{transform:rotate(-135deg);margin-top:3px}
+.ggrp{margin:0 16px 6px}
+.ghd{display:flex;align-items:center;gap:10px;padding:18px 4px 10px;border-bottom:.5px solid var(--sep);color:var(--text);font-size:17px;font-weight:700}
+.ghd svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--g1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .gbody{display:flow-root}
-.goal{display:block;margin:14px 0 0;padding:16px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit}
+.goal{display:block;margin:14px 0 0;padding:16px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.g-name a{color:inherit;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
+.g-more>div{overflow:hidden;min-height:0}
+.goal.open .g-more{grid-template-rows:1fr}
+.goal .g-bar{margin-bottom:0;transition:margin .3s}.goal.open .g-bar{margin-bottom:12px}
 .g-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}
 .g-name{font-size:17px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .g-pct{flex:none;font-size:17px;font-weight:700}
-.g-bar{height:14px;border-radius:99px;background:var(--fill);overflow:hidden;margin-bottom:12px}
+.g-bar{height:14px;border-radius:99px;background:var(--fill);overflow:hidden}
 .g-bar i{display:block;height:100%;border-radius:99px}
 .g-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .g-stats>div{text-align:center}.g-stats>div:first-child{justify-self:start}.g-stats>div:nth-child(2){justify-self:center}.g-stats>div:last-child{justify-self:end}
@@ -995,12 +995,12 @@ let gradSeq = 0;
 function goalCard(g, c1, c2) {
   const st = goalStats(g), shown = Math.max(0, Math.min(st.pct, 100));
   const p = st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0);
-  return `<a class="goal" href="#/goal/${esc(g.id)}">
-    <div class="g-top"><div class="g-name">${esc(g.name)}</div><div class="g-pct">${p}%</div></div>
+  return `<div class="goal${GEXP.has(g.id) ? ' open' : ''}" data-gid="${esc(g.id)}">
+    <div class="g-top"><div class="g-name"><a href="#/goal/${esc(g.id)}">${esc(g.name)}</a></div><div class="g-pct">${p}%</div></div>
     <div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div>
-    <div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></a>`;
+    <div class="g-more"><div><div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></div></div>`;
 }
-let GOPEN = '';                                            // the one open goal group (kept across re-renders); collapsed by default
+const GEXP = new Set();                                 // goal cards whose details are expanded (kept across re-renders)
 const GICON = {
   'Long Term': '<svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><path d="M9 10V4l5 2-5 2"/></svg>',
   'Mid Term': '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
@@ -1012,9 +1012,8 @@ const goals = () => {
   GOAL_TYPES.forEach(([tn, c1, c2]) => {
     const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
     if (!list.length) return;
-    h += `<details class="ggrp" data-t="${tn}" style="--g1:${c1};--g2:${c2}" ${GOPEN === tn ? 'open' : ''}><summary>${GICON[tn]}<span class="gn">${tn}</span><em>${list.length}</em></summary><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></details>`;
+    h += `<section class="ggrp" style="--g1:${c1};--g2:${c2}"><div class="ghd">${GICON[tn]}<span class="gn">${tn}</span></div><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></section>`;
   });
-  if (!h) GOPEN = '';
   if (!h) h = `<div class="soon-page"><div class="big">🎯</div><h2>No goals yet</h2><p>Tap + to set a target and link it to your investments.</p></div>`;
   return { title: 'Goals', large: 'Goals', tab: 'goals', right: `<a class="plus" href="#/goal/new" aria-label="Add goal">+</a>`, html: h };
 };
@@ -1225,23 +1224,10 @@ function openSheet() {
 function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; }
 window.closeSheet = closeSheet;
 
-document.addEventListener('click', e => {                       // goal groups: opening one collapses the other
-  const sm = e.target.closest('.ggrp > summary'); if (!sm) return;
-  e.preventDefault();
-  const d = sm.parentElement; if (d._busy) return;
-  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const slide = (g, opening) => {
-    const body = g.querySelector('.gbody'); if (!body || g._busy) return;
-    g._busy = true; body.style.overflow = 'hidden';
-    if (opening) g.open = true;
-    const full = { height: body.offsetHeight + 'px', opacity: 1 }, shut = { height: '0px', opacity: 0 };
-    const an = body.animate(opening ? [shut, full] : [full, shut], { duration: reduce ? 0 : 320, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'forwards' });
-    an.onfinish = () => { if (!opening) g.open = false; an.cancel(); body.style.overflow = ''; g._busy = false; };
-  };
-  const opening = !d.open;
-  if (opening) document.querySelectorAll('.ggrp[open]').forEach(g => { if (g !== d) slide(g, false); });
-  GOPEN = opening ? d.dataset.t : '';
-  slide(d, opening);
+document.addEventListener('click', e => {                       // goal cards: name opens edit; anywhere else toggles details
+  const c = e.target.closest('.goal'); if (!c || e.target.closest('.g-name a')) return;
+  const id = c.dataset.gid, on = c.classList.toggle('open');
+  on ? GEXP.add(id) : GEXP.delete(id);
 });
 
 document.addEventListener('click', e => {                       // smooth open / close for asset cards
