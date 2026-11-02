@@ -133,6 +133,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .item .t{flex:1;min-width:0}.item .t b{font-weight:500;display:block}
 .item .t small{display:block;color:var(--sub);font-size:13px}
 .item .v{color:var(--sub);font-size:15px}
+.hm .item .v{color:var(--text)}
 .item::after{content:"";width:8px;height:8px;border-top:2px solid var(--sep);border-right:2px solid var(--sep);transform:rotate(45deg);margin-left:2px;flex:none;opacity:1}
 .item.nochev::after{display:none}
 .ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:18px;flex:none;color:#fff}
@@ -669,7 +670,7 @@ function home() {
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
   h += '</div>';
 
-  const solo = (...args) => `<div class="group solo">${item(...args)}</div>`;      // every menu sits in its own tile
+  const solo = (...args) => `<div class="group solo hm">${item(...args)}</div>`;      // every menu sits in its own tile
   const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
     solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)), ofTypes([t]).length + (ofTypes([t]).length > 1 ? ' items' : ' item'))).join('');
   const nIns = byCat('insurance').length, nProp = selfuse.length, pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
