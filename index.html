@@ -67,8 +67,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.hero .top{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:0 64px 0 20px;margin-bottom:14px;white-space:nowrap}
-.hero .eye{position:absolute;top:12px;right:12px;margin:0;background:rgba(255,255,255,.18);color:#fff}
+.hero .top{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:0 64px 0 20px;position:relative;margin-bottom:14px;white-space:nowrap}
+.hero .eye{position:absolute;top:50%;right:12px;transform:translateY(-50%);margin:0;background:rgba(255,255,255,.18);color:#fff}
 .hero .cols{text-align:center}
 .hero .lbl{font-size:14px;opacity:.85}
 .hero .amt{font-size:35px;font-weight:700;letter-spacing:-.8px;margin:0}
@@ -700,7 +700,7 @@ function home() {
     return { html: h, tab: 'home', nobar: true };
   }
 
-  h += `<section class="hero"><button class="eye" data-act="eye" aria-label="${S.hide ? 'Show amounts' : 'Hide amounts'}">${S.hide ? eyeOff : eyeOn}</button><div class="top"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div></div>
+  h += `<section class="hero"><div class="top"><button class="eye" data-act="eye" aria-label="${S.hide ? 'Show amounts' : 'Hide amounts'}">${S.hide ? eyeOff : eyeOn}</button><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div></div>
     <div class="cols"><a href="#/realestate"><span>Property &amp; Gold</span><b>${C(real)}</b></a><a href="#/funds"><span>Total Funds</span><b>${C(funds)}</b></a><a href="#/liquid"><span>Liquid Funds</span><b>${C(liquid)}</b></a></div></section>`;
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
