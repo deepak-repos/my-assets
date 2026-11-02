@@ -79,18 +79,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .card.warm{--card:#f6ece1;--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);--fill:rgba(78,53,36,.10);background:var(--card);color:var(--text)}
 .card.warm .dl{color:var(--text)}
 .card.warm{--glow:rgba(185,119,47,.6)}
-.dtile.glow{--glow:rgba(185,119,47,.6);animation:glow 3s ease-in-out infinite}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .dtile.glow{--glow:rgba(232,164,92,.55)}}
-:root[data-theme=dark] .dtile.glow{--glow:rgba(232,164,92,.55)}
-.card.outer{background:#f6ece1;padding:10px;display:flex;flex-direction:column;gap:8px}
+.tglow{--glow:rgba(185,119,47,.85);animation:tglow 3s ease-in-out infinite}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tglow{--glow:rgba(255,190,110,.8)}}
+:root[data-theme=dark] .tglow{--glow:rgba(255,190,110,.8)}
+@keyframes tglow{0%,62%,100%{text-shadow:0 0 0 rgba(0,0,0,0)}80%{text-shadow:0 0 9px var(--glow),0 0 3px var(--glow)}}
+@media (prefers-reduced-motion:reduce){.tglow{animation:none}}
+.card.outer{background:#f6ece1;padding:0;overflow:hidden}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22}}
 :root[data-theme=dark] .card.outer{background:#3a2c22}
-.dtile.in{background:var(--card);border-radius:0;box-shadow:none}
-.dtile.in>summary{padding:13px 14px}
-.dtile.in .body{padding:0 14px 12px}
-@keyframes glow{0%,62%,100%{box-shadow:0 0 0 0 rgba(0,0,0,0),inset 0 0 0 1.5px rgba(0,0,0,0)}
-  80%{box-shadow:0 0 10px 0 var(--glow),inset 0 0 0 1px var(--glow)}}
-@media (prefers-reduced-motion:reduce){.dtile.glow{animation:none;box-shadow:inset 0 0 0 1.5px var(--glow)}}
+.dtile.in{background:transparent;border-radius:0;box-shadow:none}
+.dtile.in+.dtile.in{border-top:.5px solid rgba(78,53,36,.22)}
+.dtile.prem{--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);color:var(--text)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .dtile.in+.dtile.in{border-top-color:rgba(243,227,209,.18)}
+  :root:not([data-theme=light]) .dtile.prem{--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16)}}
+:root[data-theme=dark] .dtile.in+.dtile.in{border-top-color:rgba(243,227,209,.18)}
+:root[data-theme=dark] .dtile.prem{--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16)}
 .card.warm .pill.next{background:rgba(154,91,0,.14);color:#9a5b00}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12);--glow:rgba(232,164,92,.55)}
   :root:not([data-theme=light]) .card.warm .pill.next{background:rgba(255,159,10,.18);color:#ffb340}}
@@ -346,8 +349,8 @@ const T = {
       m('monthlyAmt','Monthly Contribution Amount',{show:d => d.freq === 'Monthly'}),
       NOTES, DOCS ] },
   fd: { cat:'investment', label:'Fixed Deposit', ico:'🏦', c:'#ff9f0a',
-    title:d => (d.bank || 'Fixed') + ' FD',
-    sub:d => [d.owner, d.accountNo && '•••• ' + String(d.accountNo).slice(-4)].filter(Boolean).join(' · '),
+    title:d => [d.owner, d.bank].filter(Boolean).join(' · ') || 'Fixed Deposit',
+    sub:d => [d.maturityDate && 'Matures ' + fmtDate(d.maturityDate), d.accountNo && '*' + String(d.accountNo).slice(-4)].filter(Boolean).join(' · '),
     fields:[
       tx('owner','Owner'), tx('bank','Bank Name',{req:1}), tx('accountNo','Account Number'),
       m('invested','Invested Amount',{req:1}), m('maturityAmt','Maturity Amount'),
@@ -648,7 +651,7 @@ function home() {
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
-  h += `<details class="dtile in${upTot > 0 ? ' glow' : ''}"><summary><span class="dl">Premiums Due (in 90 days)</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
+  h += `<details class="dtile in prem"><summary><span class="dl">Premiums Due (in 90 days)</span><span class="dr${upTot > 0 ? ' tglow' : ''}">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
     `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('') +
     `<div class="tot"><span>Total</span><span>${money(upTot)}</span></div>`
