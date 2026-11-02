@@ -639,7 +639,7 @@ function home() {
   const up = upcomingPremiums(90);
   h += `<div class="card warm"><h3>Insurance Premiums Due - next 90 days</h3>` + (up.length ? up.map(u =>
     `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
-     <div class="r">${u.amt ? M(u.amt) : '—'}<small><span class="pill ${u.diff <= 7 ? 'soon' : u.diff <= 30 ? 'next' : ''}">${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</span></small></div></div>`).join('')
+     <div class="r">${u.amt ? M(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div>`;
 
   const solo = (...args) => `<div class="group solo">${item(...args)}</div>`;      // every menu sits in its own tile
