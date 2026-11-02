@@ -133,10 +133,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .ggrp{margin:0 16px 6px}
 .ghd{display:flex;align-items:center;gap:10px;padding:18px 4px 0;color:var(--text);font-size:17px;font-weight:700}
 .ghd svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--g1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.ggrp:first-child .ghd{padding-top:2px}
+.ggrp:first-of-type{margin-top:-22px}
 .gbody{display:flow-root;margin-top:12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
 .goal{display:block;margin:0;padding:16px;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.goal+.goal{border-top:.5px solid var(--sep)}
+.goal:last-child:not(.open){padding-bottom:48px}
+.goal{transition:padding .3s}
 .g-name a{color:inherit;opacity:.55;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 .g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
 .g-more>div{overflow:hidden;min-height:0}
