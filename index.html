@@ -62,8 +62,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* hero */
 .hero{position:relative;margin:0 16px 16px;padding:22px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
   background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
-.eye{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;color:#fff}
-.eye svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
+.eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .hero .lbl{font-size:14px;opacity:.85}
 .hero .amt{font-size:38px;font-weight:700;letter-spacing:-1px;margin:2px 0 18px}
 .hero .cols{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.25)}
@@ -205,8 +205,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .row.sp{justify-content:space-between;gap:10px}
 .row .lft{display:flex;align-items:center;flex:none;gap:6px}
 .row input.sipin{flex:none;width:92px;text-align:left;background:var(--fill);border-radius:10px;padding:6px 9px;font-size:14px}
-.row input.curin{flex:1;min-width:0;text-align:right;background:var(--fill);border-radius:10px;padding:8px 10px;font-size:14px}
-.row.sp input.curin{flex:none;width:92px;padding:6px 9px;font-size:14px;text-align:right}
+.row input.curin{flex:1;min-width:0;text-align:center;background:var(--fill);border-radius:10px;padding:8px 10px;font-size:14px}
+.row.sp input.curin{flex:none;width:92px;padding:6px 9px;font-size:14px;text-align:center}
 .row input.chk{-webkit-appearance:none;appearance:none;flex:none;width:20px;height:20px;min-width:20px;padding:0;margin:0 4px 0 0;border-radius:7px;
   border:1.5px solid var(--sub);background:transparent;cursor:pointer;transition:background .18s,border-color .18s,transform .12s}
 .row input.chk:active{transform:scale(.86)}
@@ -235,9 +235,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .summary .gain{display:flex;justify-content:space-between;gap:10px}
 .summary .gain em{font-style:normal;font-weight:600;font-size:13px}
 .group.solo{margin-bottom:12px}
+.savetile{display:block;width:100%;margin:8px 0 0;padding:16px;background:var(--card);color:var(--blue);font-size:17px;font-weight:600;text-align:center;border-top:.5px solid var(--sep);border-bottom:.5px solid var(--sep)}
 .ghead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 32px 6px}
 .ghead .gl{font-size:13px;color:var(--blue);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ghead .gr{font-size:13px;color:var(--sub);flex:none;text-transform:uppercase}
+.ghead .gr{font-size:12px;color:var(--sub);flex:none;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -400,7 +401,7 @@ const persist = () => { store.set('assets', S.assets); store.set('history', S.hi
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
-const subOf = a => { const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
+const subOf = a => { if (a.type === 'mf') return 'Invested ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
 
 function fdValue(d, at) {
   // Quarterly compounding on the interest rate; simple interest on the part-quarter, like bank accrual.
@@ -610,7 +611,7 @@ function home() {
   const real = sum(selfuse, curVal);
   const last = S.assets.reduce((mx, a) => (a.updated > mx ? a.updated : mx), '');
   let h = `<div class="head"><div><h1>My Assets</h1><small>${last ? 'Last updated ' + esc(fmtDT(last)) : 'No assets added yet'}</small></div>
-    <button class="iconbtn" data-act="refresh" aria-label="Refresh">${chev}</button></div>`;
+    ${S.assets.length ? `<button class="eye" data-act="eye" aria-label="${S.hide ? 'Show amounts' : 'Hide amounts'}">${S.hide ? eyeOff : eyeOn}</button>` : `<button class="iconbtn" data-act="refresh" aria-label="Refresh">${chev}</button>`}</div>`;
 
   if (!remote()) h += `<div class="warn">Running in <b>local mode</b> – data stays on this device only. Connect Google Sheets in <a href="#/settings/keys">Settings › Add Keys</a>.</div>`;
 
@@ -619,7 +620,7 @@ function home() {
     return { html: h, tab: 'home', nobar: true };
   }
 
-  h += `<section class="hero"><button class="eye" data-act="eye" aria-label="${S.hide ? 'Show amounts' : 'Hide amounts'}">${S.hide ? eyeOff : eyeOn}</button><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>
+  h += `<section class="hero"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>
     <div class="cols"><div><span>Property &amp; Gold</span><b>${C(real)}</b></div><div><span>Total Funds</span><b>${C(funds)}</b></div><div><span>Liquid Funds</span><b>${C(liquid)}</b></div></div></section>`;
 
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
@@ -721,12 +722,17 @@ function updatePage(key) {
         <b class="v" data-tot>${money(inv + sip)}</b></div>
       <div class="row sp"><label class="dpick" title="Investment date">${cal}<span class="dtxt">${esc(fmtShort(today))}</span><input type="date" name="${a.id}__date" value="${today}" aria-label="Investment date"></label>${cur}</div>`;
     else rows = (T[a.type].cat === 'selfuse' ? `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>` : '') + `<div class="row">${cur}</div>`;
-    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gr">Now ${money(curVal(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
+    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gr">Now - ${money(curVal(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
   }).join('');
-  const h = `<form id="f">${blocks}<button class="btn" type="submit">Save</button></form>`;
+  const h = `<form id="f">${blocks}<button class="savetile" type="submit">Save Current Value</button></form>`;
   return { title: 'Update ' + title, back, html: h, notabs: true,
     after() {
       const f = $('#f');
+      f.querySelectorAll('.group[data-id]').forEach(g => {            // SIP box ends where the "Invested so far" label ends
+        const l = g.querySelector('.row .l'), lft = g.querySelector('.lft'), si = g.querySelector('.sipin');
+        if (!l || !lft || !si || !l.offsetWidth) return;
+        lft.style.width = l.offsetWidth + 'px'; si.style.flex = '1'; si.style.width = 'auto'; si.style.minWidth = '56px';
+      });
       const recalc = () => f.querySelectorAll('.group[data-id]').forEach(g => {
         const dt = g.querySelector('.dtxt'); if (dt) dt.textContent = fmtShort(g.querySelector('[name$="__date"]').value);
         const tot = g.querySelector('[data-tot]'); if (!tot) return;
