@@ -48,9 +48,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .bar::after{content:"";position:absolute;left:0;right:0;top:100%;height:25px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
 .bar .back{flex:none;width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .bar .back svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.bar .bt{font-weight:600;font-size:22px;flex:1;min-width:0;text-align:left;line-height:1.2;margin-left:-5px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar:has(.right .plus) .bt{position:absolute;margin-left:0;left:59px;right:69px;top:calc(10px + env(safe-area-inset-top));height:36px;line-height:36px;text-align:center;flex:none}
+.bar .bt{position:absolute;left:0;right:0;top:calc(10px + env(safe-area-inset-top));height:36px;margin:0;padding:0 60px;text-align:center;font-weight:600;font-size:22px;line-height:36px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateX(-8px);pointer-events:none}
 .bar .right{margin-left:auto;flex:none;color:var(--blue);font-size:19px;display:flex;gap:14px;align-items:center}
 .bar .right .link{color:var(--blue);font-weight:600}
 .bar .right .plus{position:relative;flex:none;width:36px;height:36px;border-radius:50%;background:var(--fill);color:var(--blue);font-size:0}
@@ -69,7 +68,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .hero .top{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px;align-items:baseline;padding:0 16px;margin-bottom:14px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
 .hero .top .lbl,.hero .top .amt{grid-column:1}
-.hero .top .ar,.hero .top .xp{grid-column:2;justify-self:end}
+.hero .top .ar,.hero .top .xp{grid-column:2;justify-self:center}
+.hero .top .xp{align-self:start;margin-top:9px}
 .hero .top .ar{grid-row:1}.hero .top .xp{grid-row:2}
 .hero .lbl{font-size:14px;opacity:.85}
 .hero .amt{font-size:35px;font-weight:700;letter-spacing:-.8px;margin:0}
@@ -77,9 +77,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .hero .cols{background:rgba(255,255,255,.04)}
 .hero .cols>*{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:6px;row-gap:8px;align-items:baseline;text-align:left;white-space:nowrap;padding:11px 10px 12px 14px;color:inherit;text-decoration:none}
 .hero .cols>*>span,.hero .cols>*>b{grid-column:1;min-width:0}
-.hero .cols>*>.ar,.hero .cols>*>.xp{grid-column:2;justify-self:end}
+.hero .cols>*>.ar,.hero .cols>*>.xp{grid-column:2;justify-self:center}
 .hero .cols>*>.ar{grid-row:1}.hero .cols>*>.xp{grid-row:2}
 .hero .ar,.hero .xp{font-style:normal;font-size:13px;font-weight:600;line-height:1.35}
+.hero .xp{font-size:12.5px;opacity:.95}
 .hero .ar.up{color:#30d158}.hero .ar.dn{color:#ff453a}
 .hero .xp.na{opacity:.6}
 .hero .cols>*+*{border-left:1px solid rgba(255,255,255,.25)}
@@ -165,12 +166,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
 .g-more>div{overflow:hidden;min-height:0;padding-left:0}
 .goal.open .g-more{grid-template-rows:1fr}
-.g-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;row-gap:3px;align-items:center;transition:margin .3s}
+.g-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:0;row-gap:3px;align-items:center;transition:margin .3s}
 .goal.open .g-row{margin-bottom:12px}
-.g-ico{grid-column:1;grid-row:1;align-self:center;width:26px;height:22px;display:grid;place-items:center start;color:var(--sub);background:none;-webkit-tap-highlight-color:transparent}
+.g-ico{grid-column:1;grid-row:1;align-self:center;width:22px;height:22px;display:grid;place-items:center start;color:var(--sub);background:none;-webkit-tap-highlight-color:transparent}
 .g-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .g-main{display:contents}
-.g-name{grid-column:2;grid-row:1;font-size:15.5px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:20px}
+.g-name{grid-column:2;grid-row:1;font-size:15px;font-weight:700;opacity:.78;margin-left:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:20px}
 .g-line{grid-column:1/-1;grid-row:2;display:flex;align-items:center;gap:10px}
 .g-line .g-bar{flex:1;min-width:0}
 .g-pct{flex:none;min-width:38px;text-align:right;font-size:14.5px;font-weight:700}
@@ -382,7 +383,7 @@ a.gr-card{display:block;color:inherit;padding:14px 16px 10px}
 .gr-h em{font-style:normal;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .gr-h .up{color:var(--green)}.gr-h .dn{color:var(--red)}.gr-h .eq{color:var(--blue)}
 .gr-card .an-top{margin-top:10px}
-.gr-card .an-k b{font-size:17px}
+.gr-card .an-k b{font-size:15px}
 .gr-card .an-k:last-child{justify-self:end;text-align:left}
 svg.ansp{margin:8px 0 0;pointer-events:none}
 </style>
@@ -765,14 +766,14 @@ const xCells = x => x == null ? { ar: '', pc: '<em class="xp na">—</em>' }
 const backHome = () => { const b = navStack[navStack.length - 2]; return b && b.hash === '#/networth' ? '#/networth' : '#/home'; };
 const nwItems = () => [...byCat('investment'), ...byCat('selfuse')];
 
-function homeMenus(C) {                                    // the menu tiles on the home screen (also used on the Net Worth page)
+function homeMenus(C, noIns) {                                    // the menu tiles on the home screen (also used on the Net Worth page)
   const solo = (...args) => `<div class="group solo hm">${item(...args)}</div>`;
   const prop = sum(ofTypes(['house', 'land']), curVal), gld = sum(ofTypes(['gold']), curVal);
   const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
     solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)))).join('');
   const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
   return rows
-    + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')
+    + (noIns ? '' : solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : ''))
     + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
     + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld));
 }
@@ -786,7 +787,7 @@ function netWorthPage() {
     h += `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
       <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>`;
   }
-  return { title: 'Your Net Worth', back: '#/home', html: h + homeMenus(C), tab: 'home' };
+  return { title: 'Your Net Worth', back: '#/home', html: h + homeMenus(C, true), tab: 'home' };
 }
 
 function home() {
@@ -1307,7 +1308,7 @@ function homeGrowth() {                                    // All Investments, f
   const g = last.cur - last.inv, pc = last.inv ? g / last.inv * 100 : 0;
   const gain = last.inv > 0 ? `<em class="${c.k}">${c.k === 'dn' ? '▼' : c.k === 'up' ? '▲' : ''} ${S.hide ? '••••' : fmtCr(Math.abs(g))} (${Math.abs(pc).toFixed(1)}%)</em>` : '';
   return `<div class="hsec">Growth</div><a class="card gr-card" href="#/analytics" aria-label="Open analytics">
-    <div class="gr-h"><span>All Investments</span>${gain}</div>
+    <div class="gr-h"><span>Total Funds</span>${gain}</div>
     <div class="an-top"><div class="an-k"><span><i style="background:#ff9f0a"></i>Investment</span><b>${anM(last.inv)}</b></div>
       <div class="an-k"><span><i style="background:var(--blue)"></i>Current</span><b>${anM(last.cur)}</b></div></div>
     ${pts.length > 1 ? anSpark(pts) : ''}</a>`;
