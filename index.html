@@ -989,9 +989,172 @@ function formPage(type, id) {
 /* ---- Analytics / Goals placeholders ---- */
 const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'), item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
+/* ---- Analytics ----
+   Chart of Investment amount vs Current amount over time, for all investments,
+   one category (asset type) or one asset.
+   Rules:
+     invested(t) = sum of dated investments on/before t
+     current(t)  = latest value snapshot on/before t; if there is no earlier
+                   snapshot it falls back to invested(t).
+                   Fixed deposits use the app's own accrual (fdValue) at t.
+     assets with no invested figure (Saving, Gratuity) count their current value on both lines. */
+const AN = { cat: 'all', ast: 'all', rng: 'all', lim: 40 };
+const AN_RNG = [['3m', '3M', 3], ['6m', '6M', 6], ['1y', '1Y', 12], ['2y', '2Y', 24], ['3y', '3Y', 36], ['5y', '5Y', 60], ['10y', '10Y', 120], ['all', 'All', 0]];
+const anDay = ms => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const anEnd = ms => { const d = new Date(ms); d.setHours(23, 59, 59, 999); return d.getTime(); };
+const anIso = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? NaN : d.getTime(); };
+const anFmt = ms => new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+const anFmtS = ms => new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' });
+const anAxis = v => { const a = Math.abs(v), t = x => x.toFixed(1).replace(/\.0$/, '');
+  return a >= 1e7 ? t(v / 1e7) + 'Cr' : a >= 1e5 ? t(v / 1e5) + 'L' : a >= 1e3 ? t(v / 1e3) + 'K' : String(Math.round(v)); };
+const anM = v => S.hide ? '••••' : money(v);
+let ANC = null;                                            // geometry of the chart currently on screen
+
+function anPrep(a, snapsBy) {
+  const snaps = snapsBy[a.id] || [];
+  const created = anDay(new Date(a.created || a.updated || Date.now()).getTime());
+  const fallback = snaps.length ? anDay(snaps[0].t) : anDay(Date.now());
+  const base = isNaN(created) ? fallback : created;
+  const tx = txOf(a).map(z => { const t = z.date ? anIso(z.date) : NaN; return { t: isNaN(t) ? base : t, amt: z.amt }; });
+  const hasTx = tx.length > 0;
+  return { a, snaps, tx, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
+}
+function anVals(p, e) {                                    // [invested, current] of one asset at the end of a day
+  if (e < p.start) return [0, 0];
+  const inv = p.hasTx ? p.tx.reduce((t, z) => t + (z.t <= e ? z.amt : 0), 0) : null;
+  let cur;
+  if (p.fd) cur = fdValue(p.a.data, new Date(Math.min(e, Date.now())));
+  else {
+    let s = null; for (const x of p.snaps) { if (x.t <= e) s = x; else break; }
+    cur = s ? s.cur : p.hasTx ? inv : (p.snaps.length ? p.snaps[0].cur : curVal(p.a));
+  }
+  return [inv == null ? cur : inv, cur];
+}
+function anBuild(list, months) {
+  if (!list.length) return null;
+  const snapsBy = {};
+  S.history.forEach(h => { const t = new Date(h.ts).getTime(); if (!isNaN(t)) (snapsBy[h.assetId] = snapsBy[h.assetId] || []).push({ t, cur: num(h.current) }); });
+  Object.values(snapsBy).forEach(l => l.sort((x, y) => x.t - y.t));
+  const P = list.map(a => anPrep(a, snapsBy));
+  const today = anDay(Date.now()), first = Math.min(...P.map(p => p.start));
+  let from = first;
+  if (months) { const d = new Date(); d.setMonth(d.getMonth() - months); from = Math.max(first, anDay(d.getTime())); }
+  from = Math.min(from, today);
+  const ev = new Map(), days = new Set([from, today]);
+  const mark = (t, add, upd) => {
+    const d = anDay(t); if (d < from || d > today) return;
+    const o = ev.get(d) || { add: 0, upd: false }; o.add += add; o.upd = o.upd || upd; ev.set(d, o);
+  };
+  P.forEach(p => { p.tx.forEach(z => mark(z.t, z.amt, false)); p.snaps.forEach(s => mark(s.t, 0, true)); });
+  ev.forEach((o, d) => { days.add(d); const b = anDay(d - 1); if (b >= from) days.add(b); });   // a point just before each event keeps jumps vertical
+  for (let i = 1; i < 48; i++) days.add(anDay(from + (today - from) * i / 48));                    // gentle samples so FD accrual draws smoothly
+  const pts = [...days].sort((x, y) => x - y).map(d => {
+    let inv = 0, cur = 0; const e = anEnd(d);
+    P.forEach(p => { const v = anVals(p, e); inv += v[0]; cur += v[1]; });
+    return { x: d, inv, cur, ev: ev.get(d) || null };
+  });
+  return { pts, from, today };
+}
+
+function anChart(pts) {
+  const W = 340, H = 220, pl = 44, pr = 8, pt = 12, pb = 24;
+  const x0 = pts[0].x, x1 = pts[pts.length - 1].x;
+  const all = pts.flatMap(p => [p.inv, p.cur]);
+  let lo = Math.min(...all), hi = Math.max(...all); const nonNeg = lo >= 0;
+  if (hi === lo) { hi = hi * 1.05 + 1; lo = lo * .95; }
+  const pad = (hi - lo) * .12; lo -= pad; hi += pad; if (nonNeg && lo < 0) lo = 0;
+  const sx = x => pl + (x - x0) / (x1 - x0) * (W - pl - pr), sy = y => pt + (1 - (y - lo) / (hi - lo)) * (H - pt - pb);
+  const P = pts.map(p => ({ ...p, px: sx(p.x), p1: sy(p.inv), p2: sy(p.cur) }));
+  ANC = { P, W };
+  const path = k => P.map((p, i) => (i ? 'L' : 'M') + p.px.toFixed(1) + ' ' + p[k].toFixed(1)).join(' ');
+  let grid = '';
+  for (let i = 0; i < 4; i++) {
+    const v = lo + (hi - lo) * i / 3, y = sy(v).toFixed(1);
+    grid += `<line class="gl" x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}"/>${S.hide ? '' : `<text x="${pl - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${anAxis(Math.max(v, 0))}</text>`}`;
+  }
+  const f = P[0], l = P[P.length - 1];
+  grid += `<text x="${pl}" y="${H - 6}" text-anchor="start">${anFmtS(f.x)}</text><text x="${W - pr}" y="${H - 6}" text-anchor="end">${anFmtS(l.x)}</text>`;
+  return `<svg class="anch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Investment amount and current amount over time">
+    <defs><linearGradient id="an-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--blue);stop-opacity:.24"/><stop offset="1" style="stop-color:var(--blue);stop-opacity:0"/></linearGradient></defs>${grid}
+    <path d="${path('p2')} L${l.px.toFixed(1)} ${H - pb} L${f.px.toFixed(1)} ${H - pb} Z" fill="url(#an-g)"/>
+    <path class="l1" d="${path('p1')}"/><path class="l2" d="${path('p2')}"/>
+    <line class="xh" id="an-v" x1="${l.px}" x2="${l.px}" y1="${pt}" y2="${H - pb}"/>
+    <circle id="an-c1" r="4.6" cx="${l.px}" cy="${l.p1}" style="fill:#ff9f0a"/><circle id="an-c2" r="4.6" cx="${l.px}" cy="${l.p2}" style="fill:var(--blue)"/></svg>`;
+}
+function anMark(p) {
+  const set = (id, o) => { const el = $('#' + id); if (el) for (const k in o) el.setAttribute(k, o[k]); };
+  set('an-v', { x1: p.px, x2: p.px }); set('an-c1', { cx: p.px, cy: p.p1 }); set('an-c2', { cx: p.px, cy: p.p2 });
+  const txt = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
+  txt('an-dt', anFmt(p.x)); txt('an-v1', anM(p.inv)); txt('an-v2', anM(p.cur));
+}
+function anTip(e) {
+  const svg = e.target.closest && e.target.closest('svg.anch');
+  if (!svg || !ANC) return;
+  const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * ANC.W;
+  let b = ANC.P[0]; ANC.P.forEach(p => { if (Math.abs(p.px - x) < Math.abs(b.px - x)) b = p; });
+  anMark(b);
+}
+
+function anDraw() {
+  const L = invAssets();
+  if (AN.cat !== 'all' && !L.some(a => a.type === AN.cat)) AN.cat = 'all';
+  const inCat = AN.cat === 'all' ? L : L.filter(a => a.type === AN.cat);
+  if (AN.ast !== 'all' && !inCat.some(a => a.id === AN.ast)) AN.ast = 'all';
+  const sel = AN.ast === 'all' ? inCat : inCat.filter(a => a.id === AN.ast);
+
+  const chip = (attr, v, label, on) => `<button class="chip${on ? ' on' : ''}" data-${attr}="${esc(v)}">${esc(label)}</button>`;
+  const types = ORDER.investment.filter(t => L.some(a => a.type === t));
+  const catHtml = chip('cat', 'all', 'All', AN.cat === 'all') + types.map(t => chip('cat', t, T[t].label, AN.cat === t)).join('');
+  const names = inCat.map(ttl), dup = n => names.filter(x => x === n).length > 1;
+  const astHtml = AN.cat === 'all' ? '' : chip('ast', 'all', 'All ' + T[AN.cat].label, AN.ast === 'all') +
+    inCat.map((a, i) => chip('ast', a.id, dup(names[i]) ? names[i] + ' ' + (a.data.accountNo ? '•' + String(a.data.accountNo).slice(-4) : '#' + (i + 1)) : names[i], AN.ast === a.id)).join('');
+  const rngHtml = AN_RNG.map(r => `<button data-rng="${r[0]}" class="${AN.rng === r[0] ? 'on' : ''}">${r[1]}</button>`).join('');
+
+  const scope = AN.ast !== 'all' ? ttl(sel[0]) : AN.cat !== 'all' ? T[AN.cat].label : 'All investments';
+  const months = (AN_RNG.find(r => r[0] === AN.rng) || [])[2] || 0;
+  const res = anBuild(sel, months);
+  let body = '';
+  if (!res) body = `<div class="card"><div class="empty">No investments added yet. Add one from the More tab to see your trend here.</div></div>`;
+  else {
+    const pts = res.pts, last = pts[pts.length - 1], g = last.cur - last.inv, pc = last.inv ? g / last.inv * 100 : 0;
+    body = `<div class="card an-card"><div class="an-m">${esc(scope)}</div><div class="an-big">${anM(last.cur)}</div>
+      ${last.inv > 0 ? `<div class="an-g ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'} ${S.hide ? '••••' : fmtCr(Math.abs(g))} (${pc.toFixed(1)}%) on ${S.hide ? '••••' : fmtCr(last.inv)} invested</div>` : '<div class="an-g"></div>'}`;
+    if (pts.length > 1) body += `<div class="an-tt" id="an-dt"></div>
+      <div class="an-leg"><span><i style="background:#ff9f0a"></i>Investment<b id="an-v1"></b></span><span><i style="background:var(--blue)"></i>Current<b id="an-v2"></b></span></div>
+      ${anChart(pts)}<div class="an-note">Touch and drag across the chart to read values.</div>`;
+    else body += `<div class="empty">Only one day of data so far – a trend will appear as you add investments and update values over time.</div>`;
+    body += `</div>`;
+
+    const rows = pts.filter(p => p.ev).reverse(), shown = rows.slice(0, AN.lim);
+    body += `<div class="gtitle" style="margin-top:22px">History · ${esc(scope)}</div><div class="card an-list">` + (rows.length ? shown.map(p => {
+      const note = [p.ev.add > 0 && anM(p.ev.add) + ' invested', p.ev.upd && 'Value updated'].filter(Boolean).join(' · ');
+      return `<div class="li"><div><b>${esc(anFmt(p.x))}</b>${note ? `<small>${esc(note)}</small>` : ''}</div>
+        <div class="an-r"><div><span>Investment</span><b>${anM(p.inv)}</b></div><div><span>Current</span><b>${anM(p.cur)}</b></div></div></div>`;
+    }).join('') + (rows.length > shown.length ? `<button class="an-more" data-more="1">Show more</button>` : '') : `<div class="empty">No entries in this period.</div>`) + `</div>`;
+  }
+
+  const put = (id, html) => { const el = $('#' + id); if (!el) return; const x = el.scrollLeft; el.innerHTML = html; el.scrollLeft = x; };
+  put('an-cat', catHtml); put('an-ast', astHtml); put('an-rng', rngHtml); put('an-body', body);
+  const a = $('#an-ast'); if (a) a.hidden = !astHtml;
+  document.querySelectorAll('#an-cat .on,#an-ast .on').forEach(el => { try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (x) {} });
+  if (res && res.pts.length > 1 && ANC) anMark(ANC.P[ANC.P.length - 1]);
+}
 const analytics = () => ({ title: 'Analytics', large: 'Analytics', tab: 'analytics',
-  html: `<div class="soon-page"><div class="big">📊</div><h2>Coming next</h2><p>Trends for net worth, funds, premiums and property values will appear here.</p>
-    <p><b>${S.history.length}</b> value snapshot${S.history.length === 1 ? '' : 's'} recorded so far – every update you make is being saved with its date.</p></div>` });
+  html: `<div id="an"><div class="pills" id="an-cat"></div><div class="pills" id="an-ast" hidden></div><div class="seg an" id="an-rng"></div><div id="an-body"></div></div>`,
+  after() {
+    const root = $('#an');
+    root.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.cat !== undefined) { AN.cat = b.dataset.cat; AN.ast = 'all'; AN.lim = 40; }
+      else if (b.dataset.ast !== undefined) { AN.ast = b.dataset.ast; AN.lim = 40; }
+      else if (b.dataset.rng !== undefined) { AN.rng = b.dataset.rng; AN.lim = 40; }
+      else if (b.dataset.more !== undefined) AN.lim += 40;
+      else return;
+      anDraw();
+    });
+    const body = $('#an-body'); body.addEventListener('pointerdown', anTip); body.addEventListener('pointermove', anTip);
+    anDraw();
+  } });
 /* ---- Goals ---- */
 const GOAL_TYPES = [['Long Term', '#0a84ff', '#5e5ce6'], ['Mid Term', '#2bd2c3', '#34c759'], ['Short Term', '#ff9f0a', '#ff453a'], ['Fund Collection', '#bf5af2', '#ff375f']];
 const GOAL_CATS = [['mf', 'Mutual Fund'], ['fd', 'Fixed Deposit'], ['ppf', 'PPF'], ['epf', 'EPF'], ['nps', 'NPS'], ['sa', 'Saving'], ['gratuity', 'Gratuity']];
