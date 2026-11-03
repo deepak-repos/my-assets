@@ -348,6 +348,23 @@ svg.anch{width:100%;height:auto;display:block;touch-action:pan-y;user-select:non
 .an-ld em{display:block;margin-top:4px;font-style:normal;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
 .an-ld .up{color:var(--green)}.an-ld .dn{color:var(--red)}.an-ld .eq{color:var(--blue)}
 .an-more{display:block;width:100%;text-align:center;color:var(--blue);font-weight:600;padding:13px 0 11px;border-top:.5px solid var(--sep)}
+
+/* home: goals + growth tiles */
+.hsec{margin:26px 20px 10px;font-size:20px;font-weight:700;letter-spacing:-.4px}
+a.hg-card{display:block;color:inherit;padding:2px 16px}
+.hg{padding:14px 0 15px}.hg+.hg{border-top:.5px solid var(--sep)}
+.hg-t{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:9px}
+.hg-n{font-size:15px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hg-p{flex:none;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.hg .g-bar{height:9px}
+a.gr-card{display:block;color:inherit;padding:14px 16px 10px}
+.gr-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.gr-h span{font-size:13px;font-weight:600;color:var(--sub)}
+.gr-h em{font-style:normal;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.gr-h .up{color:var(--green)}.gr-h .dn{color:var(--red)}.gr-h .eq{color:var(--blue)}
+.gr-card .an-top{margin-top:10px}
+.gr-card .an-k b{font-size:17px}
+svg.ansp{margin:8px 0 0;pointer-events:none}
 </style>
 </head>
 <body>
@@ -769,6 +786,7 @@ function home() {
     + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')
     + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
     + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld));
+  h += homeGoals() + homeGrowth();
   return { html: h, tab: 'home', nobar: true };
 }
 
@@ -1210,6 +1228,45 @@ const analytics = () => ({ title: 'Analytics', large: 'Analytics', tab: 'analyti
     const body = $('#an-body'); body.addEventListener('pointerdown', anTip); body.addEventListener('pointermove', anTip);
     anDraw();
   } });
+/* ---- Home page: compact Goals + Growth tiles ---- */
+function homeGoals() {                                     // long-term goals only, collapsed, whole tile opens the Goals page
+  const [tn, c1, c2] = GOAL_TYPES[0];
+  const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
+  if (!list.length) return '';
+  const rows = list.map(g => {
+    const st = goalStats(g), shown = Math.max(0, Math.min(st.pct, 100));
+    const p = st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0);
+    return `<div class="hg"><div class="hg-t"><span class="hg-n">${esc(g.name)}</span><span class="hg-p">${p}%</span></div>
+      <div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div></div>`;
+  }).join('');
+  return `<div class="hsec">Goals</div><a class="card hg-card" href="#/goals" aria-label="Open goals">${rows}</a>`;
+}
+function anSpark(pts) {                                    // small static line chart (no axes, no touch) for the home tile
+  const W = 340, H = 84, px = 8, pt = 9, pb = 9, n = pts.length;
+  const x0 = pts[0].x, x1 = pts[n - 1].x, all = pts.flatMap(p => [p.inv, p.cur]);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (hi === lo) { hi = hi * 1.05 + 1; lo = lo * .95; }
+  const sx = x => px + (x - x0) / (x1 - x0) * (W - 2 * px), sy = y => pt + (1 - (y - lo) / (hi - lo)) * (H - pt - pb);
+  const path = k => pts.map((p, i) => (i ? 'L' : 'M') + sx(p.x).toFixed(1) + ' ' + sy(p[k]).toFixed(1)).join(' ');
+  const dots = (k, cls) => n <= 24 ? pts.slice(0, -1).map(p => `<circle class="${cls}" cx="${sx(p.x).toFixed(1)}" cy="${sy(p[k]).toFixed(1)}" r="2.6"/>`).join('') : '';
+  const l = pts[n - 1];
+  return `<svg class="anch ansp" viewBox="0 0 ${W} ${H}" aria-hidden="true"><line class="gl" x1="${px}" x2="${W - px}" y1="${H - 1}" y2="${H - 1}"/>
+    <path class="l1" d="${path('inv')}"/><path class="l2" d="${path('cur')}"/>${dots('inv', 'd1')}${dots('cur', 'd2')}
+    <circle class="s1" cx="${sx(l.x).toFixed(1)}" cy="${sy(l.inv).toFixed(1)}" r="4"/><circle class="s2" cx="${sx(l.x).toFixed(1)}" cy="${sy(l.cur).toFixed(1)}" r="4"/></svg>`;
+}
+function homeGrowth() {                                    // All Investments, full history; whole tile opens Analytics
+  const res = anBuild(invAssets(), 0);
+  if (!res) return '';
+  const pts = res.pts, last = pts[pts.length - 1], c = anChg(last.inv, last.cur);
+  const g = last.cur - last.inv, pc = last.inv ? g / last.inv * 100 : 0;
+  const gain = last.inv > 0 ? `<em class="${c.k}">${c.k === 'dn' ? '▼' : c.k === 'up' ? '▲' : ''} ${S.hide ? '••••' : fmtCr(Math.abs(g))} (${Math.abs(pc).toFixed(1)}%)</em>` : '';
+  return `<div class="hsec">Growth</div><a class="card gr-card" href="#/analytics" aria-label="Open analytics">
+    <div class="gr-h"><span>All Investments</span>${gain}</div>
+    <div class="an-top"><div class="an-k"><span><i style="background:#ff9f0a"></i>Investment</span><b>${anM(last.inv)}</b></div>
+      <div class="an-k"><span><i style="background:var(--blue)"></i>Current</span><b>${anM(last.cur)}</b></div></div>
+    ${pts.length > 1 ? anSpark(pts) : ''}</a>`;
+}
+
 /* ---- Goals ---- */
 const GOAL_TYPES = [['Long Term', '#0a84ff', '#5e5ce6'], ['Mid Term', '#2bd2c3', '#34c759'], ['Short Term', '#ff9f0a', '#ff453a'], ['Fund Collection', '#bf5af2', '#ff375f']];
 const GOAL_CATS = [['mf', 'Mutual Fund'], ['fd', 'Fixed Deposit'], ['ppf', 'PPF'], ['epf', 'EPF'], ['nps', 'NPS'], ['sa', 'Saving'], ['gratuity', 'Gratuity']];
