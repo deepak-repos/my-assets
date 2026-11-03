@@ -1,50 +1,1303 @@
-/* My Asset – service worker
-   - Pre-caches the app shell so the app opens offline.
-   - Network-first for the shell (you always get new code when online), cache fallback offline.
-   - Never touches the Google Apps Script API or any other cross-origin request,
-     so your financial data is never stored by the service worker.
-   Bump CACHE when you want to force-refresh old caches. */
-const CACHE = 'my-asset-v13';
-const SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-maskable-512.png',
-  './apple-touch-icon.png'
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="My Asset">
+<meta name="theme-color" content="#f2f2f7">
+<title>My Asset</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+:root{
+  --bg:#f2f2f7;--card:#fff;--text:#000;--sub:#8e8e93;--sep:rgba(60,60,67,.16);
+  --blue:#007aff;--green:#34c759;--red:#ff3b30;--fill:rgba(120,120,128,.12);
+  --blur:rgba(249,249,249,.82);--shadow:0 1px 2px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){
+    --bg:#000;--card:#1c1c1e;--text:#fff;--sub:#98989f;--sep:rgba(84,84,88,.55);
+    --blue:#0a84ff;--green:#30d158;--red:#ff453a;--fill:rgba(120,120,128,.28);--blur:rgba(22,22,24,.82);--shadow:none;
+  }
+}
+:root[data-theme=dark]{
+  --bg:#000;--card:#1c1c1e;--text:#fff;--sub:#98989f;--sep:rgba(84,84,88,.55);
+  --blue:#0a84ff;--green:#30d158;--red:#ff453a;--fill:rgba(120,120,128,.28);--blur:rgba(22,22,24,.82);--shadow:none;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{display:flex;flex-direction:column;height:100dvh}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+#app{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none}
+.page{max-width:600px;margin:0 auto;padding-bottom:calc(24px + env(safe-area-inset-bottom));animation:in .22s ease}
+@keyframes in{from{opacity:0}to{opacity:1}}
+.page.noanim{animation:none}
+
+/* top bar: back / centred title / action, no tile behind it */
+.bar{position:-webkit-sticky;position:sticky;top:0;z-index:20;-webkit-transform:translateZ(0);transform:translateZ(0);display:flex;align-items:center;gap:12px;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;margin-bottom:25px;background:var(--bg)}
+.bar::after{content:"";position:absolute;left:0;right:0;top:100%;height:25px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
+.bar .back{flex:none;width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
+.bar .back svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.bar .bt{font-weight:600;font-size:22px;flex:1;min-width:0;text-align:left;line-height:1.2;margin-left:-5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar:has(.right .plus) .bt{position:absolute;margin-left:0;left:59px;right:69px;top:calc(10px + env(safe-area-inset-top));height:36px;line-height:36px;text-align:center;flex:none}
+.bar .right{margin-left:auto;flex:none;color:var(--blue);font-size:19px;display:flex;gap:14px;align-items:center}
+.bar .right .link{color:var(--blue);font-weight:600}
+.bar .right .plus{position:relative;flex:none;width:36px;height:36px;border-radius:50%;background:var(--fill);color:var(--blue);font-size:0}
+.bar .right .plus::before,.bar .right .plus::after{content:"";position:absolute;left:50%;top:50%;background:currentColor;border-radius:2px;transform:translate(-50%,-50%)}
+.bar .right .plus::before{width:16px;height:2.4px}.bar .right .plus::after{width:2.4px;height:16px}
+.head{padding:calc(18px + env(safe-area-inset-top)) 20px 14px;display:flex;justify-content:space-between;align-items:flex-start}
+.head h1{margin:0;font-size:32px;font-weight:700;letter-spacing:-.6px}
+.head small{display:block;color:var(--sub);font-size:13px;margin-top:2px}
+.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
+.iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* hero */
+.hero{position:relative;margin:0 16px 16px;padding:18px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
+  background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
+.eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
+.eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.hero .top{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 12px;margin-bottom:14px;white-space:nowrap}
+.hero .lbl{font-size:14px;opacity:.85}
+.hero .amt{font-size:35px;font-weight:700;letter-spacing:-.8px;margin:0}
+.hero .cols{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid rgba(255,255,255,.25)}
+.hero .cols{background:rgba(255,255,255,.11)}
+.hero .cols>*{display:block;padding:11px 8px 12px;color:inherit;text-decoration:none}
+.hero .cols>*+*{border-left:1px solid rgba(255,255,255,.25)}
+.hero .cols span,.hero .rw span{display:block;font-size:13px;opacity:.85}
+.hero .cols span{margin-bottom:8px}
+.hero .cols b{display:block;font-size:17px;font-weight:600}
+.hero .rw{padding:14px 8px 16px;border-top:1px solid rgba(255,255,255,.25)}
+.hero .rw b{display:block;font-size:20px;font-weight:600}
+
+/* cards */
+.card{margin:0 16px 16px;background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.card.warm{--card:#f6ece1;--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);--fill:rgba(78,53,36,.10);background:var(--card);color:var(--text)}
+.card.warm .dl{color:var(--text)}
+.card.warm{--glow:rgba(185,119,47,.6)}
+.tglow{--glow:rgba(185,119,47,.45);animation:tglow 3s ease-in-out infinite}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tglow{--glow:rgba(255,190,110,.4)}}
+:root[data-theme=dark] .tglow{--glow:rgba(255,190,110,.4)}
+@keyframes tglow{0%,62%,100%{text-shadow:0 0 0 rgba(0,0,0,0)}80%{text-shadow:0 0 5px var(--glow),0 0 1px var(--glow)}}
+@keyframes iglow{0%,62%,100%{filter:none}80%{filter:drop-shadow(0 0 2px var(--glow))}}
+.tglow svg{animation:iglow 3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.tglow,.tglow svg{animation:none}}
+.card.outer{background:#f6ece1;padding:0;overflow:hidden;border-radius:15px;border:.75px solid rgba(185,119,47,.35);box-shadow:0 2px 10px rgba(78,53,36,.08),inset 0 0 0 .5px rgba(255,255,255,.55)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22;border-color:rgba(232,164,92,.35);box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.05)}}
+:root[data-theme=dark] .card.outer{background:#3a2c22;border-color:rgba(232,164,92,.35);box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.05)}
+.dtile.in{background:transparent;border-radius:0;box-shadow:none}
+.dtile.in+.dtile.in{border-top:.5px solid rgba(78,53,36,.22)}
+.dtile.prem{--text:#4e3524;--sub:#8a6a52;--sep:rgba(78,53,36,.16);color:var(--text)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .dtile.in+.dtile.in{border-top-color:rgba(243,227,209,.18)}
+  :root:not([data-theme=light]) .dtile.prem{--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16)}}
+:root[data-theme=dark] .dtile.in+.dtile.in{border-top-color:rgba(243,227,209,.18)}
+:root[data-theme=dark] .dtile.prem{--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16)}
+.card.warm .pill.next{background:rgba(154,91,0,.14);color:#9a5b00}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12);--glow:rgba(232,164,92,.55)}
+  :root:not([data-theme=light]) .card.warm .pill.next{background:rgba(255,159,10,.18);color:#ffb340}}
+:root[data-theme=dark] .card.warm{--card:#3a2c22;--text:#f3e3d1;--sub:#bda089;--sep:rgba(243,227,209,.16);--fill:rgba(243,227,209,.12);--glow:rgba(232,164,92,.55)}
+:root[data-theme=dark] .card.warm .pill.next{background:rgba(255,159,10,.18);color:#ffb340}
+.card h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--sub);letter-spacing:0}
+.dtile{padding:0;border-radius:10px}
+.dtile>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;font-size:14px;font-weight:600}
+.dtile>summary::-webkit-details-marker{display:none}
+.dtile .dl{flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:var(--text);font-weight:700}
+.dtile .dl svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dtile .dr{flex:none}
+.dtile .body,.dtile .body .li b,.dtile .body .li .r,.dtile .body .tot{font-size:14px}
+.dtile .body .li small{font-size:12px}
+.dtile .body{padding:0 16px 14px;border-top:.5px solid var(--sep)}
+.dtile.prem .body{padding-left:36px}
+.card .empty{color:var(--sub);font-size:14px;padding:4px 0}
+.li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--sep)}
+.li:first-of-type{border-top:0}
+.li b{font-weight:600}.li small{display:block;color:var(--sub);font-size:13px}
+.li .r{display:flex;flex-direction:column;align-items:center;font-weight:600}
+.li .r small{font-weight:400}
+.tot{display:flex;justify-content:space-between;margin-top:6px;padding-top:12px;border-top:.5px solid var(--sep);font-weight:700}
+.warn{background:rgba(255,159,10,.14);color:var(--text);border-radius:14px;padding:12px 14px;margin:0 16px 16px;font-size:14px}
+.warn a{color:var(--blue);font-weight:600}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--fill)}
+.pill.soon{background:rgba(255,59,48,.14);color:var(--red)}
+.pill.next{background:rgba(255,159,10,.16);color:#ff9f0a}
+
+/* grouped list */
+.group{margin:0 16px 22px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.gsec{display:flex;justify-content:space-between;align-items:center;margin:20px 32px 10px;font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--sub)}
+.gsec span{display:flex;align-items:center;gap:8px}.gsec i{width:10px;height:10px;border-radius:50%}.gsec em{font-style:normal;font-weight:600}
+.ggrp{margin:0 16px 6px}
+.ghd{display:flex;align-items:center;gap:10px;padding:18px 4px 0;color:var(--text);font-size:17px;font-weight:700}
+.ghd svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--g1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ggrp:first-of-type{margin-top:-22px}
+.gbody{display:flow-root;margin-top:12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
+.goal{display:block;margin:0;padding:16px;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.goal:last-child:not(.open){padding-bottom:43px}
+.goal{transition:padding .3s}
+.g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
+.g-more>div{overflow:hidden;min-height:0;padding-left:52px}
+.goal.open .g-more{grid-template-rows:1fr}
+.g-row{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:12px;align-items:center;transition:margin .3s}
+.goal.open .g-row{margin-bottom:12px}
+.g-ico{grid-column:1;grid-row:1/span 2;align-self:center;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--g1);background:var(--fill);-webkit-tap-highlight-color:transparent}
+.g-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.g-main{display:contents}
+.g-name{grid-column:2;grid-row:1;font-size:15.5px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px;line-height:20px}
+.g-line{grid-column:2;grid-row:2;display:flex;align-items:center;gap:10px}
+.g-line .g-bar{flex:1;min-width:0}
+.g-pct{flex:none;min-width:38px;text-align:right;font-size:14.5px;font-weight:700}
+.g-bar{height:14px;border-radius:99px;background:var(--fill);overflow:hidden}
+.g-bar i{display:block;height:100%;border-radius:99px}
+.g-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.g-stats>div{text-align:center}.g-stats>div:first-child{justify-self:start}.g-stats>div:nth-child(2){justify-self:center}.g-stats>div:last-child{justify-self:end}
+.g-stats span{display:block;font-size:11px;color:var(--sub);margin-bottom:2px}
+.g-stats b{display:block;font-size:14px;font-weight:600;white-space:nowrap;opacity:.78}
+.srcnote{white-space:pre-line}
+.srcdel{width:100%;text-align:center;color:var(--red);font-weight:600;padding:13px 0}
+button.btn{width:calc(100% - 32px)}
+.gtitle{margin:0 32px 6px;font-size:13px;color:var(--sub);text-transform:uppercase}
+.gfoot{margin:-14px 32px 22px;font-size:13px;color:var(--sub)}
+.item{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:52px;width:100%;text-align:left}
+.item+.item{border-top:.5px solid var(--sep)}
+.item .t{flex:1;min-width:0}.item .t b{font-weight:500;display:block}
+.item .t small{display:block;color:var(--sub);font-size:13px}
+.item .v{color:var(--sub);font-size:15px}
+.hm .item .v{color:var(--text)}
+.hm .item{padding-top:15px;padding-bottom:15px;min-height:64px}
+.item::after{content:"";width:8px;height:8px;border-top:2px solid var(--sep);border-right:2px solid var(--sep);transform:rotate(45deg);margin-left:2px;flex:none;opacity:1}
+.item.nochev::after{display:none}
+.ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:18px;flex:none;color:#fff}
+
+/* asset cards */
+.summary{text-align:center;margin:0 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;row-gap:12px;padding:28px 18px;border-radius:20px;color:#fff;
+  background:#2A4D75}
+.summary.one{grid-template-columns:1fr;padding:18px}
+.summary span{display:block;font-size:13px;opacity:.85;margin-bottom:6px}
+.summary b{font-size:22px;font-weight:700}
+.summary .gain{grid-column:1/-1;font-size:13px;opacity:.95;padding-top:10px;border-top:1px solid rgba(255,255,255,.25)}
+.acard{margin:0 16px 12px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.acard summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.acard summary::-webkit-details-marker{display:none}
+.acard .ttl{flex:1;min-width:0}.acard .ttl b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acard .ttl small{display:block;color:var(--sub);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acard .val{font-weight:600;text-align:right}
+.acard .val small{display:block;font-size:13px}
+.acard .val small.xirr{font-weight:600}
+.acard .body{padding:2px 16px 14px;border-top:.5px solid var(--sep)}
+.kv{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:.5px solid var(--sep);font-size:15px}
+.kv span{color:var(--sub);flex:none}.kv b{font-weight:500;text-align:right;word-break:break-word}
+.doc{display:block;padding:8px 0;color:var(--blue);font-size:15px}
+.acts{display:flex;gap:10px;margin-top:12px}
+
+.btn{display:block;text-align:center;background:var(--blue);color:#fff;font-weight:600;padding:14px;border-radius:14px;margin:6px 16px 16px}
+.btn.sm{display:inline-block;margin:0;padding:9px 18px;font-size:15px;border-radius:10px}
+.btn.danger{background:rgba(255,59,48,.14);color:var(--red)}
+.btn.plain{background:var(--card);color:var(--blue)}
+.btn.redtxt{background:var(--card);color:var(--red)}
+
+/* forms */
+.row{display:flex;align-items:center;gap:12px;padding:0 16px;min-height:48px}
+.row+.row{border-top:.5px solid var(--sep)}
+.row .l{flex:none;font-size:16px;max-width:46%}
+.row input,.row select{flex:1;min-width:0;text-align:right;border:0;background:transparent;color:var(--text);font:inherit;font-size:16px;padding:13px 0;outline:none;
+  -webkit-appearance:none;appearance:none}
+.row select{direction:rtl;color:var(--text)}
+.row input::placeholder{color:var(--sub);opacity:.7}
+.row .pre,.row .suf{color:var(--sub)}
+.row.col{flex-direction:column;align-items:stretch;gap:8px;padding:12px 16px}
+.row.col .l{max-width:none}
+.row textarea{width:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:16px;resize:vertical;outline:none;padding:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:7px 12px;border-radius:99px;background:var(--fill);font-size:14px;font-weight:500}
+.chip.on{background:var(--blue);color:#fff}
+.file{display:block;padding:10px 0;color:var(--blue);font-size:15px}
+.row input[type=file]{text-align:left;font-size:14px;padding:10px 0}
+.seg{display:flex;background:var(--fill);border-radius:10px;padding:2px;margin:0 16px 22px}
+.seg button{flex:1;padding:8px;border-radius:8px;font-weight:500;font-size:14px}
+.seg button.on{background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.15);font-weight:600}
+.upd{display:flex;align-items:center;gap:12px;padding:10px 16px}
+.upd+.upd{border-top:.5px solid var(--sep)}
+.upd .t{flex:1;min-width:0}.upd .t b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upd .t small{color:var(--sub);font-size:13px}
+.upd input{width:130px;text-align:right;border:0;border-radius:10px;background:var(--fill);color:var(--text);font:inherit;padding:9px 12px;outline:none}
+
+.hero-empty{text-align:center;padding:36px 24px}
+.hero-empty .big{font-size:54px}.hero-empty h2{margin:8px 0 4px}.hero-empty p{color:var(--sub);margin:0 0 16px}
+.soon-page{text-align:center;padding:64px 28px;color:var(--sub)}
+.soon-page .big{font-size:56px}.soon-page h2{color:var(--text);margin:10px 0 6px}
+
+/* tab bar */
+#tabbar{position:relative;flex:none;z-index:30;display:flex;justify-content:center;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--blur);border-top:.5px solid var(--sep);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+#tabbar>*{flex:1;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--sub);font-size:11px;font-weight:500;padding:4px 0}
+#tabbar svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#tabbar .on{color:var(--blue)}
+#tabbar.off{display:none}
+
+/* sheet */
+#sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
+#sheet .pane{width:100%;max-width:600px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.2,.8,.2,1)}
+#sheet .group{margin:0 0 8px;background:var(--card)}
+#sheet .cancel{width:100%;padding:16px;border-radius:14px;background:var(--card);color:var(--blue);font-weight:600}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* lock */
+#lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px}
+#lock h2{margin:0;font-size:20px}
+.dots{display:flex;gap:16px}.dots i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--text)}.dots i.f{background:var(--text)}
+.pad{display:grid;grid-template-columns:repeat(3,78px);gap:14px}
+.pad button{height:78px;border-radius:50%;background:var(--fill);font-size:28px;font-weight:400}
+.pad button.x{background:none;font-size:16px}
+#lock .err{color:var(--red);min-height:20px;font-size:14px}
+
+#busy{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.25);display:grid;place-items:center}
+#busy i{width:38px;height:38px;border-radius:50%;border:4px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:95;
+  background:rgba(40,40,42,.94);color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;max-width:86vw;text-align:center;
+  opacity:0;pointer-events:none;transition:.25s}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.row .v{flex:1;text-align:right;color:var(--sub)}
+.row b.v{color:var(--text);font-weight:600}
+.row.sp{justify-content:space-between;gap:10px}
+.row .lft{display:flex;align-items:center;flex:none;gap:6px}
+.row input.sipin{flex:none;width:92px;text-align:left;background:var(--fill);border-radius:10px;padding:6px 9px;font-size:14px}
+.row input.curin{flex:1;min-width:0;text-align:center;background:var(--fill);border-radius:10px;padding:8px 10px;font-size:14px}
+.row.sp input.curin{flex:none;width:92px;padding:6px 9px;font-size:14px;text-align:center}
+.row input.chk{-webkit-appearance:none;appearance:none;flex:none;width:20px;height:20px;min-width:20px;padding:0;margin:0 4px 0 0;border-radius:7px;
+  border:1.5px solid var(--sub);background:transparent;cursor:pointer;transition:background .18s,border-color .18s,transform .12s}
+.row input.chk:active{transform:scale(.86)}
+.row input.chk:checked{border-color:transparent;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.4l2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat,#8e8e93}
+.dpick{position:relative;display:flex;align-items:center;gap:8px;flex:none;color:var(--sub);font-weight:500;font-size:15px;padding:6px 0}
+.dpick svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.row .dpick input[type=date]{position:absolute;inset:0;width:100%;height:100%;min-width:0;opacity:0;padding:0;margin:0;cursor:pointer}
+.dpick input[type=date]::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.pds{display:flex;flex-direction:column;gap:8px}
+.pdrow{display:flex;gap:8px;align-items:center}
+.row .pdrow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
+.pdadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
+.txs{display:flex;flex-direction:column;gap:8px}
+.txrow{display:flex;gap:8px;align-items:center}
+.row .txrow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
+.row .txrow input.ta{text-align:right}
+.txdel,.pddel{flex:none;width:32px;height:32px;border-radius:50%;background:rgba(255,59,48,.14);color:var(--red);font-size:20px;line-height:1}
+.txadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
+.txsum{color:var(--sub);font-size:13px}
+.xirr.up{color:var(--green)}.xirr.dn{color:var(--red)}
+.acard .ttl small.xirr{font-weight:600}
+.acard .ttl small.xirr.up{color:var(--green)}
+.acard .ttl small.xirr.dn{color:var(--red)}
+.txlist{max-height:200px;overflow:auto;padding-left:12px}
+.txlist .kv{font-size:14px}
+.summary .gain{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+.summary .gain span{margin-bottom:0}
+.summary .gain em{font-style:normal;font-weight:600;font-size:13px}
+.group.solo{margin-bottom:12px}
+.savetile{display:block;width:100%;margin:8px 0 0;padding:16px;background:var(--card);color:var(--blue);font-size:17px;font-weight:600;text-align:center;border-top:.5px solid var(--sep);border-bottom:.5px solid var(--sep)}
+.ghead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 32px 6px}
+.ghead .gl{font-size:13px;color:var(--blue);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ghead .gr .gn{font-size:13px}
+.ghead .gr{font-size:12px;color:var(--sub);flex:none;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<nav id="tabbar">
+  <a data-tab="home" href="#/home">
+    <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span>
+  </a>
+  <a data-tab="analytics" href="#/analytics">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Analytics</span>
+  </a>
+  <a data-tab="goals" href="#/goals">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg><span>Goals</span>
+  </a>
+  <a data-tab="more" href="#/more">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span>
+  </a>
+</nav>
+
+<div id="sheet" hidden></div>
+<div id="lock" hidden></div>
+<div id="busy" hidden><i></i></div>
+<div id="toast"></div>
+<script>
+'use strict';
+/* =====================================================================
+   My Asset – static front end (GitHub Pages) + Google Apps Script backend
+   Data model
+     asset   : { id, cat, type, data:{...}, docs:[{name,url}], created, updated }
+     history : { ts, assetId, cat, type, current, invested, premium }
+               -> one snapshot is written on every save / bulk update so the
+                  Analytics section can chart trends later.
+   ===================================================================== */
+
+const $ = (s, r = document) => r.querySelector(s);
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('ma.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('ma.' + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem('ma.' + k); } catch {} }
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const nf = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const money = n => '₹' + nf.format(Math.round(n || 0));
+const fmtCr = n => { n = Math.round(n || 0); const a = Math.abs(n);
+  return a >= 1e7 ? '₹' + (n / 1e7).toFixed(2) + ' Cr' : a >= 1e5 ? '₹' + (n / 1e5).toFixed(2) + ' L' : money(n); };
+const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); };
+const fmtDT = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------------------------------------------------------------------
+   Asset type definitions
+   --------------------------------------------------------------------- */
+const m  = (k, l, o) => ({ k, l, t:'number', pre:'₹', ...o });
+const tx = (k, l, o) => ({ k, l, t:'text', ...o });
+const dt = (k, l, o) => ({ k, l, t:'date', ...o });
+const sel = (k, l, opts, o) => ({ k, l, t:'select', opts, ...o });
+const NOTES = { k:'notes', l:'Notes', t:'textarea' };
+const DOCS  = { k:'_docs', l:'Documents', t:'file' };
+const TXS   = { k:'tx', l:'Investments', t:'txs' };   // list of {date, amt}
+
+const premiumFields = [
+  tx('provider','Policy Provider',{req:1}), tx('policyNo','Policy Number'),
+  m('cover','Cover Amount'), m('premium','Premium Amount'),
+  { k:'pdates', l:'Premium Dates', t:'dates' }, NOTES, DOCS
 ];
+const companyBase = [tx('provider','Policy Provider',{req:1}), tx('companyId','Company ID'), m('cover','Cover Amount')];
 
-self.addEventListener('install', event => {
-  // cache each file separately so one missing file can never block installation
-  event.waitUntil(
-    caches.open(CACHE)
-      .then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {}))))
-      .then(() => self.skipWaiting())
-  );
+const T = {
+  /* ---- Investments ---- */
+  mf: { cat:'investment', label:'Mutual Fund', ico:'📈', c:'#5e5ce6',
+    title:d => [d.fundHouse, d.fundGroup].filter(Boolean).join(' ') || 'Mutual Fund',
+    sub:() => '',
+    fields:[
+      tx('fundType','Fund Type',{list:['Equity','Debt','Hybrid','Index','ELSS','Liquid','Other']}),
+      tx('fundGroup','Fund Group'), tx('fundHouse','Fund House',{req:1}),
+      TXS, m('current','Current Amount',{req:1}),
+      tx('folio','Folio Number'), tx('purpose','Purpose'),
+      sel('freq','Contribution Frequency',['Monthly','Adhoc','Once']),
+      m('monthlyAmt','Monthly Contribution Amount',{show:d => d.freq === 'Monthly'}),
+      NOTES, DOCS ] },
+  fd: { cat:'investment', label:'Fixed Deposit', ico:'🏦', c:'#ff9f0a',
+    title:d => [d.owner, d.bank].filter(Boolean).join(' · ') || 'Fixed Deposit',
+    sub:d => [d.maturityDate && fmtDate(d.maturityDate), d.accountNo && '*' + String(d.accountNo).slice(-4)].filter(Boolean).join(' · '),
+    fields:[
+      tx('owner','Owner'), tx('bank','Bank Name',{req:1}), tx('accountNo','Account Number'),
+      m('invested','Invested Amount',{req:1}), m('maturityAmt','Maturity Amount'),
+      dt('investDate','Investment Date'), dt('maturityDate','Maturity Date'),
+      m('rate','Interest Rate',{pre:'',suf:'%',step:'0.01'}), tx('purpose','Purpose'), NOTES, DOCS ] },
+  sa: { cat:'investment', label:'Saving Account', ico:'💰', c:'#30b0c7',
+    title:d => (d.bank || 'Savings') + ' Savings',
+    sub:d => [d.owner, d.accountNo && '•••• ' + String(d.accountNo).slice(-4)].filter(Boolean).join(' · '),
+    fields:[
+      tx('owner','Owner'), tx('bank','Bank Name',{req:1}), tx('accountNo','Account Number'),
+      m('current','Current Amount',{req:1}), m('rate','Interest Rate',{pre:'',suf:'%',step:'0.01'}),
+      tx('purpose','Purpose'), NOTES, DOCS ] },
+  epf: { cat:'investment', label:'EPF', ico:'🧾', c:'#34c759',
+    title:() => 'EPF', sub:d => d.accountNo || '',
+    fields:[
+      tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}), dt('maturityDate','Maturity Date'),
+      tx('purpose','Purpose'), m('monthly','Monthly Contribution Amount'), NOTES, DOCS ] },
+  ppf: { cat:'investment', label:'PPF', ico:'🏛️', c:'#ff6482',
+    title:d => ((d.bank || '') + ' PPF').trim(), sub:d => d.accountNo || '',
+    fields:[
+      tx('bank','Bank Name'), tx('accountNo','Account Number'), TXS,
+      m('current','Current Amount',{req:1}), dt('maturityDate','Maturity Date'), tx('purpose','Purpose'),
+      m('yearly','Yearly Contribution Amount'), sel('contribMonth','Contribution Month',MONTHS), NOTES, DOCS ] },
+  nps: { cat:'investment', label:'NPS', ico:'🌅', c:'#af52de',
+    title:() => 'NPS', sub:d => d.accountNo || '',
+    fields:[
+      tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}),
+      dt('maturityDate','Maturity Date'), tx('purpose','Purpose'), m('monthly','Monthly Contribution Amount'), NOTES, DOCS ] },
+  gratuity: { cat:'investment', label:'Gratuity', ico:'🎁', c:'#64d2ff',
+    title:() => 'Gratuity', sub:d => d.companyId ? 'Company ID ' + d.companyId : '',
+    fields:[ tx('companyId','Company ID'), m('current','Current Amount',{req:1}), tx('purpose','Purpose'), NOTES, DOCS ] },
+
+  /* ---- Insurance : personal ---- */
+  term:   { cat:'insurance', group:'personal', label:'Term Insurance',    ico:'🛡️', c:'#0a84ff', fields:premiumFields },
+  pmed:   { cat:'insurance', group:'personal', label:'Medical Insurance', ico:'🏥', c:'#ff375f', fields:premiumFields },
+  car:    { cat:'insurance', group:'personal', label:'Car Insurance',     ico:'🚗', c:'#ff9f0a', fields:premiumFields },
+  bike:   { cat:'insurance', group:'personal', label:'Bike Insurance',    ico:'🏍️', c:'#30b0c7', fields:premiumFields },
+  pother: { cat:'insurance', group:'personal', label:'Others',            ico:'📄', c:'#8e8e93', fields:premiumFields },
+  /* ---- Insurance : company ---- */
+  clife:  { cat:'insurance', group:'company', label:'Life Insurance',     ico:'🛡️', c:'#0a84ff', fields:[...companyBase, NOTES, DOCS] },
+  cacc:   { cat:'insurance', group:'company', label:'Accidental Insurance', ico:'🩹', c:'#ff9f0a', fields:[...companyBase, NOTES, DOCS] },
+  cmed:   { cat:'insurance', group:'company', label:'Medical Insurance',  ico:'🏥', c:'#ff375f',
+    fields:[...companyBase, tx('people','People Covered'), sel('renewal','Renewal Month',MONTHS), NOTES, DOCS] },
+  cother: { cat:'insurance', group:'company', label:'Others',             ico:'📄', c:'#8e8e93', fields:[...companyBase, NOTES, DOCS] },
+
+  /* ---- Self use ---- */
+  house: { cat:'selfuse', label:'House', ico:'🏠', c:'#ff9f0a', title:d => d.name || 'House', sub:d => num(d.purchase) > 0 ? 'Purchased ' + money(num(d.purchase)) : '',
+    fields:[tx('name','House Name',{req:1}), m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
+  land:  { cat:'selfuse', label:'Land',  ico:'🌳', c:'#34c759', title:d => d.name || 'Land', sub:d => num(d.purchase) > 0 ? 'Purchased ' + money(num(d.purchase)) : '',
+    fields:[tx('name','Land Name',{req:1}), m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), tx('location','Location'), NOTES, DOCS] },
+  gold:  { cat:'selfuse', label:'Gold',  ico:'🪙', c:'#ffcc00', title:() => 'Gold', sub:d => num(d.purchase) > 0 ? 'Purchased ' + money(num(d.purchase)) : '',
+    fields:[m('purchase','Purchase Amount'), dt('purchaseDate','Purchase Date'), m('current','Approx Current Value',{req:1}), DOCS] }
+};
+const ORDER = {
+  investment:['mf','fd','sa','epf','ppf','nps','gratuity'],
+  personal:['term','pmed','car','bike','pother'],
+  company:['clife','cacc','cmed','cother'],
+  selfuse:['house','land','gold'],
+  property:['house','land']
+};
+const GROUPS = { mf:['mf'], fd:['fd'], sa:['sa'], epf:['epf'], ppf:['ppf'], nps:['nps'], gratuity:['gratuity'],
+  realestate:['house','land','gold'], property:['house','land'], gold:['gold'], personal:ORDER.personal, company:ORDER.company };
+const CAT_META = {
+  investment:{ label:'Investment', ico:'📊', c:'#0a84ff', sub:'Funds, deposits, retirement' },
+  insurance: { label:'Insurance',  ico:'🛡️', c:'#ff375f', sub:'Personal & company policies' },
+  selfuse:   { label:'Self Use',   ico:'🏠', c:'#ff9f0a', sub:'House, land, gold' }
+};
+
+/* ---------------------------------------------------------------------
+   State & persistence
+   --------------------------------------------------------------------- */
+const S = { hide: !!store.get('hide', false), assets: store.get('assets', []), goals: store.get('goals', []), history: store.get('history', []), cfg: store.get('cfg', null) };
+const remote = () => !!(S.cfg && S.cfg.url && S.cfg.key);
+const persist = () => { store.set('assets', S.assets); store.set('history', S.history); store.set('goals', S.goals); };
+
+const typeOf = a => T[a.type];
+const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
+const subOf = a => { if (a.type === 'mf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
+
+function fdValue(d, at) {
+  // Quarterly compounding on the interest rate; simple interest on the part-quarter, like bank accrual.
+  const P = num(d.invested), r = num(d.rate) / 100;
+  const s = new Date(d.investDate), e = new Date(d.maturityDate), now = at || new Date();
+  if (isNaN(s)) return P;
+  let days = (now - s) / 864e5;
+  if (!isNaN(e) && e > s) days = Math.min(days, (e - s) / 864e5);   // stops growing at maturity
+  if (days <= 0) return P;
+  if (r > 0) {
+    const Q = 365 / 4, n = Math.floor(days / Q), rem = days - n * Q, q = r / 4;
+    const v = P * Math.pow(1 + q, n);
+    return v + v * q * (rem / Q);
+  }
+  const mat = num(d.maturityAmt);                       // no rate given: straight line to maturity amount
+  if (!mat || isNaN(e) || e <= s) return P;
+  return P + (mat - P) * Math.min(1, Math.max(0, (now - s) / (e - s)));
+}
+const curVal = a => a.type === 'fd' ? fdValue(a.data) : num(a.data.current);
+const INV_TYPES = ['mf', 'epf', 'ppf', 'nps'];           // investments entered as dated splits
+const CONTRIB = {                                          // standing contribution field per type
+  mf:  { k: 'monthlyAmt', lab: 'Monthly SIP' },
+  epf: { k: 'monthly',    lab: 'Monthly contribution' },
+  nps: { k: 'monthly',    lab: 'Monthly contribution' },
+  ppf: { k: 'yearly',     lab: 'Yearly contribution' }
+};
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const pct = v => (v * 100).toFixed(1) + '%';
+const byDate = (x, y) => (x.date || '') < (y.date || '') ? -1 : (x.date || '') > (y.date || '') ? 1 : 0;
+
+/* Dated money-in list for an asset: [{date:'YYYY-MM-DD' or '', amt}] */
+function txOf(a) {
+  const d = a.data;
+  if (INV_TYPES.includes(a.type)) {
+    if (Array.isArray(d.tx)) return d.tx.map(z => ({ date: z.date || '', amt: num(z.amt) })).filter(z => z.amt > 0);
+    return num(d.invested) > 0 ? [{ date: '', amt: num(d.invested) }] : [];     // older asset saved before dates existed
+  }
+  if (a.type === 'fd') return num(d.invested) > 0 ? [{ date: d.investDate || '', amt: num(d.invested) }] : [];
+  if (T[a.type].cat === 'selfuse') return num(d.purchase) > 0 ? [{ date: d.purchaseDate || '', amt: num(d.purchase) }] : [];
+  return [];
+}
+const invVal = a => txOf(a).reduce((t, z) => t + z.amt, 0);
+const fmtShort = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? 'Date' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }); };
+const fmtDay = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); };
+
+/* Premium dates (yearly recurring) of a personal policy as ['YYYY-MM-DD'].
+   Policies saved earlier with only months are converted: due on the 1st (or today if it is this month). */
+function pdatesOf(a) {
+  const d = a.data;
+  if (Array.isArray(d.pdates)) return d.pdates.filter(Boolean);
+  if (!d.months) return [];
+  const now = new Date(), iso = (y, m, dd) => y + '-' + String(m + 1).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+  return String(d.months).split(',').map(x => MONTHS.indexOf(x.trim())).filter(i => i >= 0).map(i =>
+    i === now.getMonth() ? todayISO() : iso(i > now.getMonth() ? now.getFullYear() : now.getFullYear() + 1, i, 1));
+}
+
+/* XIRR: annualised rate r where sum(v / (1+r)^(days/365)) = 0. Needs 30+ days of history. */
+function xirr(flows) {
+  const f = flows.filter(x => isFinite(x.v) && x.v !== 0 && isFinite(x.t));
+  if (f.length < 2 || !f.some(x => x.v < 0) || !f.some(x => x.v > 0)) return null;
+  const t0 = Math.min(...f.map(x => x.t)), t1 = Math.max(...f.map(x => x.t));
+  if (t1 - t0 < 30 * 864e5) return null;
+  const npv = r => f.reduce((s, x) => s + x.v / Math.pow(1 + r, (x.t - t0) / (365 * 864e5)), 0);
+  let lo = -0.9999, hi = 10, flo = npv(lo), fhi = npv(hi);
+  while (flo * fhi > 0 && hi < 1e6) { hi *= 10; fhi = npv(hi); }
+  if (!(flo * fhi <= 0)) return null;
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2, fm = npv(mid);
+    if (flo * fm <= 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+  }
+  return (lo + hi) / 2;
+}
+function endDate(a) {                                        // an FD stops earning at maturity
+  if (a.type === 'fd') { const e = new Date(a.data.maturityDate); if (!isNaN(e) && e < new Date()) return e; }
+  return new Date();
+}
+function flowsOf(a) {
+  const list = txOf(a);
+  if (!list.length || list.some(z => !z.date)) return null;  // undated money-in: can't compute
+  const out = list.map(z => ({ t: new Date(z.date).getTime(), v: -z.amt }));
+  out.push({ t: endDate(a).getTime(), v: curVal(a) });
+  return out;
+}
+const assetXirr = a => { const f = flowsOf(a); return f ? xirr(f) : null; };
+function groupXirr(items) {
+  const all = [];
+  items.forEach(a => { const f = flowsOf(a); if (f) all.push(...f); });
+  return all.length ? xirr(all) : null;
+}
+const ofTypes = types => S.assets.filter(a => types.includes(a.type));
+const sum = (list, fn) => list.reduce((t, a) => t + fn(a), 0);
+const byCat = c => S.assets.filter(a => T[a.type].cat === c);
+
+function snap(a) {
+  return { ts: new Date().toISOString(), assetId: a.id, cat: a.cat, type: a.type,
+           current: curVal(a), invested: invVal(a), premium: num(a.data.premium) };
+}
+
+/* ---------------------------------------------------------------------
+   Backend (Google Apps Script)
+   --------------------------------------------------------------------- */
+async function api(action, payload = {}) {
+  const c = S.cfg;
+  const res = await fetch(c.url, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // avoids CORS pre-flight
+    body: JSON.stringify({ key: c.key, action, ...payload })
+  });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || 'Request failed');
+  return j;
+}
+async function sync(quiet) {
+  if (!remote()) return;
+  try {
+    const r = await api('list');
+    S.assets = r.assets || []; S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals; persist();
+    if (!/^#\/(form|update)/.test(location.hash)) render();
+    if (!quiet) toast('Synced');
+  } catch (e) { toast(quiet ? 'Offline – showing saved data' : e.message); }
+}
+const b64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
+
+async function saveAsset(asset) {
+  asset.updated = new Date().toISOString();
+  asset.created = asset.created || asset.updated;
+  const h = [snap(asset)];
+  if (remote()) await api('save', { asset, history: h });
+  const i = S.assets.findIndex(x => x.id === asset.id);
+  if (i >= 0) S.assets[i] = asset; else S.assets.push(asset);
+  S.history.push(...h); persist();
+}
+async function bulkSave(list) {
+  const now = new Date().toISOString();
+  list.forEach(a => a.updated = now);
+  const h = list.map(snap);
+  if (remote()) await api('bulk', { assets: list, history: h });
+  list.forEach(a => { const i = S.assets.findIndex(x => x.id === a.id); if (i >= 0) S.assets[i] = a; });
+  S.history.push(...h); persist();
+}
+async function saveGoal(g) {
+  g.updated = new Date().toISOString(); g.created = g.created || g.updated;
+  let note = '';
+  if (remote()) { try { await api('goalsave', { goal: g }); } catch (e) { if (/Unknown action/i.test(e.message)) note = 'Saved on this device – update Code.gs to sync goals'; else throw e; } }
+  const i = S.goals.findIndex(x => x.id === g.id); if (i >= 0) S.goals[i] = g; else S.goals.push(g);
+  persist(); return note;
+}
+async function removeGoal(id) {
+  if (remote()) { try { await api('goaldelete', { id }); } catch (e) { if (!/Unknown action/i.test(e.message)) throw e; } }
+  S.goals = S.goals.filter(x => x.id !== id); persist();
+}
+async function removeAsset(id) {
+  if (remote()) await api('delete', { id });
+  S.assets = S.assets.filter(a => a.id !== id); persist();
+}
+
+/* ---------------------------------------------------------------------
+   UI helpers
+   --------------------------------------------------------------------- */
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+const busy = on => { $('#busy').hidden = !on; };
+async function run(fn) { busy(true); try { return await fn(); } catch (e) { toast(e.message || 'Something went wrong'); return null; } finally { busy(false); } }
+
+function applyTheme() {
+  const th = store.get('theme', 'auto');
+  if (th === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', th);
+  const dark = th === 'dark' || (th === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches);
+  $('meta[name=theme-color]').setAttribute('content', dark ? '#000000' : '#f2f2f7');
+}
+matchMedia('(prefers-color-scheme:dark)').addEventListener?.('change', applyTheme);
+
+const chev = '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>';
+const soloList = arr => arr.map(x => `<div class="group solo">${x}</div>`).join('');
+const item = (href, ico, c, title, val, sub) =>
+  `<a class="item" href="${href}">${ico ? `<span class="ico" style="background:${c}">${ico}</span>` : ''}<span class="t"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${val ? `<span class="v">${esc(val)}</span>` : ''}</a>`;
+
+/* ---------------------------------------------------------------------
+   Date logic: upcoming premiums & next-month contributions
+   --------------------------------------------------------------------- */
+function nextOccurrence(iso, from) {                  // next yearly occurrence of a date, on or after `from`
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!m || !d) return null;
+  const at = yr => new Date(yr, m - 1, Math.min(d, new Date(yr, m, 0).getDate()));
+  let dt = at(from.getFullYear());
+  if (dt < from) dt = at(from.getFullYear() + 1);
+  return dt;
+}
+function upcomingPremiums(days = 90) {                // personal policies only, due within `days`
+  const now = new Date(), from = new Date(now.getFullYear(), now.getMonth(), now.getDate()), out = [];
+  ofTypes(ORDER.personal).forEach(a => {
+    let best = null;
+    pdatesOf(a).forEach(iso => { const dt = nextOccurrence(iso, from); if (dt && (!best || dt < best)) best = dt; });
+    if (!best) return;
+    const diff = Math.round((best - from) / 864e5);
+    if (diff <= days) out.push({ a, diff, date: best, amt: num(a.data.premium) });
+  });
+  return out.sort((x, y) => x.diff - y.diff);
+}
+function nextMonthPayments() {
+  const nm = new Date().getMonth(), out = [];
+  ofTypes(['mf']).forEach(a => { if (a.data.freq === 'Monthly' && num(a.data.monthlyAmt)) out.push({ n: ttl(a), t: 'Mutual Fund', amt: num(a.data.monthlyAmt) }); });
+  ofTypes(['epf']).forEach(a => { if (num(a.data.monthly)) out.push({ n: 'EPF', t: 'Monthly', amt: num(a.data.monthly) }); });
+  ofTypes(['nps']).forEach(a => { if (num(a.data.monthly)) out.push({ n: 'NPS', t: 'Monthly', amt: num(a.data.monthly) }); });
+  ofTypes(['ppf']).forEach(a => { if (num(a.data.yearly) && MONTHS.indexOf(a.data.contribMonth) === nm) out.push({ n: ttl(a), t: 'Yearly contribution', amt: num(a.data.yearly) }); });
+  return { month: MONTHS[nm], items: out };
+}
+
+/* ---------------------------------------------------------------------
+   Views – each returns { title, back, right, html, after, tab, large, nobar, notabs }
+   --------------------------------------------------------------------- */
+function home() {
+  const M = v => S.hide ? '••••' : money(v), C = v => S.hide ? '••••' : fmtCr(v);
+  const icoShield = '<svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6z"/></svg>';
+  const icoTrend = '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>';
+  const eyeOn = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const eyeOff = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg>';
+  const inv = byCat('investment'), selfuse = byCat('selfuse');
+  const funds = sum(inv, curVal);
+  const liquid = sum(ofTypes(['mf', 'fd', 'sa']), curVal);
+  const real = sum(selfuse, curVal);
+  const prop = sum(ofTypes(['house', 'land']), curVal), gld = sum(ofTypes(['gold']), curVal);
+  const last = S.assets.reduce((mx, a) => (a.updated > mx ? a.updated : mx), '');
+  let h = `<div class="head"><div><h1>My Assets</h1><small>${last ? 'Last updated ' + esc(fmtDT(last)) : 'No assets added yet'}</small></div>
+    ${S.assets.length ? `<button class="eye" data-act="eye" aria-label="${S.hide ? 'Show amounts' : 'Hide amounts'}">${S.hide ? eyeOff : eyeOn}</button>` : `<button class="iconbtn" data-act="refresh" aria-label="Refresh">${chev}</button>`}</div>`;
+
+  if (!remote()) h += `<div class="warn">Running in <b>local mode</b> – data stays on this device only. Connect Google Sheets in <a href="#/settings/keys">Settings › Add Keys</a>.</div>`;
+
+  if (!S.assets.length) {
+    h += `<div class="card hero-empty"><div class="big">🪙</div><h2>Start tracking</h2><p>Add your investments, insurance, property and gold.</p><a class="btn sm" href="#/add">Add your first asset</a></div>`;
+    return { html: h, tab: 'home', nobar: true };
+  }
+
+  h += `<section class="hero"><div class="top"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div></div>
+    <div class="cols"><a href="#/funds"><span>Total Funds</span><b>${C(funds)}</b></a><a href="#/liquid"><span>Liquid Funds</span><b>${C(liquid)}</b></a></div>
+    <div class="cols"><a href="#/property"><span>Property</span><b>${C(prop)}</b></a><a href="#/gold"><span>Gold</span><b>${C(gld)}</b></a></div></section>`;
+
+  const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
+  h += '<div class="card outer">';
+  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' tglow' : ''}">${icoShield}Premiums Due (in 90 days)</span><span class="dr${upTot > 0 ? ' tglow' : ''}">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
+    `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
+     <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
+    : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
+
+  const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
+  h += `<details class="dtile in prem"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
+    `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
+    : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
+  h += '</div>';
+
+  const solo = (...args) => `<div class="group solo hm">${item(...args)}</div>`;      // every menu sits in its own tile
+  const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
+    solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)))).join('');
+  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
+  h += rows
+    + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')
+    + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
+    + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld));
+  return { html: h, tab: 'home', nobar: true };
+}
+
+function summaryTile(items, types) {
+  const hasInv = types.some(t => INV_TYPES.includes(t) || T[t].fields.some(f => f.k === 'invested' || f.k === 'purchase'));
+  const inv = sum(items, invVal), cur = sum(items, curVal);
+  if (!hasInv) return `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div></div>`;
+  const g = cur - inv, p = inv ? (g / inv * 100) : 0, x = groupXirr(items);
+  return `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
+    ${inv ? `<div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${p.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
+}
+function showVal(f, v) {
+  if (f.t === 'dates') return v.map(fmtDay).join(', ');
+  if (f.t === 'number') return f.pre ? money(num(v)) : v + (f.suf || '');
+  if (f.t === 'date') return fmtDate(v);
+  return v;
+}
+function card(a) {
+  const t = typeOf(a), d = a.data, ins = t.cat === 'insurance';
+  const right = ins ? (num(d.cover) ? money(num(d.cover)) : '') : money(curVal(a));
+  const kv = (l, v) => `<div class="kv"><span>${esc(l)}</span><b>${esc(v)}</b></div>`;
+  const list = ins ? [] : txOf(a), x = ins ? null : assetXirr(a), sub = subOf(a);
+  const xl = x == null ? '' : `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>`;
+  const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); });
+  let rows = t.fields.filter(f => f.t !== 'file' && f.t !== 'txs' && dd[f.k] !== '' && dd[f.k] != null && !(Array.isArray(dd[f.k]) && !dd[f.k].length))
+    .map(f => kv(f.l, showVal(f, dd[f.k]))).join('');
+  if (INV_TYPES.includes(a.type) && list.length)
+    rows += kv('Total invested', money(invVal(a))) +
+      `<div class="kv"><span>Investments (${list.length})</span><b></b></div><div class="txlist">${[...list].sort((p, q) => byDate(q, p)).map(z => kv(z.date ? fmtDate(z.date) : 'No date', money(z.amt))).join('')}</div>`;
+  const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
+  return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
+    <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
+    <div class="body">${rows}${docs}<div class="acts"><a class="btn sm" href="#/form/${a.type}/${a.id}">Edit</a>
+    <button class="btn sm danger" data-del="${a.id}">Delete</button></div></div></details>`;
+}
+
+function fundsPage(kind) {
+  const liq = kind === 'liquid';
+  const types = liq ? ['mf', 'fd', 'sa'] : ORDER.investment;
+  const items = types.flatMap(t => ofTypes([t]));
+  let h;
+  if (items.length) {
+    const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
+    const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
+    h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
+      <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
+  } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
+  return { title: liq ? 'Liquid Funds' : 'Total Funds', back: '#/home', html: h, tab: 'home' };
+}
+const listTitle = key => ({ realestate: 'Property & Gold', property: 'Property', gold: 'Gold' })[key] || T[key].label;
+const UPDATABLE = ['mf', 'sa', 'epf', 'ppf', 'nps', 'gratuity', 'realestate'];
+function listPage(key) {
+  const types = GROUPS[key]; if (!types) return notFound();
+  const items = ofTypes(types);
+  const title = listTitle(key);
+  const back = '#/home';
+  const addHref = key === 'realestate' ? '#/add/selfuse' : key === 'property' ? '#/add/property' : key === 'gold' ? '#/form/gold' : (items.length && UPDATABLE.includes(key)) ? '#/update/' + key : '#/form/' + key;
+  let h = '' + (items.length ? summaryTile(items, types) + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
+  return { title, back, right: `<a class="plus" href="${addHref}" aria-label="Add">+</a>`, html: h, tab: 'home' };
+}
+
+function insuranceMenu() {
+  return { title: 'Insurance', back: '#/home', large: 'Insurance', tab: 'home',
+    html: soloList([item('#/insurance/personal', '👤', '#0a84ff', 'Personal', ''),
+      item('#/insurance/company', '🏢', '#5e5ce6', 'Company', '')]) };
+}
+function insuranceList(group) {
+  if (!['personal', 'company'].includes(group)) return notFound();
+  const items = ofTypes(ORDER[group]);
+  const cover = sum(items, a => num(a.data.cover));
+  const annual = sum(items, a => num(a.data.premium) * pdatesOf(a).length);
+  let h = items.length ? `<div class="summary ${group === 'company' ? 'one' : ''}"><div><span>Total Cover</span><b>${money(cover)}</b></div>${group === 'personal' ? `<div><span>Yearly Premium</span><b>${money(annual)}</b></div>` : ''}</div>` + items.map(card).join('')
+    : `<div class="card"><div class="empty">No policies added yet.</div></div>`;
+  return { title: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance', back: '#/insurance', large: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance',
+    right: `<a class="plus" href="#/add/insurance/${group}">+</a>`, html: h, tab: 'home' };
+}
+
+function updatePage(key) {
+  if (!UPDATABLE.includes(key)) return notFound();
+  const items = ofTypes(GROUPS[key]);
+  const title = listTitle(key);
+  const back = key === 'realestate' ? '#/realestate' : '#/list/' + key;
+  const today = todayISO();
+  const cal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+  const blocks = items.map(a => {
+    const c = CONTRIB[a.type], inv = invVal(a), sip = c ? num(a.data[c.k]) : 0;
+    const cur = `<input class="curin" name="${a.id}__cur" type="number" inputmode="decimal" step="any" placeholder="${c ? 'Current' : 'Current value'}" aria-label="Current value">`;
+    let rows;
+    if (c) rows = `<div class="row"><span class="l">Invested so far</span><span class="v">${money(inv)}</span></div>
+      <div class="row sp"><div class="lft"><input class="chk" type="checkbox" name="${a.id}__add" ${sip > 0 ? 'checked' : ''} aria-label="Add to investments"><span class="pre">₹</span><input class="sipin" name="${a.id}__sip" type="number" inputmode="decimal" step="any" placeholder="${a.type === 'mf' ? 'SIP' : 'Amount'}" value="${sip || ''}" aria-label="${esc(c.lab)}"></div>
+        <b class="v" data-tot>${money(inv + sip)}</b></div>
+      <div class="row sp"><label class="dpick" title="Investment date">${cal}<span class="dtxt">${esc(fmtShort(today))}</span><input type="date" name="${a.id}__date" value="${today}" aria-label="Investment date"></label>${cur}</div>`;
+    else rows = (T[a.type].cat === 'selfuse' ? `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>` : '') + `<div class="row">${cur}</div>`;
+    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
+  }).join('');
+  const h = `<form id="f">${blocks}<button class="savetile" type="submit">Save Current Value</button></form>`;
+  return { title: 'Update ' + title, back, html: h, notabs: true,
+    after() {
+      const f = $('#f');
+      f.querySelectorAll('.group[data-id]').forEach(g => {            // SIP box ends where the "Invested so far" label ends
+        const l = g.querySelector('.row .l'), lft = g.querySelector('.lft'), si = g.querySelector('.sipin');
+        if (!l || !lft || !si || !l.offsetWidth) return;
+        lft.style.width = l.offsetWidth + 'px'; si.style.flex = '1'; si.style.width = 'auto'; si.style.minWidth = '56px';
+      });
+      const recalc = () => f.querySelectorAll('.group[data-id]').forEach(g => {
+        const dt = g.querySelector('.dtxt'); if (dt) dt.textContent = fmtShort(g.querySelector('[name$="__date"]').value);
+        const tot = g.querySelector('[data-tot]'); if (!tot) return;
+        const sip = num(g.querySelector('[name$="__sip"]').value), add = g.querySelector('[name$="__add"]').checked;
+        tot.textContent = money(num(g.dataset.inv) + (add && sip > 0 ? sip : 0));
+      });
+      f.addEventListener('input', recalc); f.addEventListener('change', recalc);
+      f.addEventListener('click', e => { const d = e.target.closest('.dpick'); if (d) { try { d.querySelector('input').showPicker(); } catch (x) {} } });
+      f.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(e.target), changed = [];
+        for (const a of items) {
+          const c = CONTRIB[a.type], data = { ...a.data };
+          let dirty = false;
+          const cur = fd.get(a.id + '__cur');
+          if (cur !== null && cur !== '' && Number(cur) !== num(a.data.current)) { data.current = Number(cur); dirty = true; }
+          if (c) {
+            const sip = num(fd.get(a.id + '__sip')), add = fd.get(a.id + '__add') !== null, date = fd.get(a.id + '__date');
+            if (sip !== num(a.data[c.k])) { data[c.k] = sip; dirty = true; if (a.type === 'mf' && sip > 0) data.freq = 'Monthly'; }
+            if (add && sip > 0) {
+              if (!date) return toast('Pick an investment date for ' + ttl(a));
+              const list = txOf(a).map(z => ({ ...z }));
+              list.push({ date, amt: sip }); list.sort(byDate);
+              data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0); dirty = true;
+            }
+          }
+          if (dirty) changed.push({ ...a, data });
+        }
+        if (!changed.length) return toast('Nothing changed');
+        if (await run(async () => { await bulkSave(changed); return true; })) { toast('Values updated'); location.hash = back; }
+      });
+    } };
+}
+
+/* ---- Add flow ---- */
+function addPage(a, b) {
+  if (!a) return { title: 'Add Asset', back: '#/more', large: 'Add Asset', tab: 'more',
+    html: soloList(Object.entries(CAT_META).map(([k, v]) => item('#/add/' + k, v.ico, v.c, v.label, '', v.sub))) };
+  if (a === 'insurance' && !b) return { title: 'Insurance', back: '#/add', large: 'Insurance', tab: 'more',
+    html: soloList([item('#/add/insurance/personal', '👤', '#0a84ff', 'Personal'), item('#/add/insurance/company', '🏢', '#5e5ce6', 'Company')]) };
+  const key = a === 'insurance' ? b : a;
+  const list = ORDER[key]; if (!list) return notFound();
+  return { title: 'Select Type', back: a === 'insurance' ? '#/add/insurance' : a === 'property' ? '#/property' : '#/add', large: 'Select Type', tab: 'more',
+    html: soloList(list.map(t => item('#/form/' + t, T[t].ico, T[t].c, T[t].label))) };
+}
+
+const pdRow = v => `<div class="pdrow"><input type="date" class="pd" value="${esc(v || '')}" aria-label="Premium date"><button type="button" class="pddel" aria-label="Remove">−</button></div>`;
+const txRow = x => `<div class="txrow"><input type="date" class="td" value="${esc(x.date || '')}" aria-label="Date"><input type="number" inputmode="decimal" step="any" class="ta" placeholder="Amount ₹" value="${esc(x.amt ?? '')}" aria-label="Amount"><button type="button" class="txdel" aria-label="Remove">−</button></div>`;
+function fieldHTML(f, v) {
+  const val = v ?? '';
+  const row = (inner, cls = '') => `<div class="row ${cls}" data-k="${f.k}"${f.show ? ' data-cond="1"' : ''}>${inner}</div>`;
+  const lbl = `<span class="l">${esc(f.l)}${f.req ? ' <span style="color:var(--red)">*</span>' : ''}</span>`;
+  switch (f.t) {
+    case 'textarea': return row(`${lbl}<textarea name="${f.k}" rows="3" placeholder="Add notes…">${esc(val)}</textarea>`, 'col');
+    case 'select': return row(`${lbl}<select name="${f.k}"><option value="">Select</option>${f.opts.map(o => `<option ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`);
+    case 'months': {
+      const on = String(val).split(',').map(s => s.trim()).filter(Boolean);
+      return row(`${lbl}<div class="chips">${MONTHS.map(mo => `<button type="button" class="chip ${on.includes(mo) ? 'on' : ''}" data-chip="${mo}">${mo}</button>`).join('')}</div><input type="hidden" name="months" value="${esc(on.join(','))}">`, 'col');
+    }
+    case 'dates': {
+      const list = Array.isArray(v) && v.length ? v : [''];
+      return row(`${lbl}<div class="pds">${list.map(pdRow).join('')}</div><button type="button" class="pdadd">＋ Add premium date</button><div class="txsum">Repeats every year on each date.</div>`, 'col');
+    }
+    case 'txs': {
+      const list = Array.isArray(v) && v.length ? v : [{ date: todayISO(), amt: '' }];
+      return row(`${lbl}<div class="txs">${list.map(txRow).join('')}</div><button type="button" class="txadd">＋ Add investment</button><div class="txsum"></div>`, 'col');
+    }
+    case 'file': return row(`${lbl}<input type="file" name="_docs" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">`, 'col');
+    default: {
+      const type = f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text';
+      const dl = f.list ? `list="dl_${f.k}"` : '';
+      return row(`${lbl}${f.pre ? `<span class="pre">${f.pre}</span>` : ''}<input name="${f.k}" type="${type}" ${f.t === 'number' ? `inputmode="decimal" step="${f.step || 'any'}"` : ''} ${dl} value="${esc(val)}" ${f.req ? 'required' : ''} placeholder="${f.t === 'number' ? '0' : ''}" autocomplete="off">${f.suf ? `<span class="suf">${f.suf}</span>` : ''}${f.list ? `<datalist id="dl_${f.k}">${f.list.map(o => `<option value="${esc(o)}">`).join('')}</datalist>` : ''}`);
+    }
+  }
+}
+function formPage(type, id) {
+  const t = T[type]; if (!t) return notFound();
+  const existing = id ? S.assets.find(a => a.id === id) : null;
+  if (id && !existing) return notFound();
+  const d = existing ? existing.data : {};
+  const initTx = existing ? txOf(existing) : [];
+  const initPd = existing ? pdatesOf(existing) : [];
+  const selfHome = type === 'gold' ? '#/gold' : '#/property';
+  let back = existing ? (t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? selfHome : '#/list/' + type) : null;
+  const addBack = t.cat === 'insurance' ? '#/add/insurance/' + t.group : '#/add/' + t.cat;   // the "Select Type" page
+  const home = t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? selfHome : '#/list/' + type;
+  if (!back) back = /^#\/add/.test(prevHash) ? prevHash : (prevHash ? home : addBack);   // opened from a list's + → back to that list
+  const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
+  const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
+  const h = `
+    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : d[f.k])).join('')}</div>${docs}
+    ${existing ? '' : ''}</form>${remote() ? '' : '<div class="gfoot">Local mode: document uploads need Google Drive keys (Settings › Add Keys).</div>'}`;
+  return { title: (existing ? 'Edit ' : 'Add ') + label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
+    after() {
+      const form = $('#f');
+      const raw = () => { const o = {}; new FormData(form).forEach((v, k) => { if (k !== '_docs') o[k] = v; }); return o; };
+      const cond = () => { const r = raw(); t.fields.forEach(f => { if (f.show) { const el = form.querySelector(`[data-k="${f.k}"]`); const vis = f.show(r); el.hidden = !vis; } }); };
+      form.addEventListener('input', cond); form.addEventListener('change', cond); cond();
+      const box = form.querySelector('.txs'), sumEl = form.querySelector('.txsum');
+      const calc = () => { if (!box) return; sumEl.textContent = 'Total invested ' + money([...box.querySelectorAll('.ta')].reduce((tt, i) => tt + num(i.value), 0)); };
+      calc(); if (box) box.addEventListener('input', calc);
+      form.addEventListener('click', e => {
+        if (e.target.closest('.pdadd')) { form.querySelector('.pds').insertAdjacentHTML('beforeend', pdRow('')); return; }
+        const pdd = e.target.closest('.pddel');
+        if (pdd) { const pb = form.querySelector('.pds'); if (pb.children.length > 1) pdd.parentElement.remove(); else pdd.parentElement.querySelector('input').value = ''; return; }
+        if (e.target.closest('.txadd')) { box.insertAdjacentHTML('beforeend', txRow({ date: todayISO(), amt: '' })); calc(); return; }
+        const del = e.target.closest('.txdel');
+        if (del) {
+          if (box.children.length > 1) del.parentElement.remove();
+          else del.parentElement.querySelectorAll('input').forEach(i => { i.value = ''; });
+          calc(); return;
+        }
+        const c = e.target.closest('[data-chip]'); if (!c) return;
+        c.classList.toggle('on');
+        form.elements.months.value = MONTHS.filter(mo => form.querySelector(`[data-chip="${mo}"]`)?.classList.contains('on')).join(',');
+      });
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const r = raw(), data = {};
+        t.fields.forEach(f => {
+          if (f.t === 'file' || f.t === 'txs' || f.t === 'dates') return;
+          let v = r[f.k] ?? '';
+          if (f.show && !f.show(r)) v = '';
+          if (f.t === 'number' && v !== '') v = Number(v);
+          data[f.k] = typeof v === 'string' ? v.trim() : v;
+        });
+        if (t.fields.some(f => f.t === 'txs')) {
+          const list = [...form.querySelectorAll('.txrow')].map(rw => ({ date: rw.querySelector('.td').value, amt: num(rw.querySelector('.ta').value) })).filter(z => z.amt > 0);
+          if (list.some(z => !z.date)) return toast('Add a date for every investment');
+          list.sort(byDate);
+          data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0);
+        }
+        if (t.fields.some(f => f.t === 'dates')) data.pdates = [...new Set([...form.querySelectorAll('.pd')].map(i => i.value).filter(Boolean))].sort();
+        const files = [...(form.elements._docs?.files || [])];
+        const ok = await run(async () => {
+          const docsOut = existing ? [...(existing.docs || [])] : [];
+          if (files.length) {
+            if (!remote()) toast('Documents need Drive keys – saved without files');
+            else for (const f of files) {
+              if (f.size > 8 * 1024 * 1024) throw new Error(f.name + ' is larger than 8 MB');
+              const up = await api('upload', { name: f.name, mime: f.type || 'application/octet-stream', data: await b64(f), folder: t.label });
+              docsOut.push({ name: f.name, url: up.url });
+            }
+          }
+          const asset = { id: existing ? existing.id : uid(), cat: t.cat, type, data, docs: docsOut, created: existing?.created };
+          await saveAsset(asset); return true;
+        });
+        if (ok) { toast('Saved'); location.hash = home; }
+      });
+    } };
+}
+
+/* ---- Analytics / Goals placeholders ---- */
+const morePage = () => ({ title: 'More', tab: 'more',
+  html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'), item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
+const analytics = () => ({ title: 'Analytics', large: 'Analytics', tab: 'analytics',
+  html: `<div class="soon-page"><div class="big">📊</div><h2>Coming next</h2><p>Trends for net worth, funds, premiums and property values will appear here.</p>
+    <p><b>${S.history.length}</b> value snapshot${S.history.length === 1 ? '' : 's'} recorded so far – every update you make is being saved with its date.</p></div>` });
+/* ---- Goals ---- */
+const GOAL_TYPES = [['Long Term', '#0a84ff', '#5e5ce6'], ['Mid Term', '#2bd2c3', '#34c759'], ['Short Term', '#ff9f0a', '#ff453a'], ['Fund Collection', '#bf5af2', '#ff375f']];
+const GOAL_CATS = [['mf', 'Mutual Fund'], ['fd', 'Fixed Deposit'], ['ppf', 'PPF'], ['epf', 'EPF'], ['nps', 'NPS'], ['sa', 'Saving'], ['gratuity', 'Gratuity']];
+const invAssets = () => S.assets.filter(a => T[a.type] && T[a.type].cat === 'investment');
+const purposeOf = a => String(a.data.purpose || '').trim().toLowerCase();
+const purposeList = () => { const seen = new Map(); invAssets().forEach(a => { const p = String(a.data.purpose || '').trim(); if (p && !seen.has(p.toLowerCase())) seen.set(p.toLowerCase(), p); }); return [...seen.values()].sort((x, y) => x.localeCompare(y)); };
+const srcAssets = src => {
+  const L = invAssets();
+  if (src.mode === 'category') return L.filter(a => a.type === src.ref);
+  if (src.mode === 'purpose') return L.filter(a => purposeOf(a) === String(src.ref || '').trim().toLowerCase());
+  return src.ref === '__all' ? L : L.filter(a => a.id === src.ref);
+};
+const srcAmount = src => src.ref ? sum(srcAssets(src), curVal) : 0;
+function goalStats(g) {
+  const target = num(g.target), achieved = sum(g.sources || [], s => srcAmount(s) * num(s.pct) / 100);
+  return { target, achieved, remaining: Math.max(target - achieved, 0), pct: target > 0 ? achieved / target * 100 : 0 };
+}
+let gradSeq = 0;
+function goalCard(g, c1, c2) {
+  const st = goalStats(g), shown = Math.max(0, Math.min(st.pct, 100));
+  const p = st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0);
+  return `<div class="goal${GEXP.has(g.id) ? ' open' : ''}" data-gid="${esc(g.id)}">
+    <div class="g-row"><a class="g-ico" href="#/goal/${esc(g.id)}" aria-label="Edit goal"><svg viewBox="0 0 24 24"><circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><path d="M11 13l9-9M16 4h4v4"/></svg></a>
+      <div class="g-main"><div class="g-name">${esc(g.name)}</div>
+        <div class="g-line"><div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div><div class="g-pct">${p}%</div></div></div></div>
+    <div class="g-more"><div><div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></div></div>`;
+}
+const GEXP = new Set();                                 // goal cards whose details are expanded (kept across re-renders)
+const GICON = {
+  'Long Term': '<svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><path d="M9 10V4l5 2-5 2"/></svg>',
+  'Mid Term': '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  'Short Term': '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+  'Fund Collection': '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>'
+};
+const goals = () => {
+  let h = '';
+  GOAL_TYPES.forEach(([tn, c1, c2]) => {
+    const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
+    if (!list.length) return;
+    h += `<section class="ggrp" style="--g1:${c1};--g2:${c2}"><div class="ghd">${GICON[tn]}<span class="gn">${tn}</span></div><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></section>`;
+  });
+  if (!h) h = `<div class="soon-page"><div class="big">🎯</div><h2>No goals yet</h2><p>Tap + to set a target and link it to your investments.</p></div>`;
+  return { title: 'Goals', large: 'Goals', tab: 'goals', right: `<a class="plus" href="#/goal/new" aria-label="Add goal">+</a>`, html: h };
+};
+function goalForm(id) {
+  const existing = id && id !== 'new' ? S.goals.find(g => g.id === id) : null;
+  if (id && id !== 'new' && !existing) return notFound();
+  const g0 = existing || { name: '', type: 'Long Term', target: '', sources: [] };
+  const blank = () => ({ mode: 'all', ref: '', pct: 100 });
+  const sources = (g0.sources && g0.sources.length ? g0.sources : [blank()]).map(x => ({ ...x }));
+  const optsFor = x => x.mode === 'category' ? GOAL_CATS
+    : x.mode === 'purpose' ? purposeList().map(p => [p, p])
+    : [['__all', 'All investments (combined)'], ...invAssets().map(a => [a.id, `${ttl(a)} · ${fmtCr(curVal(a))}`])];
+  const srcHTML = (x, i) => `<div class="gtitle">What counts towards it${sources.length > 1 ? ' · ' + (i + 1) : ''}</div><div class="group" data-i="${i}">
+      <div class="row"><span class="l">Counts</span><select data-f="mode">${[['all', 'All Investment'], ['category', 'Investment Category'], ['purpose', 'Purpose Wise']].map(([v, l]) => `<option value="${v}" ${v === x.mode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">Choose</span><select data-f="ref"><option value="">${x.mode === 'purpose' && !purposeList().length ? 'No purposes added yet' : 'Select'}</option>${optsFor(x).map(([v, l]) => `<option value="${esc(v)}" ${v === x.ref ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">% share</span><input data-f="pct" type="number" inputmode="decimal" step="any" min="0" max="100" value="${esc(x.pct)}" placeholder="100"><span class="suf">%</span></div>
+      ${sources.length > 1 ? `<div class="row"><button type="button" class="srcdel">Delete Source</button></div>` : ''}</div><div class="gfoot srcnote"></div>`;
+  const h = `<form id="f" autocomplete="off"><div class="group">
+      <div class="row"><span class="l">Goal Name</span><input name="name" value="${esc(g0.name)}" placeholder="e.g. Child education" required></div>
+      <div class="row"><span class="l">Goal Type</span><select name="type">${GOAL_TYPES.map(([t]) => `<option ${t === g0.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">Target Amount</span><span class="pre">₹</span><input name="target" type="number" inputmode="decimal" step="any" value="${esc(g0.target)}" placeholder="0" required></div></div>
+    <div id="srcs"></div>
+    <button type="button" class="btn plain srcadd">Add a Source</button>
+    <button class="btn" type="submit">Save Goal</button>${existing ? '<button type="button" class="btn redtxt goaldel">Delete Goal</button>' : ''}</form>`;
+  return { title: existing ? 'Edit Goal' : 'Add Goal', back: '#/goals', html: h, notabs: true,
+    after() {
+      const form = $('#f'), box = $('#srcs');
+      const notes = () => box.querySelectorAll('.srcnote').forEach((el, i) => {
+        const x = sources[i]; if (!x) return;
+        if (!x.ref) { el.textContent = 'Choose what should count towards this goal.'; return; }
+        const full = srcAmount(x);
+        let t = `Now ${money(full)} × ${num(x.pct)}% = ${money(full * num(x.pct) / 100)}`;
+        if (x.mode === 'purpose') t = 'Cards: ' + (srcAssets(x).map(ttl).join(', ') || 'none') + '\n' + t;
+        el.textContent = t;
+      });
+      const draw = () => { box.innerHTML = sources.map(srcHTML).join(''); notes(); };
+      draw();
+      box.addEventListener('change', e => {
+        const f = e.target.dataset.f; if (!f) return;
+        const i = +e.target.closest('.group').dataset.i, x = sources[i];
+        if (f === 'mode') { x.mode = e.target.value; x.ref = ''; draw(); } else if (f === 'ref') { x.ref = e.target.value; notes(); }
+      });
+      box.addEventListener('input', e => { if (e.target.dataset.f === 'pct') { sources[+e.target.closest('.group').dataset.i].pct = e.target.value; notes(); } });
+      form.addEventListener('click', e => {
+        if (e.target.closest('.srcadd')) { sources.push(blank()); draw(); box.lastElementChild?.previousElementSibling?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+        const del = e.target.closest('.srcdel');
+        if (del) { sources.splice(+del.closest('.group').dataset.i, 1); draw(); return; }
+        if (e.target.closest('.goaldel') && confirm('Delete this goal?')) run(async () => { await removeGoal(existing.id); return true; }).then(ok => { if (ok) { toast('Goal deleted'); location.hash = '#/goals'; } });
+      });
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(form), name = String(fd.get('name') || '').trim(), type = fd.get('type'), target = num(fd.get('target'));
+        if (!name) return toast('Enter a goal name');
+        if (!(target > 0)) return toast('Enter a target amount');
+        const kept = sources.filter(x => x.ref);
+        if (kept.some(x => !(num(x.pct) > 0 && num(x.pct) <= 100))) return toast('% share must be between 1 and 100');
+        const goal = { id: existing ? existing.id : uid(), name, type, target, created: existing?.created,
+          sources: kept.map(x => ({ mode: x.mode, ref: x.ref, pct: num(x.pct) })) };
+        const note = await run(() => saveGoal(goal));
+        if (note !== null) { toast(note || 'Goal saved'); location.hash = '#/goals'; }
+      });
+    } };
+}
+const notFound = () => ({ title: 'Not found', back: '#/home', html: `<div class="soon-page"><div class="big">🤷</div><h2>Page not found</h2></div>`, tab: 'home' });
+
+/* ---- Settings ---- */
+function settingsPage(sub) {
+  const theme = store.get('theme', 'auto');
+  if (!sub) return { title: 'Settings', back: '#/more', large: 'Settings', tab: 'more',
+    html: soloList([item('#/settings/appearance', '🎨', '#5e5ce6', 'Appearance', theme[0].toUpperCase() + theme.slice(1)),
+      item('#/settings/keys', '🔑', '#ff9f0a', 'Add Keys', remote() ? 'Connected' : 'Not connected'),
+      item('#/settings/lock', '🔒', '#34c759', 'App Lock', store.get('lock') ? 'On' : 'Off')]) };
+  if (sub === 'appearance') return { title: 'Appearance', back: '#/settings', large: 'Appearance', tab: 'more',
+    html: `<div class="seg">${['auto', 'light', 'dark'].map(x => `<button class="${theme === x ? 'on' : ''}" data-pick="${x}">${x[0].toUpperCase() + x.slice(1)}</button>`).join('')}</div>
+      <div class="gfoot">Auto follows your phone's light/dark setting.</div>` };
+  if (sub === 'keys') return { title: 'Add Keys', back: '#/settings', large: 'Add Keys', tab: 'more',
+    html: `<form id="f"><div class="group">
+      <div class="row col"><span class="l">Apps Script Web App URL</span><input name="url" style="text-align:left" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(S.cfg?.url || '')}" autocapitalize="off" autocorrect="off"></div>
+      <div class="row col"><span class="l">Secret Key</span><input name="key" type="password" style="text-align:left" placeholder="Same as SECRET_KEY in the script" value="${esc(S.cfg?.key || '')}" autocapitalize="off"></div></div>
+      <div class="gfoot">Keys are stored only in this browser. Your Google Sheet and Drive folder are created by the script in your own Google account.</div>
+      <button class="btn" type="submit">Save &amp; Test Connection</button></form>
+      ${remote() ? '<button class="btn redtxt" data-act="disconnect">Disconnect</button>' : ''}`,
+    after() {
+      $('#f').addEventListener('submit', async e => {
+        e.preventDefault(); const fd = new FormData(e.target);
+        const prev = S.cfg; S.cfg = { url: String(fd.get('url')).trim(), key: String(fd.get('key')).trim() };
+        const ok = await run(async () => { await api('ping'); return true; });
+        if (ok) { store.set('cfg', S.cfg); toast('Connected'); await sync(true); location.hash = '#/settings'; }
+        else S.cfg = prev;
+      });
+    } };
+  if (sub === 'lock') {
+    const on = !!store.get('lock');
+    return { title: 'App Lock', back: '#/settings', large: 'App Lock', tab: 'more',
+      html: `<form id="f"><div class="group"><div class="row"><span class="l">${on ? 'New PIN' : '4-digit PIN'}</span>
+        <input name="pin" type="password" inputmode="numeric" pattern="\\d{4}" maxlength="4" placeholder="••••" required></div></div>
+        <div class="gfoot">The lock asks for your PIN when you reopen the app. It hides the screen only – it is not encryption.</div>
+        <button class="btn" type="submit">${on ? 'Change PIN' : 'Turn On'}</button></form>
+        ${on ? '<button class="btn redtxt" data-act="lockoff">Turn Off App Lock</button>' : ''}`,
+      after() {
+        $('#f').addEventListener('submit', async e => {
+          e.preventDefault(); const pin = new FormData(e.target).get('pin');
+          if (!/^\d{4}$/.test(pin)) return toast('Enter 4 digits');
+          store.set('lock', await hashPin(pin)); toast('App lock on'); location.hash = '#/settings';
+        });
+      } };
+  }
+  return notFound();
+}
+
+/* ---------------------------------------------------------------------
+   Router / renderer
+   --------------------------------------------------------------------- */
+function view(p) {
+  const [a, b, c] = p;
+  switch (a) {
+    case undefined: case 'home': return home();
+    case 'more': return morePage();
+    case 'analytics': return analytics();
+    case 'goals': return goals();
+    case 'goal': return goalForm(b);
+    case 'list': return listPage(b);
+    case 'insurance': return b ? insuranceList(b) : insuranceMenu();
+    case 'realestate': return listPage('realestate');
+    case 'property': return listPage('property');
+    case 'gold': return listPage('gold');
+    case 'funds': return fundsPage('funds');
+    case 'liquid': return fundsPage('liquid');
+    case 'update': return updatePage(b);
+    case 'add': return addPage(b, c);
+    case 'form': return formPage(b, c);
+    case 'settings': return settingsPage(b);
+    default: return notFound();
+  }
+}
+function render(goTo) {
+  const y = goTo === undefined ? $('#app').scrollTop : goTo;
+  const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const v = view(p);
+  const bar = v.nobar ? '' : `<div class="bar"><a class="back" href="${v.back || '#/home'}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a><div class="bt">${esc(v.title || '')}</div><div class="right">${v.right || ''}</div></div>`;
+  $('#app').innerHTML = `<div class="page${goTo === undefined ? ' noanim' : ''}">${bar}${v.html}</div>`;
+  // list pages already include their own large title in html
+  document.querySelectorAll('#tabbar [data-tab]').forEach(el => el.classList.toggle('on', el.dataset.tab === v.tab));
+  $('#tabbar').classList.toggle('off', !!v.notabs);
+  $('#app').scrollTop = y;
+  v.after && v.after();
+}
+
+/* ---------------------------------------------------------------------
+   App lock
+   --------------------------------------------------------------------- */
+async function hashPin(p) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('my-asset:' + p));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+let pin = '';
+function showLock() {
+  if (!store.get('lock')) return;
+  pin = ''; const L = $('#lock'); L.hidden = false;
+  const draw = (err) => {
+    L.innerHTML = `<div style="font-size:42px">🔒</div><h2>Enter PIN</h2><div class="dots">${[0, 1, 2, 3].map(i => `<i class="${i < pin.length ? 'f' : ''}"></i>`).join('')}</div><div class="err">${err || ''}</div>
+      <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}<span></span><button data-n="0">0</button><button class="x" data-n="del">⌫</button></div>`;
+  };
+  draw();
+  L.onclick = async e => {
+    const b = e.target.closest('[data-n]'); if (!b) return;
+    if (b.dataset.n === 'del') pin = pin.slice(0, -1); else if (pin.length < 4) pin += b.dataset.n;
+    if (pin.length === 4) {
+      if (await hashPin(pin) === store.get('lock')) { L.hidden = true; L.innerHTML = ''; return; }
+      pin = ''; return draw('Wrong PIN');
+    }
+    draw();
+  };
+}
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (hiddenAt && Date.now() - hiddenAt > 30000) { showLock(); sync(true); }
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+/* ---------------------------------------------------------------------
+   Global events
+   --------------------------------------------------------------------- */
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act],[data-del],[data-pick],#moreBtn,#sheet');
+  if (!t) return;
+  if (t.id === 'moreBtn') return openSheet();
+  if (t.id === 'sheet') { if (e.target === t) closeSheet(); return; }
+  if (t.dataset.pick) { store.set('theme', t.dataset.pick); applyTheme(); return render(); }
+  if (t.dataset.del) {
+    if (!confirm('Delete this asset? This cannot be undone.')) return;
+    if (await run(async () => { await removeAsset(t.dataset.del); return true; })) { toast('Deleted'); render(); }
+    return;
+  }
+  switch (t.dataset.act) {
+    case 'eye': S.hide = !S.hide; store.set('hide', S.hide); return render();
+    case 'refresh': return remote() ? sync() : toast('Local mode – nothing to sync');
+    case 'disconnect': S.cfg = null; store.del('cfg'); toast('Disconnected'); return render();
+    case 'lockoff': store.del('lock'); toast('App lock off'); return render();
+  }
+});
+function openSheet() {
+  const s = $('#sheet'); s.hidden = false;
+  s.innerHTML = `<div class="pane"><div class="group">
+    <a class="item" href="#/add"><span class="ico" style="background:#0a84ff">＋</span><span class="t"><b>Add Asset</b></span></a>
+    <a class="item" href="#/settings"><span class="ico" style="background:#8e8e93">⚙️</span><span class="t"><b>Settings</b></span></a></div>
+    <button class="cancel" type="button" onclick="closeSheet()">Cancel</button></div>`;
+  s.querySelectorAll('a').forEach(a => a.addEventListener('click', closeSheet));
+}
+function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; }
+window.closeSheet = closeSheet;
+
+document.addEventListener('click', e => {                       // goal cards: icon opens edit; anywhere else toggles details
+  const c = e.target.closest('.goal'); if (!c || e.target.closest('.g-ico')) return;
+  const id = c.dataset.gid, on = c.classList.toggle('open');
+  on ? GEXP.add(id) : GEXP.delete(id);
 });
 
-self.addEventListener('fetch', event => {
-  const req = event.request;
-  const url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== self.location.origin) return;   // API calls pass straight through
-
-  event.respondWith(
-    fetch(req)
-      .then(res => {
-        if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-        return res;
-      })
-      .catch(() =>
-        caches.match(req).then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()))
-      )
-  );
+document.addEventListener('click', e => {                       // smooth open / close for asset cards
+  const sm = e.target.closest('.acard > summary, .dtile > summary'); if (!sm) return;
+  e.preventDefault();
+  const d = sm.parentElement, body = d.querySelector('.body');
+  if (!body || d._busy) return;
+  if (matchMedia('(prefers-reduced-motion:reduce)').matches) { d.open = !d.open; return; }
+  const opening = !d.open;
+  d._busy = true; body.style.overflow = 'hidden';
+  if (opening) d.open = true;
+  const cs = getComputedStyle(body);
+  const full = { height: body.offsetHeight + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1 };
+  const shut = { height: '0px', paddingTop: '0px', paddingBottom: '0px', opacity: 0 };
+  const an = body.animate(opening ? [shut, full] : [full, shut], { duration: 300, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'forwards' });
+  an.onfinish = () => { if (!opening) d.open = false; an.cancel(); body.style.overflow = ''; d._busy = false; };
 });
+
+/* Haptic tap feedback: Android vibrates; iOS 17.4+ Safari fires a tiny haptic when a hidden switch is toggled */
+const hapEl = document.createElement('label');
+hapEl.setAttribute('aria-hidden', 'true');
+hapEl.style.cssText = 'position:fixed;left:-100px;top:-100px;opacity:0;pointer-events:none';
+hapEl.innerHTML = '<input type="checkbox" switch tabindex="-1">';
+document.body.appendChild(hapEl);
+function haptic() { try { if (navigator.vibrate) navigator.vibrate(8); else hapEl.click(); } catch (x) {} }
+document.addEventListener('click', e => {
+  if (hapEl.contains(e.target)) return;
+  if (e.target.closest('a,button,summary,.item,.chip,.dpick,input[type=checkbox],[data-act],[data-del],[data-pick],[data-n]')) haptic();
+}, true);
+
+let prevHash = '', curHash = location.hash;
+const navStack = [{ hash: location.hash, y: 0 }];                // remembers where each page was scrolled to
+window.addEventListener('hashchange', () => {
+  const h = location.hash, top = navStack[navStack.length - 1], before = navStack[navStack.length - 2];
+  top.y = $('#app').scrollTop;
+  let y = 0;
+  if (before && before.hash === h) { navStack.pop(); y = before.y; }   // going back → restore position
+  else { navStack.push({ hash: h, y: 0 }); if (navStack.length > 60) navStack.shift(); }
+  prevHash = curHash; curHash = h; closeSheet(); render(y);
+});
+applyTheme();
+showLock();
+render();
+sync(true);
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
