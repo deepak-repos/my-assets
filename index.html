@@ -166,13 +166,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
 .g-more>div{overflow:hidden;min-height:0;padding-left:0}
 .goal.open .g-more{grid-template-rows:1fr}
-.g-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:0;row-gap:3px;align-items:center;transition:margin .3s}
+.g-row{display:grid;grid-template-columns:minmax(0,1fr);column-gap:0;row-gap:3px;align-items:center;transition:margin .3s}
 .goal.open .g-row{margin-bottom:12px}
-.g-ico{grid-column:1;grid-row:1;align-self:center;width:22px;height:22px;display:grid;place-items:center start;color:var(--sub);background:none;-webkit-tap-highlight-color:transparent}
-.g-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .g-main{display:contents}
-.g-name{grid-column:2;grid-row:1;font-size:15px;font-weight:700;opacity:.78;margin-left:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:20px}
-.g-line{grid-column:1/-1;grid-row:2;display:flex;align-items:center;gap:10px}
+.g-name a{color:inherit;opacity:.78;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;-webkit-tap-highlight-color:transparent}
+.g-name{grid-column:1;grid-row:1;font-size:15px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:20px}
+.g-line{grid-column:1;grid-row:2;display:flex;align-items:center;gap:10px}
 .g-line .g-bar{flex:1;min-width:0}
 .g-pct{flex:none;min-width:38px;text-align:right;font-size:14.5px;font-weight:700}
 .g-bar{height:14px;border-radius:99px;background:var(--fill);overflow:hidden}
@@ -370,7 +369,7 @@ svg.anch{width:100%;height:auto;display:block;touch-action:pan-y;user-select:non
 .an-more{display:block;width:100%;text-align:center;color:var(--blue);font-weight:600;padding:13px 0 11px;border-top:.5px solid var(--sep)}
 
 /* home: goals + growth tiles */
-.hsec{margin:26px 20px 10px;font-size:20px;font-weight:700;letter-spacing:-.4px}
+.hsec{margin:26px 20px 10px;font-size:18px;font-weight:700;letter-spacing:-.4px}
 a.hg-card{display:block;color:inherit;padding:10px 16px}
 .hg{padding:6px 0}
 .hg-t{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:9px}
@@ -382,7 +381,7 @@ a.gr-card{display:block;color:inherit;padding:14px 16px 10px}
 .gr-h span{font-size:13px;font-weight:600;color:var(--sub)}
 .gr-h em{font-style:normal;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .gr-h .up{color:var(--green)}.gr-h .dn{color:var(--red)}.gr-h .eq{color:var(--blue)}
-.gr-card .an-top{margin-top:10px}
+.gr-card .an-top{margin-top:6px}
 .gr-card .an-k b{font-size:17px}
 .gr-card .an-k:last-child{justify-self:end;text-align:left}
 svg.ansp{margin:8px 0 0;pointer-events:none}
@@ -760,7 +759,7 @@ function nextMonthPayments() {
 /* ---------------------------------------------------------------------
    Views – each returns { title, back, right, html, after, tab, large, nobar, notabs }
    --------------------------------------------------------------------- */
-const pct2 = v => Math.abs(v * 100).toFixed(2) + '%';
+const pct2 = v => Math.abs(v * 100).toFixed(1) + '%';
 const xCells = x => x == null ? { ar: '', pc: '<em class="xp na">—</em>' }
   : { ar: `<i class="ar ${x >= 0 ? 'up' : 'dn'}">${x >= 0 ? '▲' : '▼'}</i>`, pc: `<em class="xp">${pct2(x)}</em>` };
 const backHome = () => { const b = navStack[navStack.length - 2]; return b && b.hash === '#/networth' ? '#/networth' : '#/home'; };
@@ -1310,9 +1309,9 @@ function homeGrowth() {                                    // All Investments, f
   const gain = last.inv > 0 ? `<em class="${c.k}">${c.k === 'dn' ? '▼' : c.k === 'up' ? '▲' : ''} ${S.hide ? '••••' : fmtCr(Math.abs(g))} (${Math.abs(pc).toFixed(1)}%)</em>` : '';
   return `<div class="hsec">Growth</div><a class="card gr-card" href="#/analytics" aria-label="Open analytics">
     <div class="gr-h"><span>Total Funds</span>${gain}</div>
+    ${pts.length > 1 ? anSpark(pts) : ''}
     <div class="an-top"><div class="an-k"><span><i style="background:#ff9f0a"></i>Investment</span><b>${anM(last.inv)}</b></div>
-      <div class="an-k"><span><i style="background:var(--blue)"></i>Current</span><b>${anM(last.cur)}</b></div></div>
-    ${pts.length > 1 ? anSpark(pts) : ''}</a>`;
+      <div class="an-k"><span><i style="background:var(--blue)"></i>Current</span><b>${anM(last.cur)}</b></div></div></a>`;
 }
 
 /* ---- Goals ---- */
@@ -1337,11 +1336,12 @@ function goalCard(g, c1, c2) {
   const st = goalStats(g), shown = Math.max(0, Math.min(st.pct, 100));
   const p = st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0);
   return `<div class="goal${GEXP.has(g.id) ? ' open' : ''}" data-gid="${esc(g.id)}">
-    <div class="g-row"><a class="g-ico" href="#/goal/${esc(g.id)}" aria-label="Edit goal"><svg viewBox="0 0 24 24"><circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><path d="M11 13l9-9M16 4h4v4"/></svg></a>
-      <div class="g-main"><div class="g-name">${esc(g.name)}</div>
+    <div class="g-row">
+      <div class="g-main"><div class="g-name"><a href="#/goal/${esc(g.id)}" aria-label="Edit goal">${esc(g.name)}</a></div>
         <div class="g-line"><div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div><div class="g-pct">${p}%</div></div></div></div>
     <div class="g-more"><div><div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></div></div>`;
 }
+const GTARGET = '<svg viewBox="0 0 24 24"><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="C1"/><stop offset="1" stop-color="C2"/></linearGradient></defs><g stroke="url(#gg)"><circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><path d="M11 13l9-9M16 4h4v4"/></g></svg>';
 const GEXP = new Set();                                 // goal cards whose details are expanded (kept across re-renders)
 const GICON = {
   'Long Term': '<svg viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8z"/><path d="M9 10V4l5 2-5 2"/></svg>',
@@ -1351,10 +1351,10 @@ const GICON = {
 };
 const goals = () => {
   let h = '';
-  GOAL_TYPES.forEach(([tn, c1, c2]) => {
+  GOAL_TYPES.forEach(([tn, c1, c2], gi) => {
     const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
     if (!list.length) return;
-    h += `<section class="ggrp" style="--g1:${c1};--g2:${c2}"><div class="ghd"><span class="gn">${tn}</span></div><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></section>`;
+    h += `<section class="ggrp" style="--g1:${c1};--g2:${c2}"><div class="ghd">${GTARGET.replace('url(#gg)', `url(#gg${gi})`).replace('id="gg"', `id="gg${gi}"`).replace('C1', c1).replace('C2', c2)}<span class="gn">${tn}</span></div><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></section>`;
   });
   if (!h) h = `<div class="soon-page"><div class="big">🎯</div><h2>No goals yet</h2><p>Tap + to set a target and link it to your investments.</p></div>`;
   return { title: 'Goals', large: 'Goals', tab: 'goals', right: `<a class="plus" href="#/goal/new" aria-label="Add goal">+</a>`, html: h };
@@ -1569,8 +1569,8 @@ function openSheet() {
 function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; }
 window.closeSheet = closeSheet;
 
-document.addEventListener('click', e => {                       // goal cards: icon opens edit; anywhere else toggles details
-  const c = e.target.closest('.goal'); if (!c || e.target.closest('.g-ico')) return;
+document.addEventListener('click', e => {                       // goal cards: name opens edit; anywhere else toggles details
+  const c = e.target.closest('.goal'); if (!c || e.target.closest('.g-name a')) return;
   const id = c.dataset.gid, on = c.classList.toggle('open');
   on ? GEXP.add(id) : GEXP.delete(id);
 });
