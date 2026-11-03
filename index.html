@@ -66,11 +66,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   background:#2A4D75;box-shadow:0 3px 10px rgba(42,77,117,.18)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.hero .top{display:grid;grid-template-columns:max-content max-content;justify-content:start;column-gap:30px;row-gap:2px;align-items:baseline;padding:0 12px 0 15%;margin-bottom:14px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
+.hero .top{display:grid;grid-template-columns:max-content max-content;justify-content:start;column-gap:22px;row-gap:2px;align-items:baseline;padding:0 12px 0 15%;margin-bottom:14px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
 .hero .top .lbl,.hero .top .amt{grid-column:1}
 .hero .top .xp{grid-column:2;grid-row:2;justify-self:center;align-self:baseline;position:relative;margin:0;opacity:1;color:rgba(255,255,255,.475)}
 .hero .top .xp.na{color:rgba(255,255,255,.3)}
-.hero .top .xp .ar{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%)}
+.hero .top .xp .ar{margin:0 4px}
 .hero .lbl{font-size:14px;opacity:.85}
 .hero .amt{font-size:35px;font-weight:700;letter-spacing:-.8px;margin:0}
 .hero .cols{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid rgba(255,255,255,.25)}
@@ -132,6 +132,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .dtile .body .li small{font-size:12px}
 .dtile .body{padding:0 16px 14px;border-top:.5px solid var(--sep)}
 .dtile.prem .body{padding-left:36px}
+.dtile.prem>summary{font-size:15px}.dtile.prem .dl svg{width:15px;height:15px}
 .card .empty{color:var(--sub);font-size:14px;padding:4px 0}
 .li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--sep)}
 .li:first-of-type{border-top:0}
@@ -161,6 +162,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .goal:last-child{padding-bottom:14px}
 .goal:last-child:not(.open){padding-bottom:28px}
 .goal{transition:padding .3s}
+.goal.open+.goal,.goal+.goal.open{border-top:.5px solid var(--sep)}
 .g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
 .g-more>div{overflow:hidden;min-height:0;padding-left:0}
 .goal.open .g-more{grid-template-rows:1fr}
@@ -548,7 +550,7 @@ const persist = () => { store.set('assets', S.assets); store.set('history', S.hi
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
-const subOf = a => { if (a.type === 'mf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
+const subOf = a => { if (a.type === 'mf' || a.type === 'ppf' || a.type === 'epf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
 
 function fdValue(d, at) {
   // Quarterly compounding on the interest rate; simple interest on the part-quarter, like bank accrual.
@@ -576,6 +578,12 @@ const CONTRIB = {                                          // standing contribut
   ppf: { k: 'yearly',     lab: 'Yearly contribution' }
 };
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const addMonthISO = iso => {                                  // 'YYYY-MM-DD' + 1 month (day kept, clamped to month end); falls back to today
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); if (!m) return todayISO();
+  let y = +m[1], mo = +m[2] + 1; const d = +m[3]; if (mo > 12) { mo = 1; y++; }
+  const dim = new Date(y, mo, 0).getDate();
+  return y + '-' + String(mo).padStart(2, '0') + '-' + String(Math.min(d, dim)).padStart(2, '0');
+};
 const pct = v => (v * 100).toFixed(1) + '%';
 const byDate = (x, y) => (x.date || '') < (y.date || '') ? -1 : (x.date || '') > (y.date || '') ? 1 : 0;
 
@@ -813,7 +821,7 @@ function home() {
 
   const xN = xCells(groupXirr(nwItems())), xF = xCells(groupXirr(inv)), xL = xCells(groupXirr(ofTypes(['mf', 'fd', 'sa']))),
         xP = xCells(groupXirr(ofTypes(['house', 'land']))), xG = xCells(groupXirr(ofTypes(['gold'])));
-  const nwX = groupXirr(nwItems()), xNW = nwX == null ? '<em class="xp na">—</em>' : `<em class="xp"><i class="ar ${nwX >= 0 ? 'up' : 'dn'}">${nwX >= 0 ? '▲' : '▼'}</i>${pct2(nwX)}</em>`;
+  const nwX = groupXirr(nwItems()), xNW = nwX == null ? '<em class="xp na">XIRR —</em>' : `<em class="xp">XIRR<i class="ar ${nwX >= 0 ? 'up' : 'dn'}">${nwX >= 0 ? '▲' : '▼'}</i>${pct2(nwX)}</em>`;
   const box = (href, name, amt, x) => `<a href="${href}"><span>${name}</span><b>${amt}</b></a>`;
   h += `<section class="hero"><a class="top" href="#/networth" aria-label="Open net worth"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>${xNW}</a>
     <div class="cols">${box('#/funds', 'Total Funds', C(funds), xF)}${box('#/liquid', 'Liquid Funds', C(liquid), xL)}</div>
@@ -1043,7 +1051,7 @@ function formPage(type, id) {
         if (e.target.closest('.pdadd')) { form.querySelector('.pds').insertAdjacentHTML('beforeend', pdRow('')); return; }
         const pdd = e.target.closest('.pddel');
         if (pdd) { const pb = form.querySelector('.pds'); if (pb.children.length > 1) pdd.parentElement.remove(); else pdd.parentElement.querySelector('input').value = ''; return; }
-        if (e.target.closest('.txadd')) { box.insertAdjacentHTML('beforeend', txRow({ date: todayISO(), amt: '' })); calc(); return; }
+        if (e.target.closest('.txadd')) { const lastD = box.lastElementChild && box.lastElementChild.querySelector('.td'); box.insertAdjacentHTML('beforeend', txRow({ date: addMonthISO(lastD && lastD.value), amt: '' })); calc(); return; }
         const del = e.target.closest('.txdel');
         if (del) {
           if (box.children.length > 1) del.parentElement.remove();
@@ -1239,7 +1247,7 @@ function anDraw() {
     const rows = pts.filter(p => p.ev).reverse(), shown = rows.slice(0, AN.lim);
     body += `<div class="gtitle an-h">History</div><div class="card an-list">` + (rows.length ? shown.map(p => {
       const c = anChg(p.inv, p.cur);
-      return `<div class="li"><div class="an-lv"><div><span>Investment</span><b>${anM(p.inv)}</b></div><div><span>Current</span><b>${anM(p.cur)}</b></div></div>
+      return `<div class="li"><div class="an-lv"><div><span>Current</span><b>${anM(p.cur)}</b></div><div><span>Investment</span><b>${anM(p.inv)}</b></div></div>
         <div class="an-ld"><b>${esc(anFmt(p.x))}</b><em class="${c.k}">${c.t}</em></div></div>`;
     }).join('') + (rows.length > shown.length ? `<button class="an-more" data-more="1">Show more</button>` : '') : `<div class="empty">No entries in this period.</div>`) + `</div>`;
   }
