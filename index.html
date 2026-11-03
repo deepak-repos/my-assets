@@ -142,14 +142,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .goal{display:block;margin:0;padding:16px;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .goal:last-child:not(.open){padding-bottom:43px}
 .goal{transition:padding .3s}
-.g-name a{color:inherit;opacity:.55;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 .g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
-.g-more>div{overflow:hidden;min-height:0}
+.g-more>div{overflow:hidden;min-height:0;padding-left:52px}
 .goal.open .g-more{grid-template-rows:1fr}
-.goal .g-bar{margin-bottom:0;transition:margin .3s}.goal.open .g-bar{margin-bottom:12px}
-.g-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}
-.g-name{font-size:15.5px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.g-pct{flex:none;font-size:14.5px;font-weight:700}
+.g-row{display:flex;align-items:center;gap:12px;transition:margin .3s}
+.goal.open .g-row{margin-bottom:12px}
+.g-ico{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--g1);background:var(--fill);-webkit-tap-highlight-color:transparent}
+.g-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.g-main{flex:1;min-width:0}
+.g-name{font-size:15.5px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px}
+.g-line{display:flex;align-items:center;gap:10px}
+.g-line .g-bar{flex:1;min-width:0}
+.g-pct{flex:none;min-width:38px;text-align:right;font-size:14.5px;font-weight:700}
 .g-bar{height:14px;border-radius:99px;background:var(--fill);overflow:hidden}
 .g-bar i{display:block;height:100%;border-radius:99px}
 .g-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
@@ -1003,8 +1007,9 @@ function goalCard(g, c1, c2) {
   const st = goalStats(g), shown = Math.max(0, Math.min(st.pct, 100));
   const p = st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0);
   return `<div class="goal${GEXP.has(g.id) ? ' open' : ''}" data-gid="${esc(g.id)}">
-    <div class="g-top"><div class="g-name"><a href="#/goal/${esc(g.id)}">${esc(g.name)}</a></div><div class="g-pct">${p}%</div></div>
-    <div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div>
+    <div class="g-row"><a class="g-ico" href="#/goal/${esc(g.id)}" aria-label="Edit goal"><svg viewBox="0 0 24 24"><circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><path d="M11 13l9-9M16 4h4v4"/></svg></a>
+      <div class="g-main"><div class="g-name">${esc(g.name)}</div>
+        <div class="g-line"><div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div><div class="g-pct">${p}%</div></div></div></div>
     <div class="g-more"><div><div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></div></div>`;
 }
 const GEXP = new Set();                                 // goal cards whose details are expanded (kept across re-renders)
@@ -1231,8 +1236,8 @@ function openSheet() {
 function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; }
 window.closeSheet = closeSheet;
 
-document.addEventListener('click', e => {                       // goal cards: name opens edit; anywhere else toggles details
-  const c = e.target.closest('.goal'); if (!c || e.target.closest('.g-name a')) return;
+document.addEventListener('click', e => {                       // goal cards: icon opens edit; anywhere else toggles details
+  const c = e.target.closest('.goal'); if (!c || e.target.closest('.g-ico')) return;
   const id = c.dataset.gid, on = c.classList.toggle('open');
   on ? GEXP.add(id) : GEXP.delete(id);
 });
