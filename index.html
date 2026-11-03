@@ -70,8 +70,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .hero .top{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 12px;margin-bottom:14px;white-space:nowrap}
 .hero .lbl{font-size:14px;opacity:.85}
 .hero .amt{font-size:35px;font-weight:700;letter-spacing:-.8px;margin:0}
-.hero .cols{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,.25)}
-.hero .cols>*{display:block;padding:20px 8px 21px;color:inherit;text-decoration:none}
+.hero .cols{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid rgba(255,255,255,.25)}
+.hero .cols>*{display:block;padding:16px 8px 17px;color:inherit;text-decoration:none}
 .hero .cols>*+*{border-left:1px solid rgba(255,255,255,.25)}
 .hero .cols span,.hero .rw span{display:block;font-size:13px;opacity:.85}
 .hero .cols span{margin-bottom:8px}
@@ -451,10 +451,11 @@ const ORDER = {
   investment:['mf','fd','sa','epf','ppf','nps','gratuity'],
   personal:['term','pmed','car','bike','pother'],
   company:['clife','cacc','cmed','cother'],
-  selfuse:['house','land','gold']
+  selfuse:['house','land','gold'],
+  property:['house','land']
 };
 const GROUPS = { mf:['mf'], fd:['fd'], sa:['sa'], epf:['epf'], ppf:['ppf'], nps:['nps'], gratuity:['gratuity'],
-  realestate:['house','land','gold'], personal:ORDER.personal, company:ORDER.company };
+  realestate:['house','land','gold'], property:['house','land'], gold:['gold'], personal:ORDER.personal, company:ORDER.company };
 const CAT_META = {
   investment:{ label:'Investment', ico:'📊', c:'#0a84ff', sub:'Funds, deposits, retirement' },
   insurance: { label:'Insurance',  ico:'🛡️', c:'#ff375f', sub:'Personal & company policies' },
@@ -691,6 +692,7 @@ function home() {
   const funds = sum(inv, curVal);
   const liquid = sum(ofTypes(['mf', 'fd', 'sa']), curVal);
   const real = sum(selfuse, curVal);
+  const prop = sum(ofTypes(['house', 'land']), curVal), gld = sum(ofTypes(['gold']), curVal);
   const last = S.assets.reduce((mx, a) => (a.updated > mx ? a.updated : mx), '');
   let h = `<div class="head"><div><h1>My Assets</h1><small>${last ? 'Last updated ' + esc(fmtDT(last)) : 'No assets added yet'}</small></div>
     ${S.assets.length ? `<button class="eye" data-act="eye" aria-label="${S.hide ? 'Show amounts' : 'Hide amounts'}">${S.hide ? eyeOff : eyeOn}</button>` : `<button class="iconbtn" data-act="refresh" aria-label="Refresh">${chev}</button>`}</div>`;
@@ -703,7 +705,8 @@ function home() {
   }
 
   h += `<section class="hero"><div class="top"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div></div>
-    <div class="cols"><a href="#/realestate"><span>Property &amp; Gold</span><b>${C(real)}</b></a><a href="#/funds"><span>Total Funds</span><b>${C(funds)}</b></a><a href="#/liquid"><span>Liquid Funds</span><b>${C(liquid)}</b></a></div></section>`;
+    <div class="cols"><a href="#/funds"><span>Total Funds</span><b>${C(funds)}</b></a><a href="#/liquid"><span>Liquid Funds</span><b>${C(liquid)}</b></a></div>
+    <div class="cols"><a href="#/property"><span>Property</span><b>${C(prop)}</b></a><a href="#/gold"><span>Gold</span><b>${C(gld)}</b></a></div></section>`;
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
@@ -724,7 +727,8 @@ function home() {
   const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
   h += rows
     + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')
-    + solo('#/realestate', '🏡', '#ff9f0a', 'Property & Gold', C(real));
+    + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
+    + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld));
   return { html: h, tab: 'home', nobar: true };
 }
 
@@ -774,13 +778,14 @@ function fundsPage(kind) {
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: '#/home', html: h, tab: 'home' };
 }
+const listTitle = key => ({ realestate: 'Property & Gold', property: 'Property', gold: 'Gold' })[key] || T[key].label;
 const UPDATABLE = ['mf', 'sa', 'epf', 'ppf', 'nps', 'gratuity', 'realestate'];
 function listPage(key) {
   const types = GROUPS[key]; if (!types) return notFound();
   const items = ofTypes(types);
-  const title = key === 'realestate' ? 'Property & Gold' : T[key].label;
+  const title = listTitle(key);
   const back = '#/home';
-  const addHref = key === 'realestate' ? '#/add/selfuse' : (items.length && UPDATABLE.includes(key)) ? '#/update/' + key : '#/form/' + key;
+  const addHref = key === 'realestate' ? '#/add/selfuse' : key === 'property' ? '#/add/property' : key === 'gold' ? '#/form/gold' : (items.length && UPDATABLE.includes(key)) ? '#/update/' + key : '#/form/' + key;
   let h = '' + (items.length ? summaryTile(items, types) + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
   return { title, back, right: `<a class="plus" href="${addHref}" aria-label="Add">+</a>`, html: h, tab: 'home' };
 }
@@ -804,7 +809,7 @@ function insuranceList(group) {
 function updatePage(key) {
   if (!UPDATABLE.includes(key)) return notFound();
   const items = ofTypes(GROUPS[key]);
-  const title = key === 'realestate' ? 'Property & Gold' : T[key].label;
+  const title = listTitle(key);
   const back = key === 'realestate' ? '#/realestate' : '#/list/' + key;
   const today = todayISO();
   const cal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
@@ -870,7 +875,7 @@ function addPage(a, b) {
     html: soloList([item('#/add/insurance/personal', '👤', '#0a84ff', 'Personal'), item('#/add/insurance/company', '🏢', '#5e5ce6', 'Company')]) };
   const key = a === 'insurance' ? b : a;
   const list = ORDER[key]; if (!list) return notFound();
-  return { title: 'Select Type', back: a === 'insurance' ? '#/add/insurance' : '#/add', large: 'Select Type', tab: 'more',
+  return { title: 'Select Type', back: a === 'insurance' ? '#/add/insurance' : a === 'property' ? '#/property' : '#/add', large: 'Select Type', tab: 'more',
     html: soloList(list.map(t => item('#/form/' + t, T[t].ico, T[t].c, T[t].label))) };
 }
 
@@ -910,10 +915,11 @@ function formPage(type, id) {
   const d = existing ? existing.data : {};
   const initTx = existing ? txOf(existing) : [];
   const initPd = existing ? pdatesOf(existing) : [];
-  let back = existing ? (t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? '#/realestate' : '#/list/' + type) : null;
+  const selfHome = type === 'gold' ? '#/gold' : '#/property';
+  let back = existing ? (t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? selfHome : '#/list/' + type) : null;
   const addBack = t.cat === 'insurance' ? '#/add/insurance/' + t.group : '#/add/' + t.cat;   // the "Select Type" page
-  const home = t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? '#/realestate' : '#/list/' + type;
-  if (!back) back = (prevHash && !/^#\/add/.test(prevHash)) ? home : addBack;   // opened from a list's + → back to that list
+  const home = t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? selfHome : '#/list/' + type;
+  if (!back) back = /^#\/add/.test(prevHash) ? prevHash : (prevHash ? home : addBack);   // opened from a list's + → back to that list
   const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
   const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
   const h = `
@@ -1150,6 +1156,8 @@ function view(p) {
     case 'list': return listPage(b);
     case 'insurance': return b ? insuranceList(b) : insuranceMenu();
     case 'realestate': return listPage('realestate');
+    case 'property': return listPage('property');
+    case 'gold': return listPage('gold');
     case 'funds': return fundsPage('funds');
     case 'liquid': return fundsPage('liquid');
     case 'update': return updatePage(b);
