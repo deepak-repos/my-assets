@@ -70,7 +70,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .hero .top .lbl,.hero .top .amt{grid-column:1}
 .hero .top .xp{grid-column:2;grid-row:2;justify-self:center;align-self:baseline;position:relative;margin:0;opacity:1;color:rgba(255,255,255,.475)}
 .hero .top .xp.na{color:rgba(255,255,255,.3)}
-.hero .top .xp .ar{margin:0 4px}
+.hero .top .xp .ar{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%)}
 .hero .lbl{font-size:14px;opacity:.85}
 .hero .amt{font-size:35px;font-weight:700;letter-spacing:-.8px;margin:0}
 .hero .cols{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid rgba(255,255,255,.25)}
@@ -216,6 +216,7 @@ button.btn{width:calc(100% - 32px)}
 .kv span{color:var(--sub);flex:none}.kv b{font-weight:500;text-align:right;word-break:break-word}
 .doc{display:block;padding:8px 0;color:var(--blue);font-size:15px}
 .acts{display:flex;gap:10px;margin-top:12px}
+.acts .btn{text-align:center}.acts .btn.danger{flex:none;width:auto}.acts a.btn{flex:1;width:auto}
 
 .btn{display:block;text-align:center;background:var(--blue);color:#fff;font-weight:600;padding:14px;border-radius:14px;margin:6px 16px 16px}
 .btn.sm{display:inline-block;margin:0;padding:9px 18px;font-size:15px;border-radius:10px}
@@ -307,8 +308,8 @@ button.btn{width:calc(100% - 32px)}
 .row .pdrow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
 .pdadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
 .txs{display:flex;flex-direction:column;gap:8px}
-.txrow{display:flex;gap:8px;align-items:center}
-.row .txrow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
+.txrow{display:grid;grid-template-columns:calc((100% - 48px) / 2 + 7px) calc((100% - 48px) / 2 - 7px) 32px;gap:8px;align-items:center}
+.row .txrow input{width:100%;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
 .row .txrow input.ta{text-align:right}
 .txdel,.pddel{flex:none;width:32px;height:32px;border-radius:50%;background:rgba(255,59,48,.14);color:var(--red);font-size:20px;line-height:1}
 .txadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
@@ -364,8 +365,8 @@ svg.anch{width:100%;height:auto;display:block;touch-action:pan-y;user-select:non
 .an-lv>div+div{margin-top:4px}
 .an-lv span{width:74px;flex:none;color:var(--sub);font-size:12.5px}
 .an-ld{text-align:right;flex:none}
-.an-ld b{display:block;font-size:14.5px;font-weight:600}
-.an-ld em{display:block;margin-top:4px;font-style:normal;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.an-ld b{display:block;margin-top:4px;font-size:14.5px;font-weight:600}
+.an-ld em{display:block;font-style:normal;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
 .an-ld .up{color:var(--green)}.an-ld .dn{color:var(--red)}.an-ld .eq{color:var(--blue)}
 .an-more{display:block;width:100%;text-align:center;color:var(--blue);font-weight:600;padding:13px 0 11px;border-top:.5px solid var(--sep)}
 
@@ -821,7 +822,7 @@ function home() {
 
   const xN = xCells(groupXirr(nwItems())), xF = xCells(groupXirr(inv)), xL = xCells(groupXirr(ofTypes(['mf', 'fd', 'sa']))),
         xP = xCells(groupXirr(ofTypes(['house', 'land']))), xG = xCells(groupXirr(ofTypes(['gold'])));
-  const nwX = groupXirr(nwItems()), xNW = nwX == null ? '<em class="xp na">XIRR —</em>' : `<em class="xp">XIRR<i class="ar ${nwX >= 0 ? 'up' : 'dn'}">${nwX >= 0 ? '▲' : '▼'}</i>${pct2(nwX)}</em>`;
+  const nwX = groupXirr(nwItems()), xNW = nwX == null ? '<em class="xp na">XIRR —</em>' : `<em class="xp"><i class="ar ${nwX >= 0 ? 'up' : 'dn'}">${nwX >= 0 ? '▲' : '▼'}</i>XIRR ${pct2(nwX)}</em>`;
   const box = (href, name, amt, x) => `<a href="${href}"><span>${name}</span><b>${amt}</b></a>`;
   h += `<section class="hero"><a class="top" href="#/networth" aria-label="Open net worth"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>${xNW}</a>
     <div class="cols">${box('#/funds', 'Total Funds', C(funds), xF)}${box('#/liquid', 'Liquid Funds', C(liquid), xL)}</div>
@@ -874,8 +875,8 @@ function card(a) {
   const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
     <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
-    <div class="body">${rows}${docs}<div class="acts"><a class="btn sm" href="#/form/${a.type}/${a.id}">Edit</a>
-    <button class="btn sm danger" data-del="${a.id}">Delete</button></div></div></details>`;
+    <div class="body">${rows}${docs}<div class="acts"><button class="btn sm danger" data-del="${a.id}">Delete</button>
+    <a class="btn sm" href="#/form/${a.type}/${a.id}">Edit</a></div></div></details>`;
 }
 
 function fundsPage(kind) {
@@ -1248,7 +1249,7 @@ function anDraw() {
     body += `<div class="gtitle an-h">History</div><div class="card an-list">` + (rows.length ? shown.map(p => {
       const c = anChg(p.inv, p.cur);
       return `<div class="li"><div class="an-lv"><div><span>Current</span><b>${anM(p.cur)}</b></div><div><span>Investment</span><b>${anM(p.inv)}</b></div></div>
-        <div class="an-ld"><b>${esc(anFmt(p.x))}</b><em class="${c.k}">${c.t}</em></div></div>`;
+        <div class="an-ld"><em class="${c.k}">${c.t}</em><b>${esc(anFmt(p.x))}</b></div></div>`;
     }).join('') + (rows.length > shown.length ? `<button class="an-more" data-more="1">Show more</button>` : '') : `<div class="empty">No entries in this period.</div>`) + `</div>`;
   }
 
@@ -1591,10 +1592,8 @@ document.addEventListener('click', e => {                       // goal cards: n
   on ? GEXP.add(id) : GEXP.delete(id);
 });
 
-document.addEventListener('click', e => {                       // smooth open / close for asset cards
-  const sm = e.target.closest('.acard > summary, .dtile > summary'); if (!sm) return;
-  e.preventDefault();
-  const d = sm.parentElement, body = d.querySelector('.body');
+function fold(d) {                                              // smooth open / close of an asset card (<details>)
+  const body = d.querySelector('.body');
   if (!body || d._busy) return;
   if (matchMedia('(prefers-reduced-motion:reduce)').matches) { d.open = !d.open; return; }
   const opening = !d.open;
@@ -1603,8 +1602,21 @@ document.addEventListener('click', e => {                       // smooth open /
   const cs = getComputedStyle(body);
   const full = { height: body.offsetHeight + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1 };
   const shut = { height: '0px', paddingTop: '0px', paddingBottom: '0px', opacity: 0 };
-  const an = body.animate(opening ? [shut, full] : [full, shut], { duration: 300, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'forwards' });
-  an.onfinish = () => { if (!opening) d.open = false; an.cancel(); body.style.overflow = ''; d._busy = false; };
+  const run = [body.animate(opening ? [shut, full] : [full, shut],
+    { duration: opening ? 460 : 300, easing: opening ? 'cubic-bezier(.22,1,.36,1)' : 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' })];
+  [...body.children].slice(0, 14).forEach((k, i) => run.push(k.animate(                     // rows glide in one after another
+    opening ? [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 1 }, { opacity: 0 }],
+    { duration: opening ? 360 : 160, delay: opening ? 50 + i * 28 : 0, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' })));
+  Promise.all(run.map(x => x.finished.catch(() => 0))).then(() => {
+    if (!opening) d.open = false;
+    run.forEach(x => x.cancel()); body.style.overflow = ''; d._busy = false;
+  });
+}
+document.addEventListener('click', e => {
+  const sm = e.target.closest('.acard > summary, .dtile > summary');
+  if (sm) { e.preventDefault(); fold(sm.parentElement); return; }
+  const inBody = e.target.closest('.acard[open] > .body');          // tap anywhere inside an open card → collapse
+  if (inBody && !e.target.closest('a,button,input,select,textarea,label')) fold(inBody.parentElement);
 });
 
 /* Haptic tap feedback: Android vibrates; iOS 17.4+ Safari fires a tiny haptic when a hidden switch is toggled */
