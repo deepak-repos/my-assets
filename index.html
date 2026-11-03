@@ -67,15 +67,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.hero .top{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 12px;margin-bottom:14px;white-space:nowrap}
+.hero .top{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px;align-items:baseline;padding:0 16px;margin-bottom:14px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
+.hero .top .lbl,.hero .top .amt{grid-column:1}
+.hero .top .ar,.hero .top .xp{grid-column:2;justify-self:end}
+.hero .top .ar{grid-row:1}.hero .top .xp{grid-row:2}
 .hero .lbl{font-size:14px;opacity:.85}
 .hero .amt{font-size:35px;font-weight:700;letter-spacing:-.8px;margin:0}
 .hero .cols{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid rgba(255,255,255,.25)}
 .hero .cols{background:rgba(255,255,255,.04)}
-.hero .cols>*{display:block;padding:11px 8px 12px;color:inherit;text-decoration:none}
+.hero .cols>*{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:6px;row-gap:8px;align-items:baseline;text-align:left;white-space:nowrap;padding:11px 10px 12px 14px;color:inherit;text-decoration:none}
+.hero .cols>*>span,.hero .cols>*>b{grid-column:1;min-width:0}
+.hero .cols>*>.ar,.hero .cols>*>.xp{grid-column:2;justify-self:end}
+.hero .cols>*>.ar{grid-row:1}.hero .cols>*>.xp{grid-row:2}
+.hero .ar,.hero .xp{font-style:normal;font-size:13px;font-weight:600;line-height:1.35}
+.hero .ar.up{color:#30d158}.hero .ar.dn{color:#ff453a}
+.hero .xp.na{opacity:.6}
 .hero .cols>*+*{border-left:1px solid rgba(255,255,255,.25)}
 .hero .cols span,.hero .rw span{display:block;font-size:13px;opacity:.85}
-.hero .cols span{margin-bottom:8px}
+.hero .cols span{margin-bottom:0}
 .hero .cols b{display:block;font-size:17px;font-weight:600}
 .hero .rw{padding:14px 8px 16px;border-top:1px solid rgba(255,255,255,.25)}
 .hero .rw b{display:block;font-size:20px;font-weight:600}
@@ -92,6 +101,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes iglow{0%,62%,100%{filter:none}80%{filter:drop-shadow(0 0 2px var(--glow))}}
 .tglow svg{animation:iglow 3s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.tglow,.tglow svg{animation:none}}
+/* bell icon only: pulses every 2s, growing in spread and strength */
+.bglow{--glow:rgba(185,119,47,.95)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bglow{--glow:rgba(255,190,110,.95)}}
+:root[data-theme=dark] .bglow{--glow:rgba(255,190,110,.95)}
+.bglow svg{animation:bglow 2s ease-in-out infinite}
+@keyframes bglow{0%,100%{filter:drop-shadow(0 0 0 transparent)}
+  50%{filter:drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 12px var(--glow)) drop-shadow(0 0 18px var(--glow))}}
+@media (prefers-reduced-motion:reduce){.bglow svg{animation:none}}
 .card.outer{background:#f6ece1;padding:0;overflow:hidden;border-radius:15px;border:.75px solid rgba(185,119,47,.35);box-shadow:0 2px 10px rgba(78,53,36,.08),inset 0 0 0 .5px rgba(255,255,255,.55)}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22;border-color:rgba(232,164,92,.35);box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.05)}}
 :root[data-theme=dark] .card.outer{background:#3a2c22;border-color:rgba(232,164,92,.35);box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.05)}
@@ -148,9 +165,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .g-more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
 .g-more>div{overflow:hidden;min-height:0;padding-left:0}
 .goal.open .g-more{grid-template-rows:1fr}
-.g-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;row-gap:10px;align-items:center;transition:margin .3s}
+.g-row{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;row-gap:3px;align-items:center;transition:margin .3s}
 .goal.open .g-row{margin-bottom:12px}
-.g-ico{grid-column:1;grid-row:1;align-self:center;width:26px;height:30px;display:grid;place-items:center start;color:var(--sub);background:none;-webkit-tap-highlight-color:transparent}
+.g-ico{grid-column:1;grid-row:1;align-self:center;width:26px;height:22px;display:grid;place-items:center start;color:var(--sub);background:none;-webkit-tap-highlight-color:transparent}
 .g-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .g-main{display:contents}
 .g-name{grid-column:2;grid-row:1;font-size:15.5px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:20px}
@@ -742,6 +759,36 @@ function nextMonthPayments() {
 /* ---------------------------------------------------------------------
    Views – each returns { title, back, right, html, after, tab, large, nobar, notabs }
    --------------------------------------------------------------------- */
+const pct2 = v => Math.abs(v * 100).toFixed(2) + '%';
+const xCells = x => x == null ? { ar: '', pc: '<em class="xp na">—</em>' }
+  : { ar: `<i class="ar ${x >= 0 ? 'up' : 'dn'}">${x >= 0 ? '▲' : '▼'}</i>`, pc: `<em class="xp">${pct2(x)}</em>` };
+const backHome = () => { const b = navStack[navStack.length - 2]; return b && b.hash === '#/networth' ? '#/networth' : '#/home'; };
+const nwItems = () => [...byCat('investment'), ...byCat('selfuse')];
+
+function homeMenus(C) {                                    // the menu tiles on the home screen (also used on the Net Worth page)
+  const solo = (...args) => `<div class="group solo hm">${item(...args)}</div>`;
+  const prop = sum(ofTypes(['house', 'land']), curVal), gld = sum(ofTypes(['gold']), curVal);
+  const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
+    solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)))).join('');
+  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
+  return rows
+    + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')
+    + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
+    + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld));
+}
+function netWorthPage() {
+  const C = v => S.hide ? '••••' : fmtCr(v);
+  const items = nwItems();
+  let h = '';
+  if (items.length) {
+    const invOf = a => txOf(a).length ? invVal(a) : curVal(a);        // same rule as Total Funds: no invested figure → no gain counted
+    const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
+    h += `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
+      <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>`;
+  }
+  return { title: 'Your Net Worth', back: '#/home', html: h + homeMenus(C), tab: 'home' };
+}
+
 function home() {
   const M = v => S.hide ? '••••' : money(v), C = v => S.hide ? '••••' : fmtCr(v);
   const icoBell = '<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
@@ -764,13 +811,16 @@ function home() {
     return { html: h, tab: 'home', nobar: true };
   }
 
-  h += `<section class="hero"><div class="top"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div></div>
-    <div class="cols"><a href="#/funds"><span>Total Funds</span><b>${C(funds)}</b></a><a href="#/liquid"><span>Liquid Funds</span><b>${C(liquid)}</b></a></div>
-    <div class="cols"><a href="#/property"><span>Property</span><b>${C(prop)}</b></a><a href="#/gold"><span>Gold</span><b>${C(gld)}</b></a></div></section>`;
+  const xN = xCells(groupXirr(nwItems())), xF = xCells(groupXirr(inv)), xL = xCells(groupXirr(ofTypes(['mf', 'fd', 'sa']))),
+        xP = xCells(groupXirr(ofTypes(['house', 'land']))), xG = xCells(groupXirr(ofTypes(['gold'])));
+  const box = (href, name, amt, x) => `<a href="${href}"><span>${name}</span>${x.ar}<b>${amt}</b>${x.pc}</a>`;
+  h += `<section class="hero"><a class="top" href="#/networth" aria-label="Open net worth"><div class="lbl">Your Net Worth</div>${xN.ar}<div class="amt">${C(funds + real)}</div>${xN.pc}</a>
+    <div class="cols">${box('#/funds', 'Total Funds', C(funds), xF)}${box('#/liquid', 'Liquid Funds', C(liquid), xL)}</div>
+    <div class="cols">${box('#/property', 'Property', C(prop), xP)}${box('#/gold', 'Gold', C(gld), xG)}</div></section>`;
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
-  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' tglow' : ''}">${icoBell}Premiums Due (in 90 days)</span><span class="dr${upTot > 0 ? ' tglow' : ''}">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
+  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' bglow' : ''}">${icoBell}Premiums Due (in 90 days)</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
     `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
@@ -781,14 +831,7 @@ function home() {
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
   h += '</div>';
 
-  const solo = (...args) => `<div class="group solo hm">${item(...args)}</div>`;      // every menu sits in its own tile
-  const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
-    solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)))).join('');
-  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
-  h += rows
-    + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')
-    + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
-    + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld));
+  h += homeMenus(C);
   h += homeGoals() + homeGrowth();
   return { html: h, tab: 'home', nobar: true };
 }
@@ -837,7 +880,7 @@ function fundsPage(kind) {
     h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
       <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
-  return { title: liq ? 'Liquid Funds' : 'Total Funds', back: '#/home', html: h, tab: 'home' };
+  return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
 }
 const listTitle = key => ({ realestate: 'Property & Gold', property: 'Property', gold: 'Gold' })[key] || T[key].label;
 const UPDATABLE = ['mf', 'sa', 'epf', 'ppf', 'nps', 'gratuity', 'realestate'];
@@ -845,14 +888,14 @@ function listPage(key) {
   const types = GROUPS[key]; if (!types) return notFound();
   const items = ofTypes(types);
   const title = listTitle(key);
-  const back = '#/home';
+  const back = backHome();
   const addHref = key === 'realestate' ? '#/add/selfuse' : key === 'property' ? '#/add/property' : key === 'gold' ? '#/form/gold' : (items.length && UPDATABLE.includes(key)) ? '#/update/' + key : '#/form/' + key;
   let h = '' + (items.length ? summaryTile(items, types) + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
   return { title, back, right: `<a class="plus" href="${addHref}" aria-label="Add">+</a>`, html: h, tab: 'home' };
 }
 
 function insuranceMenu() {
-  return { title: 'Insurance', back: '#/home', large: 'Insurance', tab: 'home',
+  return { title: 'Insurance', back: backHome(), large: 'Insurance', tab: 'home',
     html: soloList([item('#/insurance/personal', '👤', '#0a84ff', 'Personal', ''),
       item('#/insurance/company', '🏢', '#5e5ce6', 'Company', '')]) };
 }
@@ -1437,6 +1480,7 @@ function view(p) {
     case 'realestate': return listPage('realestate');
     case 'property': return listPage('property');
     case 'gold': return listPage('gold');
+    case 'networth': return netWorthPage();
     case 'funds': return fundsPage('funds');
     case 'liquid': return fundsPage('liquid');
     case 'update': return updatePage(b);
