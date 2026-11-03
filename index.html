@@ -309,6 +309,45 @@ button.btn{width:calc(100% - 32px)}
 .ghead .gl{font-size:13px;color:var(--blue);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ghead .gr .gn{font-size:13px}
 .ghead .gr{font-size:12px;color:var(--sub);flex:none;text-transform:uppercase}
+
+/* analytics */
+.an-fil{margin-bottom:14px}
+.an-sel{cursor:pointer}
+.an-sel .l{font-weight:500}
+.an-sel select{direction:ltr;text-align:right;text-align-last:right;color:var(--blue);font-weight:600;padding-right:20px;text-overflow:ellipsis;cursor:pointer;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 16' fill='none' stroke='%238e8e93' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 6l3-3 3 3M2 10l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 1px center/9px 14px}
+.seg.an{margin-bottom:14px}.seg.an button{padding:8px 0;font-size:13px}
+.an-card{padding:18px 16px 16px}
+.an-top{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.an-k span{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--sub)}
+.an-k i{width:8px;height:8px;border-radius:50%;flex:none}
+.an-k b{display:block;margin-top:3px;font-size:19px;font-weight:700;letter-spacing:-.3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.an-dt{margin:10px 0 4px;font-size:12.5px;font-weight:600;color:var(--sub);min-height:17px}
+svg.anch{width:100%;height:auto;display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none;margin:0 -2px}
+.anch .gl{stroke:var(--sep);stroke-width:.6;stroke-dasharray:2 3}
+.anch text{fill:var(--sub);font-size:10px}
+.anch .l1,.anch .l2{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.anch .l1{stroke:#ff9f0a}.anch .l2{stroke:var(--blue)}
+.anch .d1{fill:#ff9f0a}.anch .d2{fill:var(--blue)}
+.anch .d1,.anch .d2{stroke:var(--card);stroke-width:1.2}
+.anch .xh{stroke:var(--sub);stroke-width:.8;stroke-dasharray:3 3;opacity:.7}
+.anch .s1{fill:#ff9f0a}.anch .s2{fill:var(--blue)}
+.anch .s1,.anch .s2{stroke:var(--card);stroke-width:2.2}
+.an-one{padding:28px 8px;text-align:center}
+.an-foot{margin-top:12px;padding-top:14px;border-top:.5px solid var(--sep);text-align:center}
+.an-fn{font-size:13px;font-weight:600;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.an-fa{margin-top:2px;font-size:26px;font-weight:700;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+.gtitle.an-h{margin-top:22px;margin-bottom:8px;font-weight:600}
+.an-list{padding:2px 16px}
+.an-list .li{padding:13px 0}
+.an-lv>div{display:flex;align-items:baseline;gap:10px;font-size:14.5px;font-variant-numeric:tabular-nums}
+.an-lv>div+div{margin-top:4px}
+.an-lv span{width:74px;flex:none;color:var(--sub);font-size:12.5px}
+.an-ld{text-align:right;flex:none}
+.an-ld b{display:block;font-size:14.5px;font-weight:600}
+.an-ld em{display:block;margin-top:4px;font-style:normal;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.an-ld .up{color:var(--green)}.an-ld .dn{color:var(--red)}.an-ld .eq{color:var(--blue)}
+.an-more{display:block;width:100%;text-align:center;color:var(--blue);font-weight:600;padding:13px 0 11px;border-top:.5px solid var(--sep)}
 </style>
 </head>
 <body>
@@ -990,24 +1029,29 @@ function formPage(type, id) {
 const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'), item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
 /* ---- Analytics ----
-   Chart of Investment amount vs Current amount over time, for all investments,
-   one category (asset type) or one asset.
-   Rules:
-     invested(t) = sum of dated investments on/before t
-     current(t)  = latest value snapshot on/before t; if there is no earlier
-                   snapshot it falls back to invested(t).
-                   Fixed deposits use the app's own accrual (fdValue) at t.
-     assets with no invested figure (Saving, Gratuity) count their current value on both lines. */
+   Line chart (with dots) of Investment amount vs Current amount, for all investments,
+   one category (asset type) or one asset. A dot is drawn on every date something happened
+   (an investment was made or a value was saved), plus the start of the chosen period and today.
+     investment(t) = sum of dated investments on/before t
+     current(t)    = latest saved value on/before t, plus any money invested after that value was saved.
+                     If no value was saved yet, the investment amount is used as the current amount.
+                     Fixed deposits use the app's own interest accrual (fdValue) at t.
+     Saving / Gratuity have no investment figure, so their current value is used on both lines. */
 const AN = { cat: 'all', ast: 'all', rng: 'all', lim: 40 };
 const AN_RNG = [['3m', '3M', 3], ['6m', '6M', 6], ['1y', '1Y', 12], ['2y', '2Y', 24], ['3y', '3Y', 36], ['5y', '5Y', 60], ['10y', '10Y', 120], ['all', 'All', 0]];
 const anDay = ms => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
 const anEnd = ms => { const d = new Date(ms); d.setHours(23, 59, 59, 999); return d.getTime(); };
 const anIso = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? NaN : d.getTime(); };
 const anFmt = ms => new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-const anFmtS = ms => new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' });
 const anAxis = v => { const a = Math.abs(v), t = x => x.toFixed(1).replace(/\.0$/, '');
   return a >= 1e7 ? t(v / 1e7) + 'Cr' : a >= 1e5 ? t(v / 1e5) + 'L' : a >= 1e3 ? t(v / 1e3) + 'K' : String(Math.round(v)); };
 const anM = v => S.hide ? '••••' : money(v);
+const anChg = (inv, cur) => {                              // change between current and investment, with sign + colour class
+  const c = Math.round(cur - inv);
+  if (c > 0) return { t: S.hide ? '••••' : '+' + money(c), k: 'up' };
+  if (c < 0) return { t: S.hide ? '••••' : '-' + money(-c), k: 'dn' };
+  return { t: S.hide ? '••••' : money(0), k: 'eq' };
+};
 let ANC = null;                                            // geometry of the chart currently on screen
 
 function anPrep(a, snapsBy) {
@@ -1019,14 +1063,15 @@ function anPrep(a, snapsBy) {
   const hasTx = tx.length > 0;
   return { a, snaps, tx, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
 }
-function anVals(p, e) {                                    // [invested, current] of one asset at the end of a day
+function anVals(p, e) {                                    // [investment, current] of one asset at the end of a day
   if (e < p.start) return [0, 0];
   const inv = p.hasTx ? p.tx.reduce((t, z) => t + (z.t <= e ? z.amt : 0), 0) : null;
   let cur;
   if (p.fd) cur = fdValue(p.a.data, new Date(Math.min(e, Date.now())));
   else {
     let s = null; for (const x of p.snaps) { if (x.t <= e) s = x; else break; }
-    cur = s ? s.cur : p.hasTx ? inv : (p.snaps.length ? p.snaps[0].cur : curVal(p.a));
+    if (s) { const sd = anDay(s.t); cur = s.cur + (p.hasTx ? p.tx.reduce((t, z) => t + (z.t > sd && z.t <= e ? z.amt : 0), 0) : 0); }
+    else cur = p.hasTx ? inv : curVal(p.a);              // nothing saved yet → investment amount stands in as current amount
   }
   return [inv == null ? cur : inv, cur];
 }
@@ -1041,13 +1086,9 @@ function anBuild(list, months) {
   if (months) { const d = new Date(); d.setMonth(d.getMonth() - months); from = Math.max(first, anDay(d.getTime())); }
   from = Math.min(from, today);
   const ev = new Map(), days = new Set([from, today]);
-  const mark = (t, add, upd) => {
-    const d = anDay(t); if (d < from || d > today) return;
-    const o = ev.get(d) || { add: 0, upd: false }; o.add += add; o.upd = o.upd || upd; ev.set(d, o);
-  };
-  P.forEach(p => { p.tx.forEach(z => mark(z.t, z.amt, false)); p.snaps.forEach(s => mark(s.t, 0, true)); });
-  ev.forEach((o, d) => { days.add(d); const b = anDay(d - 1); if (b >= from) days.add(b); });   // a point just before each event keeps jumps vertical
-  for (let i = 1; i < 48; i++) days.add(anDay(from + (today - from) * i / 48));                    // gentle samples so FD accrual draws smoothly
+  const mark = (t, upd) => { const d = anDay(t); if (d < from || d > today) return; ev.set(d, ev.get(d) || { upd: false }); if (upd) ev.get(d).upd = true; };
+  P.forEach(p => { p.tx.forEach(z => mark(z.t, false)); p.snaps.forEach(s => mark(s.t, true)); });
+  ev.forEach((o, d) => days.add(d));
   const pts = [...days].sort((x, y) => x - y).map(d => {
     let inv = 0, cur = 0; const e = anEnd(d);
     P.forEach(p => { const v = anVals(p, e); inv += v[0]; cur += v[1]; });
@@ -1057,29 +1098,33 @@ function anBuild(list, months) {
 }
 
 function anChart(pts) {
-  const W = 340, H = 220, pl = 44, pr = 8, pt = 12, pb = 24;
+  const W = 340, H = 230, pl = 44, pr = 12, pt = 14, pb = 26;
   const x0 = pts[0].x, x1 = pts[pts.length - 1].x;
   const all = pts.flatMap(p => [p.inv, p.cur]);
   let lo = Math.min(...all), hi = Math.max(...all); const nonNeg = lo >= 0;
   if (hi === lo) { hi = hi * 1.05 + 1; lo = lo * .95; }
-  const pad = (hi - lo) * .12; lo -= pad; hi += pad; if (nonNeg && lo < 0) lo = 0;
+  const pad = (hi - lo) * .14; lo -= pad; hi += pad; if (nonNeg && lo < 0) lo = 0;
   const sx = x => pl + (x - x0) / (x1 - x0) * (W - pl - pr), sy = y => pt + (1 - (y - lo) / (hi - lo)) * (H - pt - pb);
   const P = pts.map(p => ({ ...p, px: sx(p.x), p1: sy(p.inv), p2: sy(p.cur) }));
   ANC = { P, W };
   const path = k => P.map((p, i) => (i ? 'L' : 'M') + p.px.toFixed(1) + ' ' + p[k].toFixed(1)).join(' ');
+  const r = P.length <= 40 ? 3.4 : P.length <= 120 ? 2.4 : 1.7;
+  const dots = (k, rr, cls) => P.map(p => `<circle class="${cls}" cx="${p.px.toFixed(1)}" cy="${p[k].toFixed(1)}" r="${rr}"/>`).join('');
   let grid = '';
   for (let i = 0; i < 4; i++) {
     const v = lo + (hi - lo) * i / 3, y = sy(v).toFixed(1);
-    grid += `<line class="gl" x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}"/>${S.hide ? '' : `<text x="${pl - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${anAxis(Math.max(v, 0))}</text>`}`;
+    grid += `<line class="gl" x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}"/>${S.hide ? '' : `<text x="${pl - 7}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${anAxis(Math.max(v, 0))}</text>`}`;
   }
-  const f = P[0], l = P[P.length - 1];
-  grid += `<text x="${pl}" y="${H - 6}" text-anchor="start">${anFmtS(f.x)}</text><text x="${W - pr}" y="${H - 6}" text-anchor="end">${anFmtS(l.x)}</text>`;
-  return `<svg class="anch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Investment amount and current amount over time">
-    <defs><linearGradient id="an-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--blue);stop-opacity:.24"/><stop offset="1" style="stop-color:var(--blue);stop-opacity:0"/></linearGradient></defs>${grid}
-    <path d="${path('p2')} L${l.px.toFixed(1)} ${H - pb} L${f.px.toFixed(1)} ${H - pb} Z" fill="url(#an-g)"/>
+  const short = (x1 - x0) < 200 * 864e5;
+  const lab = ms => new Date(ms).toLocaleDateString('en-IN', short ? { day: 'numeric', month: 'short' } : { month: 'short', year: '2-digit' });
+  const mid = (x0 + x1) / 2;
+  grid += `<text x="${pl}" y="${H - 7}" text-anchor="start">${lab(x0)}</text><text x="${sx(mid).toFixed(1)}" y="${H - 7}" text-anchor="middle">${lab(mid)}</text><text x="${W - pr}" y="${H - 7}" text-anchor="end">${lab(x1)}</text>`;
+  const l = P[P.length - 1];
+  return `<svg class="anch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Investment amount and current amount over time">${grid}
     <path class="l1" d="${path('p1')}"/><path class="l2" d="${path('p2')}"/>
+    ${dots('p1', r + 1, 'd1')}${dots('p2', r, 'd2')}
     <line class="xh" id="an-v" x1="${l.px}" x2="${l.px}" y1="${pt}" y2="${H - pb}"/>
-    <circle id="an-c1" r="4.6" cx="${l.px}" cy="${l.p1}" style="fill:#ff9f0a"/><circle id="an-c2" r="4.6" cx="${l.px}" cy="${l.p2}" style="fill:var(--blue)"/></svg>`;
+    <circle class="s1" id="an-c1" r="5.6" cx="${l.px}" cy="${l.p1}"/><circle class="s2" id="an-c2" r="5.6" cx="${l.px}" cy="${l.p2}"/></svg>`;
 }
 function anMark(p) {
   const set = (id, o) => { const el = $('#' + id); if (el) for (const k in o) el.setAttribute(k, o[k]); };
@@ -1102,52 +1147,62 @@ function anDraw() {
   if (AN.ast !== 'all' && !inCat.some(a => a.id === AN.ast)) AN.ast = 'all';
   const sel = AN.ast === 'all' ? inCat : inCat.filter(a => a.id === AN.ast);
 
-  const chip = (attr, v, label, on) => `<button class="chip${on ? ' on' : ''}" data-${attr}="${esc(v)}">${esc(label)}</button>`;
+  const opt = (v, label, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(label)}</option>`;
   const types = ORDER.investment.filter(t => L.some(a => a.type === t));
-  const catHtml = chip('cat', 'all', 'All', AN.cat === 'all') + types.map(t => chip('cat', t, T[t].label, AN.cat === t)).join('');
+  const catHtml = opt('all', 'All Investments', AN.cat === 'all') + types.map(t => opt(t, T[t].label, AN.cat === t)).join('');
   const names = inCat.map(ttl), dup = n => names.filter(x => x === n).length > 1;
-  const astHtml = AN.cat === 'all' ? '' : chip('ast', 'all', 'All ' + T[AN.cat].label, AN.ast === 'all') +
-    inCat.map((a, i) => chip('ast', a.id, dup(names[i]) ? names[i] + ' ' + (a.data.accountNo ? '•' + String(a.data.accountNo).slice(-4) : '#' + (i + 1)) : names[i], AN.ast === a.id)).join('');
+  const astHtml = AN.cat === 'all' ? '' : opt('all', 'All ' + T[AN.cat].label, AN.ast === 'all') +
+    inCat.map((a, i) => opt(a.id, dup(names[i]) ? names[i] + ' ' + (a.data.accountNo ? '•' + String(a.data.accountNo).slice(-4) : '#' + (i + 1)) : names[i], AN.ast === a.id)).join('');
   const rngHtml = AN_RNG.map(r => `<button data-rng="${r[0]}" class="${AN.rng === r[0] ? 'on' : ''}">${r[1]}</button>`).join('');
 
-  const scope = AN.ast !== 'all' ? ttl(sel[0]) : AN.cat !== 'all' ? T[AN.cat].label : 'All investments';
+  const scope = AN.ast !== 'all' ? ttl(sel[0]) : AN.cat !== 'all' ? T[AN.cat].label : 'All Investments';
   const months = (AN_RNG.find(r => r[0] === AN.rng) || [])[2] || 0;
   const res = anBuild(sel, months);
   let body = '';
   if (!res) body = `<div class="card"><div class="empty">No investments added yet. Add one from the More tab to see your trend here.</div></div>`;
   else {
-    const pts = res.pts, last = pts[pts.length - 1], g = last.cur - last.inv, pc = last.inv ? g / last.inv * 100 : 0;
-    body = `<div class="card an-card"><div class="an-m">${esc(scope)}</div><div class="an-big">${anM(last.cur)}</div>
-      ${last.inv > 0 ? `<div class="an-g ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'} ${S.hide ? '••••' : fmtCr(Math.abs(g))} (${pc.toFixed(1)}%) on ${S.hide ? '••••' : fmtCr(last.inv)} invested</div>` : '<div class="an-g"></div>'}`;
-    if (pts.length > 1) body += `<div class="an-tt" id="an-dt"></div>
-      <div class="an-leg"><span><i style="background:#ff9f0a"></i>Investment<b id="an-v1"></b></span><span><i style="background:var(--blue)"></i>Current<b id="an-v2"></b></span></div>
-      ${anChart(pts)}<div class="an-note">Touch and drag across the chart to read values.</div>`;
-    else body += `<div class="empty">Only one day of data so far – a trend will appear as you add investments and update values over time.</div>`;
-    body += `</div>`;
+    const pts = res.pts, last = pts[pts.length - 1];
+    body = `<div class="card an-card">
+      <div class="an-top">
+        <div class="an-k"><span><i style="background:#ff9f0a"></i>Investment</span><b id="an-v1"></b></div>
+        <div class="an-k"><span><i style="background:var(--blue)"></i>Current</span><b id="an-v2"></b></div>
+      </div>
+      <div class="an-dt" id="an-dt"></div>
+      ${pts.length > 1 ? anChart(pts) : `<div class="empty an-one">Only one day of data so far – the chart will appear as you add investments and update values.</div>`}
+      <div class="an-foot"><div class="an-fn">${esc(scope)}</div><div class="an-fa">${anM(last.cur)}</div></div></div>`;
 
     const rows = pts.filter(p => p.ev).reverse(), shown = rows.slice(0, AN.lim);
-    body += `<div class="gtitle" style="margin-top:22px">History · ${esc(scope)}</div><div class="card an-list">` + (rows.length ? shown.map(p => {
-      const note = [p.ev.add > 0 && anM(p.ev.add) + ' invested', p.ev.upd && 'Value updated'].filter(Boolean).join(' · ');
-      return `<div class="li"><div><b>${esc(anFmt(p.x))}</b>${note ? `<small>${esc(note)}</small>` : ''}</div>
-        <div class="an-r"><div><span>Investment</span><b>${anM(p.inv)}</b></div><div><span>Current</span><b>${anM(p.cur)}</b></div></div></div>`;
+    body += `<div class="gtitle an-h">History</div><div class="card an-list">` + (rows.length ? shown.map(p => {
+      const c = anChg(p.inv, p.cur);
+      return `<div class="li"><div class="an-lv"><div><span>Investment</span><b>${anM(p.inv)}</b></div><div><span>Current</span><b>${anM(p.cur)}</b></div></div>
+        <div class="an-ld"><b>${esc(anFmt(p.x))}</b><em class="${c.k}">${c.t}</em></div></div>`;
     }).join('') + (rows.length > shown.length ? `<button class="an-more" data-more="1">Show more</button>` : '') : `<div class="empty">No entries in this period.</div>`) + `</div>`;
   }
 
-  const put = (id, html) => { const el = $('#' + id); if (!el) return; const x = el.scrollLeft; el.innerHTML = html; el.scrollLeft = x; };
-  put('an-cat', catHtml); put('an-ast', astHtml); put('an-rng', rngHtml); put('an-body', body);
-  const a = $('#an-ast'); if (a) a.hidden = !astHtml;
-  document.querySelectorAll('#an-cat .on,#an-ast .on').forEach(el => { try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (x) {} });
-  if (res && res.pts.length > 1 && ANC) anMark(ANC.P[ANC.P.length - 1]);
+  const c = $('#an-cat'), a = $('#an-ast');
+  c.innerHTML = catHtml; a.innerHTML = astHtml; $('#an-astw').hidden = !astHtml;
+  $('#an-rng').innerHTML = rngHtml; $('#an-body').innerHTML = body;
+  if (res) anMark(res.pts.length > 1 ? ANC.P[ANC.P.length - 1] : { x: res.pts[0].x, inv: res.pts[0].inv, cur: res.pts[0].cur, px: 0, p1: 0, p2: 0 });
 }
 const analytics = () => ({ title: 'Analytics', large: 'Analytics', tab: 'analytics',
-  html: `<div id="an"><div class="pills" id="an-cat"></div><div class="pills" id="an-ast" hidden></div><div class="seg an" id="an-rng"></div><div id="an-body"></div></div>`,
+  html: `<div id="an">
+    <div class="group an-fil">
+      <label class="row an-sel"><span class="l">Category</span><select id="an-cat" aria-label="Investment category"></select></label>
+      <label class="row an-sel" id="an-astw" hidden><span class="l">Asset</span><select id="an-ast" aria-label="Asset"></select></label>
+    </div>
+    <div class="seg an" id="an-rng"></div>
+    <div id="an-body"></div></div>`,
   after() {
     const root = $('#an');
+    root.addEventListener('change', e => {
+      if (e.target.id === 'an-cat') { AN.cat = e.target.value; AN.ast = 'all'; }
+      else if (e.target.id === 'an-ast') AN.ast = e.target.value;
+      else return;
+      AN.lim = 40; anDraw();
+    });
     root.addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.cat !== undefined) { AN.cat = b.dataset.cat; AN.ast = 'all'; AN.lim = 40; }
-      else if (b.dataset.ast !== undefined) { AN.ast = b.dataset.ast; AN.lim = 40; }
-      else if (b.dataset.rng !== undefined) { AN.rng = b.dataset.rng; AN.lim = 40; }
+      if (b.dataset.rng !== undefined) { AN.rng = b.dataset.rng; AN.lim = 40; }
       else if (b.dataset.more !== undefined) AN.lim += 40;
       else return;
       anDraw();
