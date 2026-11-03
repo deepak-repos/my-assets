@@ -63,10 +63,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 /* hero */
 .hero{position:relative;margin:0 16px 16px;padding:18px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
-  background:#2A4D75;box-shadow:0 10px 30px rgba(42,77,117,.32)}
+  background:#2A4D75;box-shadow:0 3px 10px rgba(42,77,117,.18)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.hero .top{display:grid;grid-template-columns:max-content max-content;justify-content:start;column-gap:30px;row-gap:2px;align-items:baseline;padding:0 26px;margin-bottom:14px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
+.hero .top{display:grid;grid-template-columns:max-content max-content;justify-content:start;column-gap:30px;row-gap:2px;align-items:baseline;padding:0 12px 0 33.33%;margin-bottom:14px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
 .hero .top .lbl,.hero .top .amt{grid-column:1}
 .hero .top .xp{grid-column:2;grid-row:2;justify-self:center;align-self:baseline;position:relative;margin:0;opacity:1;color:rgba(255,255,255,.475)}
 .hero .top .xp.na{color:rgba(255,255,255,.3)}
@@ -102,13 +102,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes iglow{0%,62%,100%{filter:none}80%{filter:drop-shadow(0 0 2px var(--glow))}}
 .tglow svg{animation:iglow 3s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.tglow,.tglow svg{animation:none}}
-/* bell icon only: pulses every 2s, growing in spread and strength */
-.bglow{--glow:rgba(185,119,47,.95)}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bglow{--glow:rgba(255,190,110,.95)}}
-:root[data-theme=dark] .bglow{--glow:rgba(255,190,110,.95)}
-.bglow svg{animation:bglow 2s ease-in-out infinite}
-@keyframes bglow{0%,100%{filter:drop-shadow(0 0 0 transparent)}
-  50%{filter:drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 12px var(--glow)) drop-shadow(0 0 18px var(--glow))}}
+/* bell icon only: rings (swings left and right) for a moment every 2s */
+.bglow svg{transform-origin:50% 12%;animation:bring 2s ease-in-out infinite}
+@keyframes bring{0%,50%,100%{transform:rotate(0)}
+  6%{transform:rotate(16deg)}14%{transform:rotate(-14deg)}22%{transform:rotate(11deg)}30%{transform:rotate(-8deg)}38%{transform:rotate(4deg)}44%{transform:rotate(-2deg)}}
 @media (prefers-reduced-motion:reduce){.bglow svg{animation:none}}
 .card.outer{background:#f6ece1;padding:0;overflow:hidden;border-radius:15px;border:.75px solid rgba(185,119,47,.35);box-shadow:0 2px 10px rgba(78,53,36,.08),inset 0 0 0 .5px rgba(255,255,255,.55)}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .card.outer{background:#3a2c22;border-color:rgba(232,164,92,.35);box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.05)}}
@@ -157,6 +154,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .ghd{display:flex;align-items:center;gap:10px;padding:18px 4px 0;color:var(--text);font-size:17px;font-weight:700}
 .ghd svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--g1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ggrp:first-of-type{margin-top:-22px}
+.ghd .gdet{margin-left:auto;padding:4px 12px;border-radius:99px;background:var(--fill);color:var(--g1);font-size:13px;font-weight:600}
+.ghd .gdet.on{background:var(--g1);color:#fff}
 .gbody{display:flow-root;margin-top:12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);overflow:hidden}
 .goal{display:block;margin:0;padding:10px 16px;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .goal:first-child{padding-top:14px}
@@ -191,7 +190,7 @@ button.btn{width:calc(100% - 32px)}
 .item .t small{display:block;color:var(--sub);font-size:13px}
 .item .v{color:var(--sub);font-size:15px}
 .hm .item .v{color:var(--text)}
-.hm .item{padding-top:15px;padding-bottom:15px;min-height:64px}
+.hm .item,.page.more .item{padding-top:15px;padding-bottom:15px;min-height:64px}
 .item::after{content:"";width:8px;height:8px;border-top:2px solid var(--sep);border-right:2px solid var(--sep);transform:rotate(45deg);margin-left:2px;flex:none;opacity:1}
 .item.nochev::after{display:none}
 .ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:18px;flex:none;color:#fff}
@@ -321,6 +320,7 @@ button.btn{width:calc(100% - 32px)}
 .txlist .kv{font-size:14px}
 .summary .gain{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
 .summary .gain span{margin-bottom:0}
+.summary .gain .ar{font-style:normal}.summary .gain .ar.up{color:#30d158}.summary .gain .ar.dn{color:#ff453a}
 .summary .gain em{font-style:normal;font-weight:600;font-size:13px}
 .group.solo{margin-bottom:12px}
 .savetile{display:block;width:100%;margin:8px 0 0;padding:16px;background:var(--card);color:var(--blue);font-size:17px;font-weight:600;text-align:center;border-top:.5px solid var(--sep);border-bottom:.5px solid var(--sep)}
@@ -773,9 +773,9 @@ function homeMenus(C, noIns) {                                    // the menu ti
     solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)))).join('');
   const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
   return rows
-    + (noIns ? '' : solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : ''))
     + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
-    + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld));
+    + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))
+    + (noIns ? '' : solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : ''));
 }
 function netWorthPage() {
   const C = v => S.hide ? '••••' : fmtCr(v);
@@ -785,7 +785,7 @@ function netWorthPage() {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);        // same rule as Total Funds: no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h += `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>`;
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>`;
   }
   return { title: 'Your Net Worth', back: '#/home', html: h + homeMenus(C, true), tab: 'home' };
 }
@@ -844,7 +844,7 @@ function summaryTile(items, types) {
   if (!hasInv) return `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div></div>`;
   const g = cur - inv, p = inv ? (g / inv * 100) : 0, x = groupXirr(items);
   return `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-    ${inv ? `<div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${p.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
+    ${inv ? `<div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${p.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
 }
 function showVal(f, v) {
   if (f.t === 'dates') return v.map(fmtDay).join(', ');
@@ -880,7 +880,7 @@ function fundsPage(kind) {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span>${g >= 0 ? '▲' : '▼'} ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
 }
@@ -1352,10 +1352,12 @@ const GICON = {
 };
 const goals = () => {
   let h = '';
+  let first = true;
   GOAL_TYPES.forEach(([tn, c1, c2], gi) => {
     const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
     if (!list.length) return;
-    h += `<section class="ggrp" style="--g1:${c1};--g2:${c2}"><div class="ghd">${GTARGET.replace('url(#gg)', `url(#gg${gi})`).replace('id="gg"', `id="gg${gi}"`).replace('C1', c1).replace('C2', c2)}<span class="gn">${tn}</span></div><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></section>`;
+    h += `<section class="ggrp" style="--g1:${c1};--g2:${c2}"><div class="ghd">${GTARGET.replace('url(#gg)', `url(#gg${gi})`).replace('id="gg"', `id="gg${gi}"`).replace('C1', c1).replace('C2', c2)}<span class="gn">${tn}</span>${first ? `<button type="button" class="gdet${S.goals.length && S.goals.every(g => GEXP.has(g.id)) ? ' on' : ''}" data-gdet aria-label="Expand or collapse all goals">Details</button>` : ''}</div><div class="gbody">` + list.map(g => goalCard(g, c1, c2)).join('') + `</div></section>`;
+    first = false;
   });
   if (!h) h = `<div class="soon-page"><div class="big">🎯</div><h2>No goals yet</h2><p>Tap + to set a target and link it to your investments.</p></div>`;
   return { title: 'Goals', large: 'Goals', tab: 'goals', right: `<a class="plus" href="#/goal/new" aria-label="Add goal">+</a>`, html: h };
@@ -1498,7 +1500,7 @@ function render(goTo) {
   const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const v = view(p);
   const bar = v.nobar ? '' : `<div class="bar"><a class="back" href="${v.back || '#/home'}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a><div class="bt">${esc(v.title || '')}</div><div class="right">${v.right || ''}</div></div>`;
-  $('#app').innerHTML = `<div class="page${goTo === undefined ? ' noanim' : ''}">${bar}${v.html}</div>`;
+  $('#app').innerHTML = `<div class="page${goTo === undefined ? ' noanim' : ''}${v.tab === 'more' ? ' more' : ''}">${bar}${v.html}</div>`;
   // list pages already include their own large title in html
   document.querySelectorAll('#tabbar [data-tab]').forEach(el => el.classList.toggle('on', el.dataset.tab === v.tab));
   $('#tabbar').classList.toggle('off', !!v.notabs);
@@ -1570,6 +1572,12 @@ function openSheet() {
 function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; }
 window.closeSheet = closeSheet;
 
+document.addEventListener('click', e => {                       // Details button: expand / collapse every goal card
+  const b = e.target.closest('[data-gdet]'); if (!b) return;
+  const cards = [...document.querySelectorAll('.goal')], all = cards.every(c => c.classList.contains('open'));
+  cards.forEach(c => { c.classList.toggle('open', !all); !all ? GEXP.add(c.dataset.gid) : GEXP.delete(c.dataset.gid); });
+  b.classList.toggle('on', !all);
+});
 document.addEventListener('click', e => {                       // goal cards: name opens edit; anywhere else toggles details
   const c = e.target.closest('.goal'); if (!c || e.target.closest('.g-name a')) return;
   const id = c.dataset.gid, on = c.classList.toggle('open');
@@ -1612,6 +1620,9 @@ window.addEventListener('hashchange', () => {
   let y = 0;
   if (before && before.hash === h) { navStack.pop(); y = before.y; }   // going back → restore position
   else { navStack.push({ hash: h, y: 0 }); if (navStack.length > 60) navStack.shift(); }
+  if (/^#\/(analytics|goals)\/?$/.test(h)) {                      // entering Analytics / Goals always starts fresh
+    Object.assign(AN, { cat: 'all', ast: 'all', rng: 'all', lim: 40 }); GEXP.clear(); y = 0; navStack[navStack.length - 1].y = 0;
+  }
   prevHash = curHash; curHash = h; closeSheet(); render(y);
 });
 applyTheme();
