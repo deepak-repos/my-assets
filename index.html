@@ -453,6 +453,24 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .res .row.hl b.rv{font-size:18px;font-weight:700}
 .calcnote{margin:-6px 32px 22px;font-size:13px;color:var(--sub)}
 .empty-s{padding:22px 16px;text-align:center;color:var(--sub);font-size:15px}
+/* more: documents */
+.drow{display:flex;align-items:center}
+.drow+.drow{border-top:.5px solid var(--sep)}
+.drow .item{flex:1;min-width:0;border-top:0!important}
+.item .t b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dbtns{display:flex;margin:0 16px}.dbtns .btn{flex:1;width:auto;margin:6px 0 16px}.dbtns .btn+.btn{margin-left:10px}
+.dmore{flex:none;width:46px;align-self:stretch;color:var(--blue);font-size:24px;font-weight:700;line-height:1}
+.dcrumb{margin:-8px 32px 16px;font-size:13px;color:var(--sub);display:flex;flex-wrap:wrap;gap:4px 6px}
+.dcrumb a{color:var(--blue)}
+#dview{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fade .2s}
+.dvbar{flex:none;display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:var(--blur);border-bottom:.5px solid var(--sep)}
+.dvbar b{flex:1;min-width:0;text-align:center;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dvbar button{flex:none;min-width:64px;color:var(--blue);font-weight:600;font-size:16px}
+.dvbar button:last-child{text-align:right}.dvbar button:first-child{text-align:left}
+.dvbody{flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch}
+.dvbody iframe{width:100%;height:100%;border:0;background:#fff}
+.dvbody img{max-width:100%;max-height:100%;object-fit:contain}
+.dvnone{text-align:center;padding:30px;color:var(--sub)}.dvnone .big{font-size:52px}.dvnone .btn{margin:14px auto 0;max-width:280px}
 </style>
 </head>
 <body>
@@ -742,7 +760,7 @@ async function sync(quiet) {
     const r = await api('list');
     S.assets = r.assets || []; S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals;
     if (Array.isArray(r.expenses)) S.expenses = r.expenses; if (Array.isArray(r.harvest)) S.harvest = r.harvest; persist();
-    if (!/^#\/(form|update|expense\/|taxentry\/|calculator)/.test(location.hash)) render();
+    if (!/^#\/(form|update|expense\/|taxentry\/|calculator|documents)/.test(location.hash)) render();
     if (!quiet) toast('Synced');
   } catch (e) { toast(quiet ? 'Offline – showing saved data' : e.message); }
 }
@@ -1271,6 +1289,7 @@ function formPage(type, id) {
 /* ---- Analytics / Goals placeholders ---- */
 const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
+    item('#/documents', '📁', '#5856d6', 'Documents', '', 'Folders and files in Google Drive'),
     item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses', '', 'Average household spending'),
     item('#/tax', '％', '#30b0c7', 'Tax Harvesting', '', 'Mutual fund gains booked each year'),
     item('#/calculator', '🧮', '#34c759', 'Calculator', '', 'SIP growth and goal planning'),
@@ -1624,6 +1643,117 @@ function goalForm(id) {
 }
 const notFound = () => ({ title: 'Not found', back: '#/home', html: `<div class="soon-page"><div class="big">🤷</div><h2>Page not found</h2></div>`, tab: 'home' });
 
+/* ---- More: Documents (live view of the "My Asset Documents" Drive folder; view / download / upload / rename, no delete) ---- */
+const DC = { cache: store.get('dcache', {}), cur: { key: 'root', id: '' }, blobs: {} };
+const dcSave = (k, v) => { delete DC.cache[k]; DC.cache[k] = v; const ks = Object.keys(DC.cache); if (ks.length > 40) ks.slice(0, ks.length - 40).forEach(x => delete DC.cache[x]); store.set('dcache', DC.cache); };
+const MAX_UP = 15 * 1024 * 1024;
+const isNative = m => String(m || '').indexOf('application/vnd.google-apps') === 0 && m !== 'application/vnd.google-apps.shortcut';
+const canView = m => m === 'application/pdf' || String(m || '').indexOf('image/') === 0 || isNative(m);
+const dIcon = m => m === 'application/pdf' ? '📕' : /^image\//.test(m) ? '🖼️' : /sheet|excel|csv/.test(m) ? '📊' : /presentation|powerpoint/.test(m) ? '📽️' : /document|word|text\/plain/.test(m) ? '📝' : '📎';
+const fmtSize = n => !n ? '' : n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+const docBack = (id, c) => { if (!id) return '#/more'; const par = c && c.path && c.path.length > 1 ? c.path[c.path.length - 2] : null; return par && !par.root ? '#/documents/' + par.id : '#/documents'; };
+function docsPage(id) {
+  const key = id || 'root', c = DC.cache[key];
+  return { title: id && c ? c.folder.name : 'Documents', back: docBack(id, c), tab: 'more',
+    html: `<div id="dbody">${c ? docsBody(c) : `<div class="empty-s">${remote() ? 'Loading…' : 'Connect your Google Sheet in Settings › Add Keys to browse documents.'}</div>`}</div>`,
+    after() { docsLoad(id || ''); } };
+}
+function docsBody(c) {
+  const crumbs = c.path.length > 1 ? `<div class="dcrumb">${c.path.map((x, i) => i === c.path.length - 1 ? `<span>${esc(x.name)}</span>` : `<a href="${x.root ? '#/documents' : '#/documents/' + x.id}">${esc(x.name)}</a><span>›</span>`).join('')}</div>` : '';
+  const folders = c.folders.map(f => `<div class="drow"><a class="item" href="#/documents/${esc(f.id)}"><span class="ico" style="background:#5ac8fa">📁</span><span class="t"><b>${esc(f.name)}</b><small>Updated ${esc(fmtDate(f.updated))}</small></span></a><button type="button" class="dmore" data-dm="${esc(f.id)}" aria-label="More">⋯</button></div>`).join('');
+  const files = c.files.map(f => `<div class="drow"><button type="button" class="item nochev" data-df="${esc(f.id)}"><span class="ico" style="background:#8e8e93">${dIcon(f.mime)}</span><span class="t"><b>${esc(f.name)}</b><small>${esc([fmtSize(f.size) || (isNative(f.mime) ? 'Google file' : ''), fmtDate(f.updated)].filter(Boolean).join(' · '))}</small></span></button></div>`).join('');
+  return `${crumbs}<div class="dbtns"><button type="button" class="btn" data-dup>Upload File</button><button type="button" class="btn plain" data-dnew>New Folder</button></div><input type="file" id="dfile" multiple hidden>
+    ${c.folders.length ? `<div class="gsec"><span>Folders</span><em>${c.folders.length}</em></div><div class="group">${folders}</div>` : ''}
+    ${c.files.length ? `<div class="gsec"><span>Files</span><em>${c.files.length}</em></div><div class="group">${files}</div>` : ''}
+    ${!c.folders.length && !c.files.length ? `<div class="group"><div class="empty-s">This folder is empty.</div></div>` : ''}`;
+}
+function docsPaint(key) {
+  const c = DC.cache[key], box = $('#dbody'); if (!c || !box || DC.cur.key !== key) return;
+  box.innerHTML = docsBody(c);
+  const bt = $('.bar .bt'), bk = $('.bar .back'); if (bt) bt.textContent = DC.cur.id ? c.folder.name : 'Documents'; if (bk) bk.setAttribute('href', docBack(DC.cur.id, c));
+}
+async function docsLoad(id) {
+  const key = id || 'root'; DC.cur = { key, id };
+  if (!remote()) return;
+  try {
+    const r = await api('dlist', { folder: id });
+    dcSave(key, r); if (!id) dcSave(r.folder.id, r);
+    docsPaint(key);
+  } catch (e) {
+    if (DC.cache[key]) toast(/Unknown action/i.test(e.message) ? 'Update Code.gs to load Documents' : 'Offline – showing saved list');
+    else { const box = $('#dbody'); if (box && DC.cur.key === key) box.innerHTML = `<div class="empty-s">${esc(/Unknown action/i.test(e.message) ? 'Update Code.gs in Apps Script to use Documents.' : e.message)}</div>`; }
+  }
+}
+const docFind = id => { const c = DC.cache[DC.cur.key]; if (!c) return null; const f = c.files.find(x => x.id === id); if (f) return { ...f, kind: 'file' }; const d = c.folders.find(x => x.id === id); return d ? { ...d, kind: 'folder' } : null; };
+function docSheet(id) {
+  const it = docFind(id); if (!it) return;
+  const b = (act, ico, c, t) => `<button type="button" class="item nochev" data-dact="${act}" data-id="${esc(id)}"><span class="ico" style="background:${c}">${ico}</span><span class="t"><b>${t}</b></span></button>`;
+  const s = $('#sheet'); s.hidden = false;
+  s.innerHTML = `<div class="pane"><div class="group"><div class="item nochev" style="min-height:44px"><span class="t"><b style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.name)}</b></span></div>
+    ${it.kind === 'file' ? b('view', '👁️', '#0a84ff', 'View') + b('download', '⬇️', '#34c759', 'Download') + `<a class="item nochev" href="${esc(it.url)}" target="_blank" rel="noopener"><span class="ico" style="background:#5856d6">↗</span><span class="t"><b>Open in Drive</b></span></a>` : ''}
+    ${b('rename', '✏️', '#ff9f0a', 'Rename')}</div><button class="cancel" type="button" onclick="closeSheet()">Cancel</button></div>`;
+}
+const b64ToBlob = (b, type) => { const bin = atob(b), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type }); };
+async function docFetch(f) {                                   // {blob, name}; kept in memory for the session so View then Download is one fetch
+  const hit = DC.blobs[f.id + ':' + f.updated]; if (hit) return hit;
+  const r = await run(() => api('dget', { id: f.id })); if (!r) return null;
+  const out = { blob: b64ToBlob(r.data, r.mime), name: r.name };
+  DC.blobs = { [f.id + ':' + f.updated]: out }; return out;     // only the latest file is kept
+}
+function saveBlob(blob, name) { const u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 30000); }
+function closeView() { const v = $('#dview'); if (!v) return; const u = v.dataset.u; if (u) URL.revokeObjectURL(u); v.remove(); }
+async function docView(f) {
+  closeView();
+  const v = document.createElement('div'); v.id = 'dview';
+  const shell = body => { v.innerHTML = `<div class="dvbar"><button type="button" data-dvx>Close</button><b>${esc(f.name)}</b><button type="button" data-dvd>Download</button></div><div class="dvbody">${body}</div>`; };
+  document.body.appendChild(v);
+  if (!canView(f.mime)) { shell(`<div class="dvnone"><div class="big">${dIcon(f.mime)}</div><p>This file type can't be previewed here.</p><a class="btn" href="${esc(f.url)}" target="_blank" rel="noopener">Open in Drive</a></div>`); return; }
+  shell('<div class="dvnone">Loading…</div>');
+  const r = await docFetch(f); if (!r) { closeView(); return; }
+  if (!$('#dview')) return;
+  const u = URL.createObjectURL(r.blob); v.dataset.u = u; v.dataset.id = f.id;
+  shell(r.blob.type.indexOf('image/') === 0 ? `<img src="${u}" alt="${esc(f.name)}">` : `<iframe src="${u}" title="${esc(f.name)}"></iframe>`);
+}
+async function docDownload(f) { const r = await docFetch(f); if (r) { saveBlob(r.blob, r.name); toast('Downloaded'); } }
+async function docRename(it) {
+  const nn = (prompt('Rename ' + (it.kind === 'folder' ? 'folder' : 'file'), it.name) || '').trim();
+  if (!nn || nn === it.name) return;
+  if (await run(async () => { await api('drename', { id: it.id, name: nn }); return true; })) {
+    const c = DC.cache[DC.cur.key]; if (c) { const x = (it.kind === 'folder' ? c.folders : c.files).find(y => y.id === it.id); if (x) x.name = nn; dcSave(DC.cur.key, c); docsPaint(DC.cur.key); }
+    toast('Renamed');
+  }
+}
+async function docNewFolder() {
+  const name = (prompt('New folder name') || '').trim(); if (!name) return;
+  const folder = DC.cur.id;
+  if (await run(async () => { await api('dmkdir', { folder, name }); return true; })) { toast('Folder created'); docsLoad(folder); }
+}
+async function docUpload(list) {
+  const files = [...list]; if (!files.length) return;
+  const big = files.find(f => f.size > MAX_UP); if (big) return toast(big.name + ' is over 15 MB – upload it from Drive');
+  const folder = DC.cur.id;
+  const ok = await run(async () => { for (const f of files) await api('dupload', { folder, name: f.name, mime: f.type || 'application/octet-stream', data: await b64(f) }); return true; });
+  if (ok) { toast(files.length > 1 ? files.length + ' files uploaded' : 'Uploaded'); docsLoad(folder); }
+}
+document.addEventListener('click', e => {
+  const q = s => e.target.closest(s);
+  let t;
+  if ((t = q('[data-df]'))) return docSheet(t.dataset.df);
+  if ((t = q('[data-dm]'))) return docSheet(t.dataset.dm);
+  if (q('[data-dup]')) return $('#dfile').click();
+  if (q('[data-dnew]')) return docNewFolder();
+  if ((t = q('[data-dact]'))) {
+    const it = docFind(t.dataset.id); closeSheet(); if (!it) return;
+    if (t.dataset.dact === 'view') docView(it); else if (t.dataset.dact === 'download') docDownload(it); else if (t.dataset.dact === 'rename') docRename(it);
+    return;
+  }
+  if (q('#sheet a.item')) { setTimeout(closeSheet, 50); return; }
+  if (q('[data-dvx]')) return closeView();
+  if (q('[data-dvd]')) { const v = $('#dview'), f = v && docFind(v.dataset.id); if (f) docDownload(f); else toast('Nothing to download'); }
+});
+document.addEventListener('change', e => { if (e.target.id === 'dfile') { const l = [...e.target.files]; e.target.value = ''; docUpload(l); } });
+window.addEventListener('hashchange', closeView);
+
 /* ---- More: Monthly expenses ---- */
 const mm = n => S.hide ? '••••' : money(n);
 const curFY = () => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String(y + 1).slice(2); };
@@ -1820,6 +1950,7 @@ function view(p) {
     case 'update': return updatePage(b);
     case 'add': return addPage(b, c);
     case 'form': return formPage(b, c);
+    case 'documents': return docsPage(b);
     case 'expenses': return expensesPage();
     case 'expense': return expenseForm(b);
     case 'tax': return taxPage();
