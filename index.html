@@ -612,7 +612,7 @@ const T = {
   nps: { cat:'investment', label:'NPS', ico:'🌅', c:'#af52de',
     title:() => 'NPS', sub:d => d.accountNo || '',
     fields:[
-      tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}),
+      tx('accountName','Account Name'), tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}),
       dt('maturityDate','Maturity Date'), tx('purpose','Purpose'), m('monthly','Monthly Contribution Amount'), NOTES, DOCS ] },
   gratuity: { cat:'investment', label:'Gratuity', ico:'🎁', c:'#64d2ff',
     title:() => 'Gratuity', sub:d => d.companyId ? 'Company ID ' + d.companyId : '',
