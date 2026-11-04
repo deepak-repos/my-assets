@@ -1575,7 +1575,7 @@ const analytics = () => ({ title: 'Analytics', large: 'Analytics', tab: 'analyti
   } });
 /* ---- Home page: compact Goals + Growth tiles ---- */
 function homeGoals() {                                     // long-term goals only, collapsed, whole tile opens the Goals page
-  const [tn, c1, c2] = GOAL_TYPES[0];
+  const [tn, c1, c2] = GOAL_TYPES.find(t => t[0] === 'Long Term');
   const list = S.goals.filter(g => g.type === tn).sort((x, y) => String(x.created).localeCompare(String(y.created)));
   if (!list.length) return '';
   const rows = list.map(g => {
@@ -1613,7 +1613,7 @@ function homeGrowth() {                                    // All Investments, l
 }
 
 /* ---- Goals ---- */
-const GOAL_TYPES = [['Long Term', '#0a84ff', '#5e5ce6'], ['Mid Term', '#2bd2c3', '#34c759'], ['Short Term', '#ff9f0a', '#ff453a'], ['Fund Collection', '#bf5af2', '#ff375f']];
+const GOAL_TYPES = [['Short Term', '#ff9f0a', '#ff453a'], ['Mid Term', '#2bd2c3', '#34c759'], ['Long Term', '#0a84ff', '#5e5ce6'], ['Fund Collection', '#bf5af2', '#ff375f']];   // display order
 const GOAL_CATS = [['mf', 'Mutual Fund'], ['fd', 'Fixed Deposit'], ['ppf', 'PPF'], ['epf', 'EPF'], ['nps', 'NPS'], ['sa', 'Saving'], ['gratuity', 'Gratuity']];
 const invAssets = () => S.assets.filter(a => T[a.type] && T[a.type].cat === 'investment');
 const purposeShares = a => {                                   // [{n, pct}]; older data without shares: 100% if one purpose, else an equal split
