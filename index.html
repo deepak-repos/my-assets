@@ -388,6 +388,36 @@ a.gr-card{display:block;color:inherit;padding:14px 16px 10px}
 .gr-card .an-k{display:flex;flex-direction:column;align-items:center;width:fit-content}
 .gr-card .an-k:last-child{justify-self:end}
 svg.ansp{margin:8px 0 0;pointer-events:none}
+
+/* breakdown bar charts + pie (inside the blue summary tile) */
+.summary .bch{grid-column:1/-1;text-align:left;padding-top:14px;border-top:1px solid rgba(255,255,255,.25)}
+.summary .bch-h{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.7;margin-bottom:12px}
+.summary .bch-r+.bch-r{margin-top:13px}
+.summary .bch-t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.summary .bch-n{font-size:13.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.summary .bch-a{flex:none;font-size:13.5px;font-weight:600;opacity:.92;font-variant-numeric:tabular-nums}
+.summary .bch-l{display:flex;align-items:center;gap:10px;margin-top:6px}
+.summary .bch-b{flex:1;min-width:0;height:9px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
+.summary .bch-b i{display:block;height:100%;border-radius:99px;box-shadow:0 0 8px rgba(255,255,255,.15)}
+.summary .bch-p{flex:none;min-width:42px;text-align:right;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.summary .pie{display:flex;align-items:center;gap:18px}
+.summary .pie svg{flex:none;width:108px;height:108px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2))}
+.summary .pie-lg{flex:1;min-width:0}
+.summary .pie-r{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:3px 0}
+.summary .pie-r i{flex:none;width:9px;height:9px;border-radius:50%}
+.summary .pie-r .pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.summary .pie-r .pp2{flex:none;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* home: fund purpose pills */
+.pp{display:flex;flex-wrap:wrap;gap:8px}
+.ppill{padding:8px 15px;border-radius:99px;background:var(--fill);color:var(--blue);font-size:14px;font-weight:600}
+.ppill:active{opacity:.6}
+
+/* goals: contributing assets */
+.g-src{margin-top:12px;padding-top:4px;border-top:.5px solid var(--sep)}
+.g-sr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;font-size:14px}
+.g-sr span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.78}
+.g-sr b{flex:none;font-weight:600;opacity:.78;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -534,6 +564,8 @@ const ORDER = {
   selfuse:['house','land','gold'],
   property:['house','land']
 };
+/* Purpose is compulsory for every investment */
+ORDER.investment.forEach(k => T[k].fields.forEach(f => { if (f.k === 'purpose') f.req = 1; }));
 const GROUPS = { mf:['mf'], fd:['fd'], sa:['sa'], epf:['epf'], ppf:['ppf'], nps:['nps'], gratuity:['gratuity'],
   realestate:['house','land','gold'], property:['house','land'], gold:['gold'], personal:ORDER.personal, company:ORDER.company };
 const CAT_META = {
@@ -793,7 +825,7 @@ function netWorthPage() {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);        // same rule as Total Funds: no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h += `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>`;
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>`;
   }
   return { title: 'Your Net Worth', back: '#/home', html: h + homeMenus(C, true), tab: 'home' };
 }
@@ -842,17 +874,74 @@ function home() {
   h += '</div>';
 
   h += homeMenus(C);
-  h += homeGoals() + homeGrowth();
+  h += homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
 
-function summaryTile(items, types) {
+/* ---- Breakdown charts shown inside the blue summary tiles ---- */
+const PAL = ['#5ac8fa', '#ffcc00', '#ff6482', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff453a'];
+function barChart(rows, title) {
+  rows = rows.filter(r => r.v > 0).sort((a, b) => b.v - a.v);
+  const tot = sum(rows, r => r.v); if (!(tot > 0)) return '';
+  return `<div class="bch">${title ? `<div class="bch-h">${esc(title)}</div>` : ''}` + rows.map(r => {
+    const p = r.v / tot * 100;
+    return `<div class="bch-r"><div class="bch-t"><div class="bch-n">${esc(r.n)}</div><div class="bch-a">${S.hide ? '••••' : fmtCr(r.v)}</div></div>
+      <div class="bch-l"><div class="bch-b"><i style="width:${Math.max(p, 2).toFixed(1)}%;background:linear-gradient(90deg,${r.c}99,${r.c})"></i></div><div class="bch-p">${p.toFixed(1)}%</div></div></div>`;
+  }).join('') + `</div>`;
+}
+function catBars(items) {                                  // one bar per investment category (house + land are grouped as Property)
+  const mp = new Map();
+  items.forEach(a => {
+    const k = a.type === 'house' || a.type === 'land' ? 'property' : a.type;
+    const e = mp.get(k) || { n: k === 'property' ? 'Property' : T[k].label, c: k === 'property' ? '#ff9f0a' : T[k].c, v: 0 };
+    e.v += curVal(a); mp.set(k, e);
+  });
+  return barChart([...mp.values()], 'By category');
+}
+function mfCharts(items) {                                 // Mutual Fund page: bar per fund, then pie of fund groups (Arbitrage left out)
+  let h = barChart(items.map((a, i) => ({ n: ttl(a), v: curVal(a), c: PAL[i % PAL.length] })), 'By fund');
+  const g = new Map();
+  items.forEach(a => {
+    const n = String(a.data.fundGroup || '').trim() || 'Other';
+    if (/arbitrage/i.test(n)) return;
+    g.set(n, (g.get(n) || 0) + curVal(a));
+  });
+  const arr = [...g].map(([n, v]) => ({ n, v })).filter(x => x.v > 0).sort((x, y) => y.v - x.v), tot = sum(arr, x => x.v);
+  if (!tot) return h;
+  const R = 10.5, C = 2 * Math.PI * R; let cum = 0;
+  const slices = arr.map((x, i) => {
+    x.c = PAL[i % PAL.length];
+    const len = x.v / tot * C, s = `<circle r="${R}" cx="21" cy="21" fill="none" stroke="${x.c}" stroke-width="21" stroke-dasharray="${Math.max(len - (arr.length > 1 ? .4 : 0), 0).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-cum).toFixed(2)}"/>`;
+    cum += len; return s;
+  }).join('');
+  h += `<div class="bch"><div class="bch-h">Fund group (excl. Arbitrage)</div><div class="pie">
+    <svg viewBox="0 0 42 42" role="img" aria-label="Fund group split"><g transform="rotate(-90 21 21)">${slices}</g></svg>
+    <div class="pie-lg">${arr.map(x => `<div class="pie-r"><i style="background:${x.c}"></i><div class="pn">${esc(x.n)}</div><div class="pp2">${(x.v / tot * 100).toFixed(1)}%</div></div>`).join('')}</div></div></div>`;
+  return h;
+}
+/* ---- Fund purposes (home pills + purpose page) ---- */
+function homePurposes() {
+  const list = purposeList(); if (!list.length) return '';
+  return `<div class="hsec">Fund Purpose</div><div class="card"><div class="pp">${list.map(p => `<a class="ppill" href="#/purpose/${encodeURIComponent(p)}">${esc(p)}</a>`).join('')}</div></div>`;
+}
+function purposePage(raw) {
+  let name = ''; try { name = decodeURIComponent(raw || ''); } catch (e) {}
+  const key = name.trim().toLowerCase();
+  const items = invAssets().filter(a => purposeOf(a) === key);
+  const disp = purposeList().find(p => p.toLowerCase() === key) || name || 'Purpose';
+  const h = items.length
+    ? `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(sum(items, curVal))}</b></div></div>` + items.map(card).join('')
+    : `<div class="card"><div class="empty">No assets for this purpose.</div></div>`;
+  return { title: disp, back: '#/home', html: h, tab: 'home' };
+}
+
+function summaryTile(items, types, extra) {
   const hasInv = types.some(t => INV_TYPES.includes(t) || T[t].fields.some(f => f.k === 'invested' || f.k === 'purchase'));
   const inv = sum(items, invVal), cur = sum(items, curVal);
   if (!hasInv) return `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div></div>`;
   const g = cur - inv, p = inv ? (g / inv * 100) : 0, x = groupXirr(items);
   return `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-    ${inv ? `<div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${p.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}</div>`;
+    ${inv ? `<div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${p.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}${extra || ''}</div>`;
 }
 function showVal(f, v) {
   if (f.t === 'dates') return v.map(fmtDay).join(', ');
@@ -888,7 +977,7 @@ function fundsPage(kind) {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div></div>` + items.map(card).join('');
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + items.map(card).join('');
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
 }
@@ -900,7 +989,7 @@ function listPage(key) {
   const title = listTitle(key);
   const back = backHome();
   const addHref = key === 'realestate' ? '#/add/selfuse' : key === 'property' ? '#/add/property' : key === 'gold' ? '#/form/gold' : (items.length && UPDATABLE.includes(key)) ? '#/update/' + key : '#/form/' + key;
-  let h = '' + (items.length ? summaryTile(items, types) + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
+  let h = '' + (items.length ? summaryTile(items, types, key === 'mf' ? mfCharts(items) : '') + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
   return { title, back, right: `<a class="plus" href="${addHref}" aria-label="Add">+</a>`, html: h, tab: 'home' };
 }
 
@@ -1080,6 +1169,7 @@ function formPage(type, id) {
           data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0);
         }
         if (t.fields.some(f => f.t === 'dates')) data.pdates = [...new Set([...form.querySelectorAll('.pd')].map(i => i.value).filter(Boolean))].sort();
+        if (t.cat === 'investment' && !String(data.purpose || '').trim()) return toast('Purpose is required');
         const files = [...(form.elements._docs?.files || [])];
         const ok = await run(async () => {
           const docsOut = existing ? [...(existing.docs || [])] : [];
@@ -1341,6 +1431,13 @@ function goalStats(g) {
   return { target, achieved, remaining: Math.max(target - achieved, 0), pct: target > 0 ? achieved / target * 100 : 0 };
 }
 let gradSeq = 0;
+function srcLabel(s) {                                  // same wording as the "Choose" option in the goal form
+  if (s.mode === 'category') return (GOAL_CATS.find(c => c[0] === s.ref) || [, s.ref])[1];
+  if (s.mode === 'purpose') return s.ref;
+  if (s.ref === '__all') return 'All investments (combined)';
+  const a = S.assets.find(x => x.id === s.ref);
+  return a ? ttl(a) : 'Removed asset';
+}
 function goalCard(g, c1, c2) {
   const st = goalStats(g), shown = Math.max(0, Math.min(st.pct, 100));
   const p = st.pct >= 100 ? Math.floor(st.pct) : st.pct.toFixed(st.pct < 10 && st.pct > 0 ? 1 : 0);
@@ -1348,7 +1445,9 @@ function goalCard(g, c1, c2) {
     <div class="g-row">
       <div class="g-main"><div class="g-name"><a href="#/goal/${esc(g.id)}" aria-label="Edit goal">${esc(g.name)}</a></div>
         <div class="g-line"><div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div><div class="g-pct">${p}%</div></div></div></div>
-    <div class="g-more"><div><div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div></div></div></div>`;
+    <div class="g-more"><div><div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div>
+    <div class="g-src">${(g.sources || []).filter(s => s.ref).map(s => { const pc = num(s.pct), v = srcAmount(s) * pc / 100;
+      return `<div class="g-sr"><span>${esc(srcLabel(s))}${pc < 100 ? ' · ' + pc + '%' : ''}</span><b>${fmtCr(v)}</b></div>`; }).join('')}</div></div></div></div>`;
 }
 const GTARGET = '<svg viewBox="0 0 24 24"><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="C1"/><stop offset="1" stop-color="C2"/></linearGradient></defs><g stroke="url(#gg)"><circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><path d="M11 13l9-9M16 4h4v4"/></g></svg>';
 const GEXP = new Set();                                 // goal cards whose details are expanded (kept across re-renders)
@@ -1494,6 +1593,7 @@ function view(p) {
     case 'property': return listPage('property');
     case 'gold': return listPage('gold');
     case 'networth': return netWorthPage();
+    case 'purpose': return purposePage(b);
     case 'funds': return fundsPage('funds');
     case 'liquid': return fundsPage('liquid');
     case 'update': return updatePage(b);
