@@ -393,13 +393,22 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .summary .bch{grid-column:1/-1;text-align:left;padding-top:14px;border-top:1px solid rgba(255,255,255,.25)}
 .summary .bch-h{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.7;margin-bottom:12px}
 .summary .bch-r+.bch-r{margin-top:13px}
-.summary .bch-t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.summary .bch-r{display:grid;grid-template-columns:minmax(0,1fr) 44px;column-gap:10px;row-gap:6px;align-items:center}
+.summary .bch-t{grid-column:1;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.summary .bch-b{grid-column:1}
+.summary .bch-p{grid-column:2;grid-row:2}
+.summary .sx{grid-column:1/-1;display:grid;grid-template-rows:0fr;margin-top:-12px;transition:grid-template-rows .38s cubic-bezier(.32,.72,0,1),margin .38s cubic-bezier(.32,.72,0,1)}
+.summary .sxi{overflow:hidden;min-height:0;text-align:left}
+.summary.open .sx{grid-template-rows:1fr;margin-top:0}
+.summary:has(.sx){cursor:pointer}
+.summary .sxi .bch+.bch{margin-top:14px}
+@media (prefers-reduced-motion:reduce){.summary .sx{transition:none}}
 .summary .bch-n{font-size:13.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .summary .bch-a{flex:none;font-size:13.5px;font-weight:600;opacity:.92;font-variant-numeric:tabular-nums}
 .summary .bch-l{display:flex;align-items:center;gap:10px;margin-top:6px}
-.summary .bch-b{flex:1;min-width:0;height:9px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
+.summary .bch-b{min-width:0;height:9px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
 .summary .bch-b i{display:block;height:100%;border-radius:99px;box-shadow:0 0 8px rgba(255,255,255,.15)}
-.summary .bch-p{flex:none;min-width:42px;text-align:right;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.summary .bch-p{text-align:right;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
 .summary .pie{display:flex;align-items:center;gap:18px}
 .summary .pie svg{flex:none;width:108px;height:108px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2))}
 .summary .pie-lg{flex:1;min-width:0}
@@ -412,6 +421,19 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .pp{display:flex;flex-wrap:wrap;gap:8px}
 .ppill{padding:8px 15px;border-radius:99px;background:var(--fill);color:var(--blue);font-size:14px;font-weight:600}
 .ppill:active{opacity:.6}
+
+/* goals: darker, thicker divider next to an expanded goal */
+.goal.open+.goal,.goal+.goal.open{border-top:1.5px solid rgba(60,60,67,.38)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .goal.open+.goal,:root:not([data-theme=light]) .goal+.goal.open{border-top-color:rgba(235,235,245,.3)}}
+:root[data-theme=dark] .goal.open+.goal,:root[data-theme=dark] .goal+.goal.open{border-top-color:rgba(235,235,245,.3)}
+
+/* multiple purposes in the asset form */
+.pus{display:flex;flex-direction:column;gap:8px}
+.purow{display:flex;gap:8px;align-items:center}
+.row .purow input{flex:1;min-width:0;background:var(--fill);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
+.puadd,.pudel{flex:none;width:32px;height:32px;border-radius:50%;font-size:20px;line-height:1}
+.puadd{background:var(--fill);color:var(--blue)}
+.pudel{background:rgba(255,59,48,.14);color:var(--red)}
 
 /* goals: contributing assets */
 .g-src{margin-top:12px;padding-top:4px;border-top:.5px solid var(--sep)}
@@ -565,7 +587,7 @@ const ORDER = {
   property:['house','land']
 };
 /* Purpose is compulsory for every investment */
-ORDER.investment.forEach(k => T[k].fields.forEach(f => { if (f.k === 'purpose') f.req = 1; }));
+ORDER.investment.forEach(k => { T[k].fields = T[k].fields.map(f => f.k === 'purpose' ? { k: 'purposes', l: 'Purpose', t: 'purposes', req: 1 } : f); });
 const GROUPS = { mf:['mf'], fd:['fd'], sa:['sa'], epf:['epf'], ppf:['ppf'], nps:['nps'], gratuity:['gratuity'],
   realestate:['house','land','gold'], property:['house','land'], gold:['gold'], personal:ORDER.personal, company:ORDER.company };
 const CAT_META = {
@@ -879,6 +901,7 @@ function home() {
 }
 
 /* ---- Breakdown charts shown inside the blue summary tiles ---- */
+const xwrap = h => h ? `<div class="sx"><div class="sxi">${h}</div></div>` : '';   // charts stay folded until the summary tile is tapped
 const PAL = ['#5ac8fa', '#ffcc00', '#ff6482', '#30d158', '#bf5af2', '#ff9f0a', '#64d2ff', '#ff453a'];
 function barChart(rows, title) {
   rows = rows.filter(r => r.v > 0).sort((a, b) => b.v - a.v);
@@ -886,7 +909,7 @@ function barChart(rows, title) {
   return `<div class="bch">${title ? `<div class="bch-h">${esc(title)}</div>` : ''}` + rows.map(r => {
     const p = r.v / tot * 100;
     return `<div class="bch-r"><div class="bch-t"><div class="bch-n">${esc(r.n)}</div><div class="bch-a">${S.hide ? '••••' : fmtCr(r.v)}</div></div>
-      <div class="bch-l"><div class="bch-b"><i style="width:${Math.max(p, 2).toFixed(1)}%;background:linear-gradient(90deg,${r.c}99,${r.c})"></i></div><div class="bch-p">${p.toFixed(1)}%</div></div></div>`;
+      <div class="bch-b"><i style="width:${Math.max(p, 2).toFixed(1)}%;background:linear-gradient(90deg,${r.c}99,${r.c})"></i></div><div class="bch-p">${p.toFixed(1)}%</div></div>`;
   }).join('') + `</div>`;
 }
 function catBars(items) {                                  // one bar per investment category (house + land are grouped as Property)
@@ -896,7 +919,7 @@ function catBars(items) {                                  // one bar per invest
     const e = mp.get(k) || { n: k === 'property' ? 'Property' : T[k].label, c: k === 'property' ? '#ff9f0a' : T[k].c, v: 0 };
     e.v += curVal(a); mp.set(k, e);
   });
-  return barChart([...mp.values()], 'By category');
+  return xwrap(barChart([...mp.values()], 'By category'));
 }
 function mfCharts(items) {                                 // Mutual Fund page: bar per fund, then pie of fund groups (Arbitrage left out)
   let h = barChart(items.map((a, i) => ({ n: ttl(a), v: curVal(a), c: PAL[i % PAL.length] })), 'By fund');
@@ -907,7 +930,7 @@ function mfCharts(items) {                                 // Mutual Fund page: 
     g.set(n, (g.get(n) || 0) + curVal(a));
   });
   const arr = [...g].map(([n, v]) => ({ n, v })).filter(x => x.v > 0).sort((x, y) => y.v - x.v), tot = sum(arr, x => x.v);
-  if (!tot) return h;
+  if (!tot) return xwrap(h);
   const R = 10.5, C = 2 * Math.PI * R; let cum = 0;
   const slices = arr.map((x, i) => {
     x.c = PAL[i % PAL.length];
@@ -917,7 +940,7 @@ function mfCharts(items) {                                 // Mutual Fund page: 
   h += `<div class="bch"><div class="bch-h">Fund group (excl. Arbitrage)</div><div class="pie">
     <svg viewBox="0 0 42 42" role="img" aria-label="Fund group split"><g transform="rotate(-90 21 21)">${slices}</g></svg>
     <div class="pie-lg">${arr.map(x => `<div class="pie-r"><i style="background:${x.c}"></i><div class="pn">${esc(x.n)}</div><div class="pp2">${(x.v / tot * 100).toFixed(1)}%</div></div>`).join('')}</div></div></div>`;
-  return h;
+  return xwrap(h);
 }
 /* ---- Fund purposes (home pills + purpose page) ---- */
 function homePurposes() {
@@ -927,7 +950,7 @@ function homePurposes() {
 function purposePage(raw) {
   let name = ''; try { name = decodeURIComponent(raw || ''); } catch (e) {}
   const key = name.trim().toLowerCase();
-  const items = invAssets().filter(a => purposeOf(a) === key);
+  const items = invAssets().filter(a => purposeOf(a).includes(key));
   const disp = purposeList().find(p => p.toLowerCase() === key) || name || 'Purpose';
   const h = items.length
     ? `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(sum(items, curVal))}</b></div></div>` + items.map(card).join('')
@@ -945,6 +968,7 @@ function summaryTile(items, types, extra) {
 }
 function showVal(f, v) {
   if (f.t === 'dates') return v.map(fmtDay).join(', ');
+  if (f.t === 'purposes') return v.join(', ');
   if (f.t === 'number') return f.pre ? money(num(v)) : v + (f.suf || '');
   if (f.t === 'date') return fmtDate(v);
   return v;
@@ -955,7 +979,7 @@ function card(a) {
   const kv = (l, v) => `<div class="kv"><span>${esc(l)}</span><b>${esc(v)}</b></div>`;
   const list = ins ? [] : txOf(a), x = ins ? null : assetXirr(a), sub = subOf(a);
   const xl = x == null ? '' : `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>`;
-  const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); });
+  const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); else if (f.t === 'purposes') dd[f.k] = purposesOf(a); });
   let rows = t.fields.filter(f => f.t !== 'file' && f.t !== 'txs' && dd[f.k] !== '' && dd[f.k] != null && !(Array.isArray(dd[f.k]) && !dd[f.k].length))
     .map(f => kv(f.l, showVal(f, dd[f.k]))).join('');
   if (INV_TYPES.includes(a.type) && list.length)
@@ -1084,6 +1108,7 @@ function addPage(a, b) {
 
 const pdRow = v => `<div class="pdrow"><input type="date" class="pd" value="${esc(v || '')}" aria-label="Premium date"><button type="button" class="pddel" aria-label="Remove">−</button></div>`;
 const txRow = x => `<div class="txrow"><input type="date" class="td" value="${esc(x.date || '')}" aria-label="Date"><input type="number" inputmode="decimal" step="any" class="ta" placeholder="Amount ₹" value="${esc(x.amt ?? '')}" aria-label="Amount"><button type="button" class="txdel" aria-label="Remove">−</button></div>`;
+const puRow = (v, first) => `<div class="purow"><input type="text" class="pu" list="dl_purposes" value="${esc(v || '')}" placeholder="e.g. Child education" autocomplete="off" aria-label="Purpose">${first ? '<button type="button" class="puadd" aria-label="Add another purpose">+</button>' : '<button type="button" class="pudel" aria-label="Remove">−</button>'}</div>`;
 function fieldHTML(f, v) {
   const val = v ?? '';
   const row = (inner, cls = '') => `<div class="row ${cls}" data-k="${f.k}"${f.show ? ' data-cond="1"' : ''}>${inner}</div>`;
@@ -1102,6 +1127,10 @@ function fieldHTML(f, v) {
     case 'txs': {
       const list = Array.isArray(v) && v.length ? v : [{ date: todayISO(), amt: '' }];
       return row(`${lbl}<div class="txs">${list.map(txRow).join('')}</div><button type="button" class="txadd">＋ Add investment</button><div class="txsum"></div>`, 'col');
+    }
+    case 'purposes': {
+      const list = Array.isArray(v) && v.length ? v : [''];
+      return row(`${lbl}<div class="pus">${list.map((x, i) => puRow(x, i === 0)).join('')}</div><datalist id="dl_purposes">${purposeList().map(o => `<option value="${esc(o)}">`).join('')}</datalist>`, 'col');
     }
     case 'file': return row(`${lbl}<input type="file" name="_docs" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">`, 'col');
     default: {
@@ -1126,7 +1155,7 @@ function formPage(type, id) {
   const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
   const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
   const h = `
-    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : d[f.k])).join('')}</div>${docs}
+    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : f.t === 'purposes' ? (existing ? purposesOf(existing) : []) : d[f.k])).join('')}</div>${docs}
     ${existing ? '' : ''}</form>${remote() ? '' : '<div class="gfoot">Local mode: document uploads need Google Drive keys (Settings › Add Keys).</div>'}`;
   return { title: (existing ? 'Edit ' : 'Add ') + label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
@@ -1138,6 +1167,8 @@ function formPage(type, id) {
       const calc = () => { if (!box) return; sumEl.textContent = 'Total invested ' + money([...box.querySelectorAll('.ta')].reduce((tt, i) => tt + num(i.value), 0)); };
       calc(); if (box) box.addEventListener('input', calc);
       form.addEventListener('click', e => {
+        if (e.target.closest('.puadd')) { const pb = form.querySelector('.pus'); pb.insertAdjacentHTML('beforeend', puRow('', false)); pb.lastElementChild.querySelector('input').focus(); return; }
+        const pud = e.target.closest('.pudel'); if (pud) { pud.parentElement.remove(); return; }
         if (e.target.closest('.pdadd')) { form.querySelector('.pds').insertAdjacentHTML('beforeend', pdRow('')); return; }
         const pdd = e.target.closest('.pddel');
         if (pdd) { const pb = form.querySelector('.pds'); if (pb.children.length > 1) pdd.parentElement.remove(); else pdd.parentElement.querySelector('input').value = ''; return; }
@@ -1156,7 +1187,7 @@ function formPage(type, id) {
         e.preventDefault();
         const r = raw(), data = {};
         t.fields.forEach(f => {
-          if (f.t === 'file' || f.t === 'txs' || f.t === 'dates') return;
+          if (f.t === 'file' || f.t === 'txs' || f.t === 'dates' || f.t === 'purposes') return;
           let v = r[f.k] ?? '';
           if (f.show && !f.show(r)) v = '';
           if (f.t === 'number' && v !== '') v = Number(v);
@@ -1169,7 +1200,12 @@ function formPage(type, id) {
           data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0);
         }
         if (t.fields.some(f => f.t === 'dates')) data.pdates = [...new Set([...form.querySelectorAll('.pd')].map(i => i.value).filter(Boolean))].sort();
-        if (t.cat === 'investment' && !String(data.purpose || '').trim()) return toast('Purpose is required');
+        if (t.fields.some(f => f.t === 'purposes')) {
+          const seen = new Set();
+          const list = [...form.querySelectorAll('.pu')].map(i => i.value.trim()).filter(p => { const k = p.toLowerCase(); if (!p || seen.has(k)) return false; seen.add(k); return true; });
+          if (!list.length) return toast('Add at least one purpose');
+          data.purposes = list; data.purpose = list.join(', ');
+        }
         const files = [...(form.elements._docs?.files || [])];
         const ok = await run(async () => {
           const docsOut = existing ? [...(existing.docs || [])] : [];
@@ -1417,12 +1453,13 @@ function homeGrowth() {                                    // All Investments, f
 const GOAL_TYPES = [['Long Term', '#0a84ff', '#5e5ce6'], ['Mid Term', '#2bd2c3', '#34c759'], ['Short Term', '#ff9f0a', '#ff453a'], ['Fund Collection', '#bf5af2', '#ff375f']];
 const GOAL_CATS = [['mf', 'Mutual Fund'], ['fd', 'Fixed Deposit'], ['ppf', 'PPF'], ['epf', 'EPF'], ['nps', 'NPS'], ['sa', 'Saving'], ['gratuity', 'Gratuity']];
 const invAssets = () => S.assets.filter(a => T[a.type] && T[a.type].cat === 'investment');
-const purposeOf = a => String(a.data.purpose || '').trim().toLowerCase();
-const purposeList = () => { const seen = new Map(); invAssets().forEach(a => { const p = String(a.data.purpose || '').trim(); if (p && !seen.has(p.toLowerCase())) seen.set(p.toLowerCase(), p); }); return [...seen.values()].sort((x, y) => x.localeCompare(y)); };
+const purposesOf = a => (Array.isArray(a.data.purposes) ? a.data.purposes : [a.data.purpose]).map(p => String(p || '').trim()).filter(Boolean);
+const purposeOf = a => purposesOf(a).map(p => p.toLowerCase());          // lower-case list, for matching
+const purposeList = () => { const seen = new Map(); invAssets().forEach(a => purposesOf(a).forEach(p => { if (!seen.has(p.toLowerCase())) seen.set(p.toLowerCase(), p); })); return [...seen.values()].sort((x, y) => x.localeCompare(y)); };
 const srcAssets = src => {
   const L = invAssets();
   if (src.mode === 'category') return L.filter(a => a.type === src.ref);
-  if (src.mode === 'purpose') return L.filter(a => purposeOf(a) === String(src.ref || '').trim().toLowerCase());
+  if (src.mode === 'purpose') return L.filter(a => purposeOf(a).includes(String(src.ref || '').trim().toLowerCase()));
   return src.ref === '__all' ? L : L.filter(a => a.id === src.ref);
 };
 const srcAmount = src => src.ref ? sum(srcAssets(src), curVal) : 0;
@@ -1479,7 +1516,7 @@ function goalForm(id) {
     : x.mode === 'purpose' ? purposeList().map(p => [p, p])
     : [['__all', 'All investments (combined)'], ...invAssets().map(a => [a.id, `${ttl(a)} · ${fmtCr(curVal(a))}`])];
   const srcHTML = (x, i) => `<div class="gtitle">What counts towards it${sources.length > 1 ? ' · ' + (i + 1) : ''}</div><div class="group" data-i="${i}">
-      <div class="row"><span class="l">Counts</span><select data-f="mode">${[['all', 'All Investment'], ['category', 'Investment Category'], ['purpose', 'Purpose Wise']].map(([v, l]) => `<option value="${v}" ${v === x.mode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">Counts</span><select data-f="mode">${[['all', 'All Investment'], ['category', 'Investment Category'], ...(x.mode === 'purpose' ? [['purpose', 'Purpose Wise']] : [])].map(([v, l]) => `<option value="${v}" ${v === x.mode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="row"><span class="l">Choose</span><select data-f="ref"><option value="">${x.mode === 'purpose' && !purposeList().length ? 'No purposes added yet' : 'Select'}</option>${optsFor(x).map(([v, l]) => `<option value="${esc(v)}" ${v === x.ref ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
       <div class="row"><span class="l">% share</span><input data-f="pct" type="number" inputmode="decimal" step="any" min="0" max="100" value="${esc(x.pct)}" placeholder="100"><span class="suf">%</span></div>
       ${sources.length > 1 ? `<div class="row"><button type="button" class="srcdel">Delete Source</button></div>` : ''}</div><div class="gfoot srcnote"></div>`;
@@ -1712,6 +1749,10 @@ function fold(d) {                                              // smooth open /
     run.forEach(x => x.cancel()); body.style.overflow = ''; d._busy = false;
   });
 }
+document.addEventListener('click', e => {                       // summary tile: tap to unfold the charts, tap again anywhere on it to fold
+  const s = e.target.closest('.summary'); if (!s || !s.querySelector('.sx')) return;
+  s.classList.toggle('open');
+});
 document.addEventListener('click', e => {
   const sm = e.target.closest('.acard > summary, .dtile > summary');
   if (sm) { e.preventDefault(); fold(sm.parentElement); return; }
