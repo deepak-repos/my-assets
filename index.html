@@ -1109,7 +1109,12 @@ const listTitle = key => ({ realestate: 'Property & Gold', property: 'Property',
 const UPDATABLE = ['mf', 'sa', 'epf', 'ppf', 'nps', 'gratuity', 'realestate'];
 function listPage(key) {
   const types = GROUPS[key]; if (!types) return notFound();
-  const items = ofTypes(types);
+  let items = ofTypes(types);
+  if (key === 'mf') items = items.slice().sort((x, y) => curVal(y) - curVal(x));                 // highest current value first
+  else if (key === 'fd') {                                                                          // by name, then earliest maturity first (no date → last)
+    const mat = a => { const t = new Date(a.data.maturityDate).getTime(); return isNaN(t) ? Infinity : t; };
+    items = items.slice().sort((x, y) => T.fd.title(x.data).localeCompare(T.fd.title(y.data), undefined, { sensitivity: 'base' }) || (mat(x) === mat(y) ? 0 : mat(x) < mat(y) ? -1 : 1));
+  }
   const title = listTitle(key);
   const back = backHome();
   const addHref = key === 'realestate' ? '#/add/selfuse' : key === 'property' ? '#/add/property' : key === 'gold' ? '#/form/gold' : (items.length && UPDATABLE.includes(key)) ? '#/update/' + key : '#/form/' + key;
