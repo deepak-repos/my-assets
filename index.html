@@ -1687,7 +1687,7 @@ function goalForm(id) {
     : x.mode === 'purpose' ? purposeList().map(p => [p, p])
     : [['__all', 'All investments (combined)'], ...invAssets().map(a => [a.id, `${ttl(a)} · ${fmtCr(curVal(a))}`])];
   const srcHTML = (x, i) => `<div class="gtitle">What counts towards it${sources.length > 1 ? ' · ' + (i + 1) : ''}</div><div class="group" data-i="${i}">
-      <div class="row"><span class="l">Counts</span><select data-f="mode">${[['all', 'All Investment'], ['category', 'Investment Category'], ...(x.mode === 'purpose' ? [['purpose', 'Purpose Wise']] : [])].map(([v, l]) => `<option value="${v}" ${v === x.mode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="row"><span class="l">Counts</span><select data-f="mode">${[['all', 'All Investment'], ['category', 'Investment Category'], ['purpose', 'Purpose Wise']].map(([v, l]) => `<option value="${v}" ${v === x.mode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="row"><span class="l">Choose</span><select data-f="ref"><option value="">${x.mode === 'purpose' && !purposeList().length ? 'No purposes added yet' : 'Select'}</option>${optsFor(x).map(([v, l]) => `<option value="${esc(v)}" ${v === x.ref ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
       <div class="row"><span class="l">% share</span><input data-f="pct" type="number" inputmode="decimal" step="any" min="0" max="100" value="${esc(x.pct)}" placeholder="100"><span class="suf">%</span></div>
       ${sources.length > 1 ? `<div class="row"><button type="button" class="srcdel">Delete Source</button></div>` : ''}</div><div class="gfoot srcnote"></div>`;
