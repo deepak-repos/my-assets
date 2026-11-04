@@ -610,7 +610,7 @@ const T = {
       m('current','Current Amount',{req:1}), dt('maturityDate','Maturity Date'), tx('purpose','Purpose'),
       m('yearly','Yearly Contribution Amount'), sel('contribMonth','Contribution Month',MONTHS), NOTES, DOCS ] },
   nps: { cat:'investment', label:'NPS', ico:'🌅', c:'#af52de',
-    title:() => 'NPS', sub:d => d.accountNo || '',
+    title:d => ('NPS ' + (d.accountName || '')).trim(), sub:d => d.accountNo || '',
     fields:[
       tx('accountName','Account Name'), tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}),
       dt('maturityDate','Maturity Date'), tx('purpose','Purpose'), m('monthly','Monthly Contribution Amount'), NOTES, DOCS ] },
