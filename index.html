@@ -429,6 +429,11 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .puadd,.pudel{flex:none;width:32px;height:32px;border-radius:50%;font-size:20px;line-height:1}
 .puadd{background:var(--fill);color:var(--blue)}
 .pudel{background:rgba(255,59,48,.14);color:var(--red)}
+.row .purow input.ps{flex:none;width:62px;text-align:right}
+.psuf{flex:none;color:var(--sub);font-size:15px;margin-left:-4px}
+.prow{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.prow .ttl{flex:1;min-width:0}.prow .ttl b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .val{font-weight:600;text-align:right}
 
 /* goals: contributing assets */
 .g-src{margin-top:12px;padding-top:4px;border-top:.5px solid var(--sep)}
@@ -903,8 +908,8 @@ function barChart(rows, title) {
   const tot = sum(rows, r => r.v); if (!(tot > 0)) return '';
   return `<div class="bch">${title ? `<div class="bch-h">${esc(title)}</div>` : ''}` + rows.map(r => {
     const p = r.v / tot * 100;
-    return `<div class="bch-r"><div class="bch-t"><div class="bch-n">${esc(r.n)}</div><div class="bch-p">${p.toFixed(1)}%</div></div>
-      <div class="bch-b"><i style="width:${Math.max(p, 2).toFixed(1)}%;background:linear-gradient(90deg,${r.c}99,${r.c})"></i><div class="bch-a">${S.hide ? '••••' : fmtCr(r.v)}</div></div></div>`;
+    return `<div class="bch-r"><div class="bch-t"><div class="bch-n">${esc(r.n)}</div><div class="bch-p">${S.hide ? '••••' : fmtCr(r.v)}</div></div>
+      <div class="bch-b"><i style="width:${Math.max(p, 2).toFixed(1)}%;background:linear-gradient(90deg,${r.c}99,${r.c})"></i><div class="bch-a">${p.toFixed(1)}%</div></div></div>`;
   }).join('') + `</div>`;
 }
 function catBars(items) {                                  // one bar per investment category (house + land are grouped as Property)
@@ -945,10 +950,13 @@ function homePurposes() {
 function purposePage(raw) {
   let name = ''; try { name = decodeURIComponent(raw || ''); } catch (e) {}
   const key = name.trim().toLowerCase();
-  const items = invAssets().filter(a => purposeOf(a).includes(key));
+  const items = invAssets().map(a => { const s = purposeShares(a).find(x => x.n.toLowerCase() === key); return s ? { a, v: curVal(a) * s.pct / 100 } : null; }).filter(Boolean);
   const disp = purposeList().find(p => p.toLowerCase() === key) || name || 'Purpose';
   const h = items.length
-    ? `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(sum(items, curVal))}</b></div></div>` + items.map(card).join('')
+    ? `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(sum(items, z => z.v))}</b></div></div>` + items.map(z => {
+        const t = typeOf(z.a);
+        return `<div class="acard"><div class="prow"><span class="ico" style="background:${t.c}">${t.ico}</span><span class="ttl"><b>${esc(ttl(z.a))}</b></span><span class="val">${esc(money(z.v))}</span></div></div>`;
+      }).join('')
     : `<div class="card"><div class="empty">No assets for this purpose.</div></div>`;
   return { title: disp, back: '#/home', html: h, tab: 'home' };
 }
@@ -974,7 +982,7 @@ function card(a) {
   const kv = (l, v) => `<div class="kv"><span>${esc(l)}</span><b>${esc(v)}</b></div>`;
   const list = ins ? [] : txOf(a), x = ins ? null : assetXirr(a), sub = subOf(a);
   const xl = x == null ? '' : `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>`;
-  const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); else if (f.t === 'purposes') dd[f.k] = purposesOf(a); });
+  const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); else if (f.t === 'purposes') { const ps = purposeShares(a); dd[f.k] = ps.map(x => x.n + (ps.length > 1 ? ' (' + x.pct + '%)' : '')); } });
   let rows = t.fields.filter(f => f.t !== 'file' && f.t !== 'txs' && dd[f.k] !== '' && dd[f.k] != null && !(Array.isArray(dd[f.k]) && !dd[f.k].length))
     .map(f => kv(f.l, showVal(f, dd[f.k]))).join('');
   if (INV_TYPES.includes(a.type) && list.length)
@@ -1103,7 +1111,16 @@ function addPage(a, b) {
 
 const pdRow = v => `<div class="pdrow"><input type="date" class="pd" value="${esc(v || '')}" aria-label="Premium date"><button type="button" class="pddel" aria-label="Remove">−</button></div>`;
 const txRow = x => `<div class="txrow"><input type="date" class="td" value="${esc(x.date || '')}" aria-label="Date"><input type="number" inputmode="decimal" step="any" class="ta" placeholder="Amount ₹" value="${esc(x.amt ?? '')}" aria-label="Amount"><button type="button" class="txdel" aria-label="Remove">−</button></div>`;
-const puRow = (v, first) => `<div class="purow"><input type="text" class="pu" list="dl_purposes" value="${esc(v || '')}" placeholder="e.g. Child education" autocomplete="off" aria-label="Purpose">${first ? '<button type="button" class="puadd" aria-label="Add another purpose">+</button>' : '<button type="button" class="pudel" aria-label="Remove">−</button>'}</div>`;
+function puSum(f) { const el = f.querySelector('.pusum'); if (el) el.textContent = 'Total ' + +[...f.querySelectorAll('.ps')].reduce((s, i) => s + num(i.value), 0).toFixed(2) + '% of 100%'; }
+function puEqual(f) { const ps = [...f.querySelectorAll('.ps')], n = ps.length, sh = Math.floor(100 / n); ps.forEach((i, k) => { i.value = k ? sh : 100 - sh * (n - 1); }); puSum(f); }
+document.addEventListener('input', e => {                       // purpose shares can never add up to more than 100%
+  const t = e.target; if (!t.classList || !t.classList.contains('ps')) return;
+  const f = t.closest('form'); let o = 0; f.querySelectorAll('.ps').forEach(i => { if (i !== t) o += num(i.value); });
+  const mx = Math.max(0, Math.round((100 - o) * 100) / 100), v = num(t.value);
+  if (t.value !== '' && v > mx) t.value = mx; else if (v < 0) t.value = 0;
+  puSum(f);
+});
+const puRow = (v, pc, first) => `<div class="purow"><input type="text" class="pu" list="dl_purposes" value="${esc(v || '')}" placeholder="e.g. Child education" autocomplete="off" aria-label="Purpose"><input type="number" class="ps" inputmode="decimal" min="0" max="100" step="any" value="${esc(pc ?? '')}" placeholder="%" aria-label="Share %"><span class="psuf">%</span>${first ? '<button type="button" class="puadd" aria-label="Add another purpose">+</button>' : '<button type="button" class="pudel" aria-label="Remove">−</button>'}</div>`;
 function fieldHTML(f, v) {
   const val = v ?? '';
   const row = (inner, cls = '') => `<div class="row ${cls}" data-k="${f.k}"${f.show ? ' data-cond="1"' : ''}>${inner}</div>`;
@@ -1124,8 +1141,8 @@ function fieldHTML(f, v) {
       return row(`${lbl}<div class="txs">${list.map(txRow).join('')}</div><button type="button" class="txadd">＋ Add investment</button><div class="txsum"></div>`, 'col');
     }
     case 'purposes': {
-      const list = Array.isArray(v) && v.length ? v : [''];
-      return row(`${lbl}<div class="pus">${list.map((x, i) => puRow(x, i === 0)).join('')}</div><datalist id="dl_purposes">${purposeList().map(o => `<option value="${esc(o)}">`).join('')}</datalist>`, 'col');
+      const list = Array.isArray(v) && v.length ? v : [{ n: '', pct: 100 }];
+      return row(`${lbl}<div class="pus">${list.map((x, i) => puRow(x.n, x.pct, i === 0)).join('')}</div><div class="txsum pusum">Total ${+list.reduce((s, x) => s + num(x.pct), 0).toFixed(2)}% of 100%</div><datalist id="dl_purposes">${purposeList().map(o => `<option value="${esc(o)}">`).join('')}</datalist>`, 'col');
     }
     case 'file': return row(`${lbl}<input type="file" name="_docs" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">`, 'col');
     default: {
@@ -1150,7 +1167,7 @@ function formPage(type, id) {
   const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
   const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
   const h = `
-    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : f.t === 'purposes' ? (existing ? purposesOf(existing) : []) : d[f.k])).join('')}</div>${docs}
+    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : f.t === 'purposes' ? (existing ? purposeShares(existing) : []) : d[f.k])).join('')}</div>${docs}
     ${existing ? '' : ''}</form>${remote() ? '' : '<div class="gfoot">Local mode: document uploads need Google Drive keys (Settings › Add Keys).</div>'}`;
   return { title: (existing ? 'Edit ' : 'Add ') + label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
@@ -1162,8 +1179,8 @@ function formPage(type, id) {
       const calc = () => { if (!box) return; sumEl.textContent = 'Total invested ' + money([...box.querySelectorAll('.ta')].reduce((tt, i) => tt + num(i.value), 0)); };
       calc(); if (box) box.addEventListener('input', calc);
       form.addEventListener('click', e => {
-        if (e.target.closest('.puadd')) { const pb = form.querySelector('.pus'); pb.insertAdjacentHTML('beforeend', puRow('', false)); pb.lastElementChild.querySelector('input').focus(); return; }
-        const pud = e.target.closest('.pudel'); if (pud) { pud.parentElement.remove(); return; }
+        if (e.target.closest('.puadd')) { const pb = form.querySelector('.pus'); pb.insertAdjacentHTML('beforeend', puRow('', 0, false)); puEqual(form); pb.lastElementChild.querySelector('input').focus(); return; }
+        const pud = e.target.closest('.pudel'); if (pud) { pud.parentElement.remove(); if (form.querySelectorAll('.purow').length === 1) form.querySelector('.ps').value = 100; puSum(form); return; }
         if (e.target.closest('.pdadd')) { form.querySelector('.pds').insertAdjacentHTML('beforeend', pdRow('')); return; }
         const pdd = e.target.closest('.pddel');
         if (pdd) { const pb = form.querySelector('.pds'); if (pb.children.length > 1) pdd.parentElement.remove(); else pdd.parentElement.querySelector('input').value = ''; return; }
@@ -1196,10 +1213,15 @@ function formPage(type, id) {
         }
         if (t.fields.some(f => f.t === 'dates')) data.pdates = [...new Set([...form.querySelectorAll('.pd')].map(i => i.value).filter(Boolean))].sort();
         if (t.fields.some(f => f.t === 'purposes')) {
-          const seen = new Set();
-          const list = [...form.querySelectorAll('.pu')].map(i => i.value.trim()).filter(p => { const k = p.toLowerCase(); if (!p || seen.has(k)) return false; seen.add(k); return true; });
+          const seen = new Set(), list = [];
+          form.querySelectorAll('.purow').forEach(rw => {
+            const n = rw.querySelector('.pu').value.trim(), k = n.toLowerCase();
+            if (!n || seen.has(k)) return; seen.add(k); list.push({ n, pct: num(rw.querySelector('.ps').value) });
+          });
           if (!list.length) return toast('Add at least one purpose');
-          data.purposes = list; data.purpose = list.join(', ');
+          if (list.some(z => !(z.pct > 0 && z.pct <= 100))) return toast('Give every purpose a share between 1 and 100%');
+          if (list.reduce((s, z) => s + z.pct, 0) > 100.001) return toast('Purpose shares cannot add up to more than 100%');
+          data.purposes = list; data.purpose = list.map(z => z.n).join(', ');
         }
         const files = [...(form.elements._docs?.files || [])];
         const ok = await run(async () => {
@@ -1448,7 +1470,12 @@ function homeGrowth() {                                    // All Investments, f
 const GOAL_TYPES = [['Long Term', '#0a84ff', '#5e5ce6'], ['Mid Term', '#2bd2c3', '#34c759'], ['Short Term', '#ff9f0a', '#ff453a'], ['Fund Collection', '#bf5af2', '#ff375f']];
 const GOAL_CATS = [['mf', 'Mutual Fund'], ['fd', 'Fixed Deposit'], ['ppf', 'PPF'], ['epf', 'EPF'], ['nps', 'NPS'], ['sa', 'Saving'], ['gratuity', 'Gratuity']];
 const invAssets = () => S.assets.filter(a => T[a.type] && T[a.type].cat === 'investment');
-const purposesOf = a => (Array.isArray(a.data.purposes) ? a.data.purposes : [a.data.purpose]).map(p => String(p || '').trim()).filter(Boolean);
+const purposeShares = a => {                                   // [{n, pct}]; older data without shares: 100% if one purpose, else an equal split
+  const d = a.data, arr = (Array.isArray(d.purposes) ? d.purposes : [d.purpose])
+    .map(x => x && typeof x === 'object' ? { n: String(x.n || '').trim(), pct: num(x.pct) } : { n: String(x || '').trim(), pct: null }).filter(x => x.n);
+  return arr.map(x => ({ n: x.n, pct: x.pct == null ? (arr.length === 1 ? 100 : Math.round(100 / arr.length)) : x.pct }));
+};
+const purposesOf = a => purposeShares(a).map(x => x.n);
 const purposeOf = a => purposesOf(a).map(p => p.toLowerCase());          // lower-case list, for matching
 const purposeList = () => { const seen = new Map(); invAssets().forEach(a => purposesOf(a).forEach(p => { if (!seen.has(p.toLowerCase())) seen.set(p.toLowerCase(), p); })); return [...seen.values()].sort((x, y) => x.localeCompare(y)); };
 const srcAssets = src => {
@@ -1457,7 +1484,11 @@ const srcAssets = src => {
   if (src.mode === 'purpose') return L.filter(a => purposeOf(a).includes(String(src.ref || '').trim().toLowerCase()));
   return src.ref === '__all' ? L : L.filter(a => a.id === src.ref);
 };
-const srcAmount = src => src.ref ? sum(srcAssets(src), curVal) : 0;
+const srcAmount = src => {
+  if (!src.ref) return 0;
+  if (src.mode === 'purpose') { const k = String(src.ref).trim().toLowerCase(); return sum(srcAssets(src), a => { const s = purposeShares(a).find(x => x.n.toLowerCase() === k); return curVal(a) * (s ? s.pct : 100) / 100; }); }
+  return sum(srcAssets(src), curVal);
+};
 function goalStats(g) {
   const target = num(g.target), achieved = sum(g.sources || [], s => srcAmount(s) * num(s.pct) / 100);
   return { target, achieved, remaining: Math.max(target - achieved, 0), pct: target > 0 ? achieved / target * 100 : 0 };
