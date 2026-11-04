@@ -1211,8 +1211,8 @@ function formPage(type, id) {
   const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
   const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
   const h = `
-    <form id="f" autocomplete="off"><div class="group">${t.fields.map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : f.t === 'purposes' ? (existing ? purposeShares(existing) : []) : d[f.k])).join('')}</div>${docs}
-    ${existing ? '' : ''}</form>${remote() ? '' : '<div class="gfoot">Local mode: document uploads need Google Drive keys (Settings › Add Keys).</div>'}`;
+    <form id="f" autocomplete="off"><div class="group">${t.fields.filter(f => f.t !== 'file').map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : f.t === 'purposes' ? (existing ? purposeShares(existing) : []) : d[f.k])).join('')}</div>${docs}
+    ${existing ? '' : ''}</form>`;
   return { title: (existing ? 'Edit ' : 'Add ') + label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
       const form = $('#f');
@@ -1267,17 +1267,8 @@ function formPage(type, id) {
           if (list.reduce((s, z) => s + z.pct, 0) > 100.001) return toast('Purpose shares cannot add up to more than 100%');
           data.purposes = list; data.purpose = list.map(z => z.n).join(', ');
         }
-        const files = [...(form.elements._docs?.files || [])];
         const ok = await run(async () => {
-          const docsOut = existing ? [...(existing.docs || [])] : [];
-          if (files.length) {
-            if (!remote()) toast('Documents need Drive keys – saved without files');
-            else for (const f of files) {
-              if (f.size > 8 * 1024 * 1024) throw new Error(f.name + ' is larger than 8 MB');
-              const up = await api('upload', { name: f.name, mime: f.type || 'application/octet-stream', data: await b64(f), folder: t.label });
-              docsOut.push({ name: f.name, url: up.url });
-            }
-          }
+          const docsOut = existing ? [...(existing.docs || [])] : [];   // files attached earlier stay as they are
           const asset = { id: existing ? existing.id : uid(), cat: t.cat, type, data, docs: docsOut, created: existing?.created };
           await saveAsset(asset); return true;
         });
@@ -1704,6 +1695,18 @@ function saveBlob(blob, name) { const u = URL.createObjectURL(blob), a = documen
 function closeView() { const v = $('#dview'); if (!v) return; const u = v.dataset.u; if (u) URL.revokeObjectURL(u); v.remove(); }
 async function docView(f) {
   closeView();
+  if (f.mime === 'application/pdf' || isNative(f.mime)) {        // PDFs (and Google files, exported as PDF) open in the phone's own PDF viewer
+    const w = window.open('', '_blank');                          // opened straight from the tap so the browser allows it
+    if (w) {
+      try { w.document.write('<meta name="viewport" content="width=device-width,initial-scale=1"><body style="font:16px -apple-system,sans-serif;color:#8e8e93;text-align:center;padding-top:40vh">Loading…</body>'); } catch (x) {}
+      const r = await docFetch(f);
+      if (!r) { try { w.close(); } catch (x) {} return; }
+      const u = URL.createObjectURL(r.blob);
+      w.location.href = u;
+      setTimeout(() => URL.revokeObjectURL(u), 300000);
+      return;
+    }
+  }
   const v = document.createElement('div'); v.id = 'dview';
   const shell = body => { v.innerHTML = `<div class="dvbar"><button type="button" data-dvx>Close</button><b>${esc(f.name)}</b><button type="button" data-dvd>Download</button></div><div class="dvbody">${body}</div>`; };
   document.body.appendChild(v);
