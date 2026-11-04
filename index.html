@@ -770,8 +770,10 @@ function endDate(a) {                                        // an FD stops earn
 function flowsOf(a) {
   const list = txOf(a);
   if (!list.length || list.some(z => !z.date)) return null;  // undated money-in: can't compute
-  const out = list.map(z => ({ t: new Date(z.date).getTime(), v: -z.amt }));
-  out.push({ t: endDate(a).getTime(), v: curVal(a) });
+  const end = endDate(a).getTime(), ld = z => new Date(z.date + 'T00:00:00').getTime();   // local midnight, same clock as "today"
+  const out = list.filter(z => ld(z) <= end).map(z => ({ t: ld(z), v: -z.amt }));       // money not yet invested (future dates) isn't part of today's return
+  if (!out.length) return null;
+  out.push({ t: end, v: curVal(a) });
   return out;
 }
 const assetXirr = a => { const f = flowsOf(a); return f ? xirr(f) : null; };
