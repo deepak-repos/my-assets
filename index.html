@@ -1111,9 +1111,10 @@ function listPage(key) {
   const types = GROUPS[key]; if (!types) return notFound();
   let items = ofTypes(types);
   if (key === 'mf') items = items.slice().sort((x, y) => curVal(y) - curVal(x));                 // highest current value first
-  else if (key === 'fd') {                                                                          // by name, then earliest maturity first (no date → last)
-    const mat = a => { const t = new Date(a.data.maturityDate).getTime(); return isNaN(t) ? Infinity : t; };
-    items = items.slice().sort((x, y) => T.fd.title(x.data).localeCompare(T.fd.title(y.data), undefined, { sensitivity: 'base' }) || (mat(x) === mat(y) ? 0 : mat(x) < mat(y) ? -1 : 1));
+  else if (key === 'fd') {                                                                          // by owner name, then earliest maturity first (no date → last), then bank
+    const nm = a => String(a.data.owner || a.data.bank || '').trim();
+    const mat = a => { const v = a.data.maturityDate; let t = new Date(v).getTime(); if (isNaN(t) && typeof v === 'string') { const iso = parseBulkDate(v); if (iso) t = new Date(iso).getTime(); } return isNaN(t) ? Infinity : t; };
+    items = items.slice().sort((x, y) => nm(x).localeCompare(nm(y), undefined, { sensitivity: 'base' }) || (mat(x) === mat(y) ? 0 : mat(x) < mat(y) ? -1 : 1) || String(x.data.bank || '').localeCompare(String(y.data.bank || ''), undefined, { sensitivity: 'base' }));
   }
   const title = listTitle(key);
   const back = backHome();
