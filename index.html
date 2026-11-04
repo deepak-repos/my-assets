@@ -473,9 +473,10 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dvnone{text-align:center;padding:30px;color:var(--sub)}.dvnone .big{font-size:52px}.dvnone .btn{margin:14px auto 0;max-width:280px}
 /* premium payments */
 .payrow{width:100%;text-align:left;font:inherit;font-size:14px;color:var(--text)}.payrow b::after{content:' ›';color:var(--sub);font-weight:400}.payrow:active{opacity:.6}
-#sheet .pdbtns{display:flex;gap:10px}#sheet .pdbtns .cancel,#sheet .pdbtns .btn{flex:1;width:auto;margin:0;padding:16px;border-radius:14px}
+#sheet .pdbtns{display:flex;gap:10px;margin-top:20px}#sheet .pdbtns .cancel,#sheet .pdbtns .btn{flex:1;width:auto;margin:0;padding:16px;border-radius:14px}
 #sheet .btn.danger{background:var(--card);color:var(--red)}
-.li.tap{cursor:pointer}.li.tap:active{opacity:.6}
+.li.tap{cursor:pointer}
+.acts{row-gap:16px}.acts .btn.danger,.acts a.btn{flex:1 1 0;width:auto}.li.tap:active{opacity:.6}
 .acts{flex-wrap:wrap}.acts .btn.mp{flex:1 1 100%;width:100%;background:var(--green)}
 .row .calcv,.row .fx{flex:1;text-align:right;font-size:16px;font-weight:600}
 .row .calcv{color:var(--sub)}
@@ -1686,6 +1687,15 @@ function premDialog(id, o) {
     <div class="row"><span class="l">Premium Amount</span><span class="pre">₹</span><input id="pdAmt" type="number" inputmode="decimal" step="any" value="${esc(o.amt != null ? o.amt : (a.data.premium || ''))}" placeholder="0"></div></div>
     ${o.edit ? '<button class="btn danger" type="button" id="pdDel">Delete Payment</button>' : ''}
     <div class="pdbtns"><button class="cancel" type="button" onclick="closeSheet()">Cancel</button><button class="btn" type="button" id="pdSave">Save</button></div></div>`;
+  const vv = window.visualViewport;                  // keep Cancel / Save above the on-screen keyboard
+  if (vv) {
+    const fit = () => {
+      if (s.hidden || !s.querySelector('#pdlg')) { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); s.style.top = s.style.height = s.style.bottom = ''; return; }
+      s.style.top = vv.offsetTop + 'px'; s.style.height = vv.height + 'px'; s.style.bottom = 'auto';
+    };
+    vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
+    s.querySelectorAll('#pdlg input').forEach(i => i.addEventListener('focus', () => setTimeout(fit, 250)));
+  }
 }
 async function markPaid(id, date, amt) {
   const a = S.assets.find(x => x.id === id); if (!a) return false;
