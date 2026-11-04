@@ -314,6 +314,16 @@ button.btn{width:calc(100% - 32px)}
 .txdel,.pddel{flex:none;width:32px;height:32px;border-radius:50%;background:rgba(255,59,48,.14);color:var(--red);font-size:20px;line-height:1}
 .txadd{align-self:flex-start;color:var(--blue);font-weight:600;padding:6px 0}
 .txsum{color:var(--sub);font-size:13px}
+.txacts{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.txbulk{color:var(--blue);font-weight:600;padding:6px 0}
+.bulk{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+.bulk-h{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--blur);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep)}
+.bulk-h b{font-size:17px;font-weight:600}
+.bulk-h button{color:var(--blue);font-size:17px;font-weight:600;padding:4px 0}
+.bulk-b{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.bulk-b .hint{color:var(--sub);font-size:13px;line-height:1.5}
+.bulk-b textarea{flex:1;min-height:240px;width:100%;box-sizing:border-box;border:0;border-radius:12px;background:var(--card);color:var(--text);font:inherit;font-size:15px;line-height:1.6;padding:14px;outline:none;resize:none;font-variant-numeric:tabular-nums}
+.bulk-b .err{color:var(--red);font-size:13px;line-height:1.5;white-space:pre-line}
 .xirr.up{color:var(--green)}.xirr.dn{color:var(--red)}
 .acard .ttl small.xirr{font-weight:600}
 .acard .ttl small.xirr.up{color:var(--green)}
@@ -1194,6 +1204,42 @@ function addPage(a, b) {
     html: soloList(list.map(t => item('#/form/' + t, T[t].ico, T[t].c, T[t].label))) };
 }
 
+const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+function parseBulkDate(t) {                                    // -> 'YYYY-MM-DD' or ''
+  t = t.trim().replace(/(\d)(st|nd|rd|th)\b/i, '$1'); let y, m, d, x;
+  if ((x = /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/.exec(t))) { y = +x[1]; m = +x[2]; d = +x[3]; }
+  else if ((x = /^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})$/.exec(t))) { d = +x[1]; m = +x[2]; y = +x[3]; if (y < 100) y += 2000; }
+  else if ((x = /^(\d{1,2})[\s\-\/.]+([A-Za-z]{3,9})[\s\-\/.,]+(\d{2}|\d{4})$/.exec(t))) { d = +x[1]; m = MON.indexOf(x[2].slice(0, 3).toLowerCase()) + 1; y = +x[3]; if (y < 100) y += 2000; }
+  else return '';
+  const dt = new Date(y, m - 1, d); if (!m || dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return '';
+  return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+function parseBulk(text) {
+  const ok = [], bad = [];
+  text.split(/\r?\n/).forEach((ln, i) => {
+    ln = ln.trim(); if (!ln) return;
+    const k = ln.search(/[,;\t]/), ds = k < 0 ? '' : ln.slice(0, k), as = k < 0 ? '' : ln.slice(k + 1).replace(/[₹\s,]|rs\.?/gi, '');
+    const date = parseBulkDate(ds), amt = /^\d+(\.\d+)?$/.test(as) ? parseFloat(as) : 0;
+    if (date && amt > 0) ok.push({ date, amt }); else bad.push(i + 1);
+  });
+  return { ok, bad };
+}
+function bulkSheet(onSave) {                                    // full-screen page laid over the form, so nothing already typed is lost
+  const el = document.createElement('div'); el.className = 'bulk';
+  el.innerHTML = `<div class="bulk-h"><button type="button" data-x>Cancel</button><b>Bulk upload</b><button type="button" data-s>Save</button></div>
+    <div class="bulk-b"><div class="hint">One investment per line: <b>date, amount</b><br>e.g. 2024-04-05, 5000 &nbsp;or&nbsp; 05-04-2024, 5000 &nbsp;or&nbsp; 05 Apr 2024, 5,000<br>Dates with a day first are read as DD-MM-YYYY.</div>
+    <textarea placeholder="2024-04-05, 5000&#10;2024-05-05, 5000&#10;2024-06-05, 7500" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea><div class="err"></div></div>`;
+  document.body.appendChild(el);
+  const ta = el.querySelector('textarea'), er = el.querySelector('.err'), close = () => el.remove();
+  el.querySelector('[data-x]').onclick = close;
+  el.querySelector('[data-s]').onclick = () => {
+    const { ok, bad } = parseBulk(ta.value);
+    if (bad.length) { er.textContent = 'Could not read line ' + bad.slice(0, 8).join(', ') + (bad.length > 8 ? '…' : '') + '. Use "date, amount" on each line.'; return; }
+    if (!ok.length) { er.textContent = 'Enter at least one date and amount.'; return; }
+    onSave(ok); close();
+  };
+  setTimeout(() => ta.focus(), 50);
+}
 const pdRow = v => `<div class="pdrow"><input type="date" class="pd" value="${esc(v || '')}" aria-label="Premium date"><button type="button" class="pddel" aria-label="Remove">−</button></div>`;
 const txRow = x => `<div class="txrow"><input type="date" class="td" value="${esc(x.date || '')}" aria-label="Date"><input type="number" inputmode="decimal" step="any" class="ta" placeholder="Amount ₹" value="${esc(x.amt ?? '')}" aria-label="Amount"><button type="button" class="txdel" aria-label="Remove">−</button></div>`;
 function puSum(f) { const el = f.querySelector('.pusum'); if (el) el.textContent = 'Total ' + +[...f.querySelectorAll('.ps')].reduce((s, i) => s + num(i.value), 0).toFixed(2) + '% of 100%'; }
@@ -1223,7 +1269,7 @@ function fieldHTML(f, v) {
     }
     case 'txs': {
       const list = Array.isArray(v) && v.length ? v : [{ date: todayISO(), amt: '' }];
-      return row(`${lbl}<div class="txs">${list.map(txRow).join('')}</div><button type="button" class="txadd">＋ Add investment</button><div class="txsum"></div>`, 'col');
+      return row(`${lbl}<div class="txs">${list.map(txRow).join('')}</div><div class="txacts"><button type="button" class="txadd">＋ Add investment</button><button type="button" class="txbulk">＋ Bulk upload</button></div><div class="txsum"></div>`, 'col');
     }
     case 'purposes': {
       const list = Array.isArray(v) && v.length ? v : [{ n: '', pct: 100 }];
@@ -1270,6 +1316,15 @@ function formPage(type, id) {
         if (e.target.closest('.pdadd')) { form.querySelector('.pds').insertAdjacentHTML('beforeend', pdRow('')); return; }
         const pdd = e.target.closest('.pddel');
         if (pdd) { const pb = form.querySelector('.pds'); if (pb.children.length > 1) pdd.parentElement.remove(); else pdd.parentElement.querySelector('input').value = ''; return; }
+        if (e.target.closest('.txbulk')) {
+          bulkSheet(list => {
+            [...box.children].forEach(r => { if (!num(r.querySelector('.ta').value)) r.remove(); });   // drop blank placeholder rows
+            box.insertAdjacentHTML('beforeend', list.map(z => txRow(z)).join(''));
+            const rows = [...box.children].sort((a, b) => (a.querySelector('.td').value || '') < (b.querySelector('.td').value || '') ? -1 : 1);
+            rows.forEach(r => box.appendChild(r)); calc(); toast(list.length + ' investment' + (list.length > 1 ? 's' : '') + ' added');
+          });
+          return;
+        }
         if (e.target.closest('.txadd')) { const lastD = box.lastElementChild && box.lastElementChild.querySelector('.td'); box.insertAdjacentHTML('beforeend', txRow({ date: addMonthISO(lastD && lastD.value), amt: '' })); calc(); return; }
         const del = e.target.closest('.txdel');
         if (del) {
