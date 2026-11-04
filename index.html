@@ -605,7 +605,7 @@ const persist = () => { store.set('assets', S.assets); store.set('history', S.hi
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
-const subOf = a => { if (a.type === 'mf' || a.type === 'ppf' || a.type === 'epf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
+const subOf = a => { if (a.type === 'fd' && !/^#\/list\/fd\/?$/.test(location.hash)) return 'Invested ' + money(invVal(a)); if (a.type === 'mf' || a.type === 'ppf' || a.type === 'epf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
 
 function fdValue(d, at) {
   // Quarterly compounding on the interest rate; simple interest on the part-quarter, like bank accrual.
