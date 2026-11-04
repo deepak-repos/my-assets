@@ -471,6 +471,14 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dvbody iframe{width:100%;height:100%;border:0;background:#fff}
 .dvbody img{max-width:100%;max-height:100%;object-fit:contain}
 .dvnone{text-align:center;padding:30px;color:var(--sub)}.dvnone .big{font-size:52px}.dvnone .btn{margin:14px auto 0;max-width:280px}
+/* premium payments */
+.payrow{width:100%;text-align:left;font:inherit;font-size:14px;color:var(--text)}.payrow b::after{content:' ›';color:var(--sub);font-weight:400}.payrow:active{opacity:.6}
+#sheet .btn.danger{background:var(--card);color:var(--red)}
+.li.tap{cursor:pointer}.li.tap:active{opacity:.6}
+.acts{flex-wrap:wrap}.acts .btn.mp{flex:1 1 100%;width:100%;background:var(--green)}
+.row .calcv,.row .fx{flex:1;text-align:right;font-size:16px;font-weight:600}
+.row .calcv{color:var(--sub)}
+.pdh{padding:14px 16px 8px;display:flex;flex-direction:column;gap:2px;border-bottom:.5px solid var(--sep)}.pdh b{font-size:17px}.pdh small{color:var(--sub);font-size:14px}
 </style>
 </head>
 <body>
@@ -536,7 +544,16 @@ const TXS   = { k:'tx', l:'Investments', t:'txs' };   // list of {date, amt}
 
 const premiumFields = [
   tx('provider','Policy Provider',{req:1}), tx('policyNo','Policy Number'),
-  m('cover','Cover Amount'), m('premium','Premium Amount'),
+  m('cover','Cover Amount'), m('premium','Approx. Premium Amount'),
+  { k:'pdates', l:'Premium Dates', t:'dates' }, NOTES, DOCS
+];
+const termFields = [
+  tx('provider','Policy Provider',{req:1}), tx('policyNo','Policy Number'),
+  m('cover','Cover Amount'),
+  dt('pstart','Premium Start Date'), dt('pend','Premium End Date'), dt('pexpiry','Policy Expiry Date'),
+  { k:'alreadyPaid', l:'Already Paid', t:'calc', fn: a => paidTotal(a) },
+  { k:'yetToPay', l:'Yet to Pay', t:'calc', fn: a => yetToPay(a) },
+  m('premium','Approx. Premium Amount'),
   { k:'pdates', l:'Premium Dates', t:'dates' }, NOTES, DOCS
 ];
 const companyBase = [tx('provider','Policy Provider',{req:1}), tx('companyId','Company ID'), m('cover','Cover Amount')];
@@ -590,7 +607,7 @@ const T = {
     fields:[ tx('companyId','Company ID'), m('current','Current Amount',{req:1}), tx('purpose','Purpose'), NOTES, DOCS ] },
 
   /* ---- Insurance : personal ---- */
-  term:   { cat:'insurance', group:'personal', label:'Term Insurance',    ico:'🛡️', c:'#0a84ff', fields:premiumFields },
+  term:   { cat:'insurance', group:'personal', label:'Term Insurance',    ico:'🛡️', c:'#0a84ff', fields:termFields },
   pmed:   { cat:'insurance', group:'personal', label:'Medical Insurance', ico:'🏥', c:'#ff375f', fields:premiumFields },
   car:    { cat:'insurance', group:'personal', label:'Car Insurance',     ico:'🚗', c:'#ff9f0a', fields:premiumFields },
   bike:   { cat:'insurance', group:'personal', label:'Bike Insurance',    ico:'🏍️', c:'#30b0c7', fields:premiumFields },
@@ -687,6 +704,25 @@ function txOf(a) {
 const invVal = a => txOf(a).reduce((t, z) => t + z.amt, 0);
 const fmtShort = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? 'Date' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }); };
 const fmtDay = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); };
+
+/* Premiums paid so far: data.paidPrem = [{date:'YYYY-MM-DD', amt}] (oldest first) */
+const isoOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const paidOf = a => (Array.isArray(a.data.paidPrem) ? a.data.paidPrem : []).filter(p => p && p.date).slice().sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
+const paidTotal = a => sum(paidOf(a), p => num(p.amt));
+function premLeft(a) {                         // premium dates still to come, up to the premium end date (after the last paid one, or from today if none paid)
+  const end = a.data.pend, md = [...new Set(pdatesOf(a).map(x => x.slice(5)))];
+  if (!end || !md.length) return 0;
+  const paid = paidOf(a), last = paid.length ? paid[paid.length - 1].date : '', today = todayISO();
+  let n = 0;
+  for (let y = +(last || today).slice(0, 4); y <= +end.slice(0, 4); y++) md.forEach(x => {
+    let [m, d] = x.split('-').map(Number); d = Math.min(d, new Date(y, m, 0).getDate());
+    const iso = y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    if (iso <= end && (last ? iso > last : iso >= today)) n++;
+  });
+  return n;
+}
+function yetToPay(a) { const paid = paidOf(a), amt = paid.length ? num(paid[paid.length - 1].amt) : num(a.data.premium); return premLeft(a) * amt; }
+const isPaidFor = (a, dt) => paidOf(a).some(p => Math.abs((new Date(p.date + 'T00:00:00') - dt) / 864e5) <= 15);
 
 /* Premium dates (yearly recurring) of a personal policy as ['YYYY-MM-DD'].
    Policies saved earlier with only months are converted: due on the 1st (or today if it is this month). */
@@ -847,7 +883,7 @@ function upcomingPremiums(days = 90) {                // personal policies only,
   const now = new Date(), from = new Date(now.getFullYear(), now.getMonth(), now.getDate()), out = [];
   ofTypes(ORDER.personal).forEach(a => {
     let best = null;
-    pdatesOf(a).forEach(iso => { const dt = nextOccurrence(iso, from); if (dt && (!best || dt < best)) best = dt; });
+    pdatesOf(a).forEach(iso => { const dt = nextOccurrence(iso, from); if (dt && !isPaidFor(a, dt) && (!best || dt < best)) best = dt; });
     if (!best) return;
     const diff = Math.round((best - from) / 864e5);
     if (diff <= days) out.push({ a, diff, date: best, amt: num(a.data.premium) });
@@ -929,7 +965,7 @@ function home() {
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
   h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' bglow' : ''}">${icoBell}Premiums Due (in 90 days)</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
-    `<div class="li"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
+    `<div class="li tap" data-prem="${esc(u.a.id)}|${isoOf(u.date)}" role="button"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
 
@@ -1018,6 +1054,7 @@ function showVal(f, v) {
   if (f.t === 'purposes') return v.join(', ');
   if (f.t === 'number') return f.pre ? money(num(v)) : v + (f.suf || '');
   if (f.t === 'date') return fmtDate(v);
+  if (f.t === 'calc') return money(num(v));
   return v;
 }
 function card(a) {
@@ -1027,15 +1064,17 @@ function card(a) {
   const list = ins ? [] : txOf(a), x = ins ? null : assetXirr(a), sub = subOf(a);
   const xl = x == null ? '' : `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>`;
   const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); else if (f.t === 'purposes') { const ps = purposeShares(a); dd[f.k] = ps.map(x => x.n + (ps.length > 1 ? ' (' + x.pct + '%)' : '')); } });
-  let rows = t.fields.filter(f => f.t !== 'file' && f.t !== 'txs' && dd[f.k] !== '' && dd[f.k] != null && !(Array.isArray(dd[f.k]) && !dd[f.k].length))
-    .map(f => kv(f.l, showVal(f, dd[f.k]))).join('');
+  t.fields.forEach(f => { if (f.t === 'calc') dd[f.k] = f.fn(a); });
+  const paid = paidOf(a).reverse();
+  const paidBlock = paid.length ? `<div class="kv"><span>Premiums Paid (${paid.length})</span><b></b></div><div class="txlist">${paid.map(z => `<button type="button" class="kv payrow" data-payedit="${a.id}|${z.date}"><span>${esc(fmtDate(z.date))}</span><b>${money(num(z.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap a payment to edit or delete it.</div>` : '';
+  let rows = t.fields.map(f => (f.t !== 'file' && f.t !== 'txs' && dd[f.k] !== '' && dd[f.k] != null && !(Array.isArray(dd[f.k]) && !dd[f.k].length) ? kv(f.l, showVal(f, dd[f.k])) : '') + (f.t === 'dates' ? paidBlock : '')).join('');
   if (INV_TYPES.includes(a.type) && list.length)
     rows += kv('Total invested', money(invVal(a))) +
       `<div class="kv"><span>Investments (${list.length})</span><b></b></div><div class="txlist">${[...list].sort((p, q) => byDate(q, p)).map(z => kv(z.date ? fmtDate(z.date) : 'No date', money(z.amt))).join('')}</div>`;
   const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
     <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
-    <div class="body">${rows}${docs}<div class="acts"><button class="btn sm danger" data-del="${a.id}">Delete</button>
+    <div class="body">${rows}${docs}<div class="acts">${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
     <a class="btn sm" href="#/form/${a.type}/${a.id}">Edit</a></div></div></details>`;
 }
 
@@ -1188,6 +1227,7 @@ function fieldHTML(f, v) {
       const list = Array.isArray(v) && v.length ? v : [{ n: '', pct: 100 }];
       return row(`${lbl}<div class="pus">${list.map((x, i) => puRow(x.n, x.pct, i === 0)).join('')}</div><div class="txsum pusum">Total ${+list.reduce((s, x) => s + num(x.pct), 0).toFixed(2)}% of 100%</div><datalist id="dl_purposes">${purposeList().map(o => `<option value="${esc(o)}">`).join('')}</datalist>`, 'col');
     }
+    case 'calc': return row(`${lbl}<span class="calcv">${v == null ? '—' : esc(money(num(v)))}</span>`);
     case 'file': return row(`${lbl}<input type="file" name="_docs" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">`, 'col');
     default: {
       const type = f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text';
@@ -1211,7 +1251,7 @@ function formPage(type, id) {
   const label = t.group === 'company' ? t.label + ' (Company)' : t.label;
   const docs = existing && (existing.docs || []).length ? `<div class="gtitle">Attached documents</div><div class="group"><div class="row col">${existing.docs.filter(x => /^https:\/\//.test(x.url)).map(x => `<a class="file" target="_blank" rel="noopener" href="${esc(x.url)}">📎 ${esc(x.name)}</a>`).join('')}</div></div>` : '';
   const h = `
-    <form id="f" autocomplete="off"><div class="group">${t.fields.filter(f => f.t !== 'file').map(f => fieldHTML(f, f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : f.t === 'purposes' ? (existing ? purposeShares(existing) : []) : d[f.k])).join('')}</div>${docs}
+    <form id="f" autocomplete="off"><div class="group">${t.fields.filter(f => f.t !== 'file').map(f => fieldHTML(f, f.t === 'calc' ? (existing ? f.fn(existing) : null) : f.t === 'txs' ? initTx : f.t === 'dates' ? initPd : f.t === 'purposes' ? (existing ? purposeShares(existing) : []) : d[f.k])).join('')}</div>${docs}
     ${existing ? '' : ''}</form>`;
   return { title: (existing ? 'Edit ' : 'Add ') + label, back, right: `<button class="link" type="submit" form="f">Save</button>`, html: h, notabs: true,
     after() {
@@ -1243,7 +1283,7 @@ function formPage(type, id) {
         e.preventDefault();
         const r = raw(), data = {};
         t.fields.forEach(f => {
-          if (f.t === 'file' || f.t === 'txs' || f.t === 'dates' || f.t === 'purposes') return;
+          if (f.t === 'file' || f.t === 'calc' || f.t === 'txs' || f.t === 'dates' || f.t === 'purposes') return;
           let v = r[f.k] ?? '';
           if (f.show && !f.show(r)) v = '';
           if (f.t === 'number' && v !== '') v = Number(v);
@@ -1269,6 +1309,7 @@ function formPage(type, id) {
         }
         const ok = await run(async () => {
           const docsOut = existing ? [...(existing.docs || [])] : [];   // files attached earlier stay as they are
+          if (existing && Array.isArray(existing.data.paidPrem)) data.paidPrem = existing.data.paidPrem;   // payments recorded earlier are kept
           const asset = { id: existing ? existing.id : uid(), cat: t.cat, type, data, docs: docsOut, created: existing?.created };
           await saveAsset(asset); return true;
         });
@@ -1633,6 +1674,69 @@ function goalForm(id) {
     } };
 }
 const notFound = () => ({ title: 'Not found', back: '#/home', html: `<div class="soon-page"><div class="big">🤷</div><h2>Page not found</h2></div>`, tab: 'home' });
+
+/* ---- Premium payments: Mark Completed (Premiums Due tile) and Mark Premium Paid (policy card) ---- */
+function premDialog(id, o) {
+  const a = S.assets.find(x => x.id === id); if (!a) return;
+  const s = $('#sheet'); s.hidden = false;
+  s.innerHTML = `<div class="pane"><div class="group" id="pdlg" data-id="${esc(id)}" data-from="${o.edit ? 'edit' : o.fixed ? 'tile' : 'card'}" data-orig="${esc(o.orig || '')}">
+    <div class="pdh"><b>${esc(o.title)}</b><small>${esc(ttl(a))}</small></div>
+    <div class="row"><span class="l">Premium Date</span>${o.fixed ? `<span class="fx">${esc(fmtDate(o.date))}</span><input type="hidden" id="pdDate" value="${esc(o.date)}">` : `<input id="pdDate" type="date" value="${esc(o.date)}">`}</div>
+    <div class="row"><span class="l">Premium Amount</span><span class="pre">₹</span><input id="pdAmt" type="number" inputmode="decimal" step="any" value="${esc(o.amt != null ? o.amt : (a.data.premium || ''))}" placeholder="0"></div></div>
+    <button class="btn" type="button" id="pdSave">Save</button>${o.edit ? '<button class="btn danger" type="button" id="pdDel">Delete Payment</button>' : ''}<button class="cancel" type="button" onclick="closeSheet()">Cancel</button></div>`;
+}
+async function markPaid(id, date, amt) {
+  const a = S.assets.find(x => x.id === id); if (!a) return false;
+  const list = (Array.isArray(a.data.paidPrem) ? a.data.paidPrem : []).filter(p => p && p.date !== date);
+  list.push({ date, amt }); list.sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
+  const next = { ...a, data: { ...a.data, paidPrem: list, premium: amt } };       // the approx. premium becomes the latest amount paid
+  return !!(await run(async () => { await saveAsset(next); return true; }));
+}
+async function updatePaid(id, orig, rec) {             // rec = {date, amt} to replace the payment dated `orig`, or null to delete it
+  const a = S.assets.find(x => x.id === id); if (!a) return false;
+  const before = paidOf(a), latestBefore = before.length ? before[before.length - 1].date : '';
+  const list = before.filter(p => p.date !== orig && !(rec && p.date === rec.date));
+  if (rec) list.push(rec);
+  list.sort((x, y) => x.date < y.date ? -1 : x.date > y.date ? 1 : 0);
+  const last = list[list.length - 1], data = { ...a.data, paidPrem: list };
+  if (last && (orig === latestBefore || (rec && last.date === rec.date))) data.premium = last.amt;   // approx. premium follows the latest payment
+  return !!(await run(async () => { await saveAsset({ ...a, data }); return true; }));
+}
+const reopenCard = id => { const b = document.querySelector(`[data-markpaid="${id}"]`), d = b && b.closest('details'); if (d) d.open = true; };
+document.addEventListener('click', async e => {
+  let t;
+  if ((t = e.target.closest('[data-payedit]'))) {
+    const [id, date] = t.dataset.payedit.split('|'), a = S.assets.find(x => x.id === id), p = a && paidOf(a).find(z => z.date === date); if (!p) return;
+    return premDialog(id, { title: 'Edit Payment', date, amt: p.amt, edit: true, orig: date });
+  }
+  if (e.target.closest('#pdDel')) {
+    const box = $('#pdlg'); if (!confirm('Delete this payment record?')) return;
+    if (await updatePaid(box.dataset.id, box.dataset.orig, null)) { closeSheet(); toast('Payment deleted'); render(); reopenCard(box.dataset.id); }
+    return;
+  }
+  if ((t = e.target.closest('[data-prem]'))) { const [id, date] = t.dataset.prem.split('|'); return premDialog(id, { title: 'Mark Completed', date, fixed: true }); }
+  if ((t = e.target.closest('[data-markpaid]'))) {
+    const a = S.assets.find(x => x.id === t.dataset.markpaid); if (!a) return;
+    const from = new Date(); from.setHours(0, 0, 0, 0);
+    const due = pdatesOf(a).map(x => nextOccurrence(x, from)).filter(Boolean).sort((x, y) => x - y)[0];
+    return premDialog(a.id, { title: 'Mark Premium Paid', date: due ? isoOf(due) : todayISO() });
+  }
+  if (e.target.closest('#pdSave')) {
+    const box = $('#pdlg'), id = box.dataset.id, fromTile = box.dataset.from === 'tile';
+    const date = $('#pdDate').value, amt = num($('#pdAmt').value);
+    if (!date) return toast('Choose the premium date');
+    if (!(amt > 0)) return toast('Enter the premium amount');
+    if (box.dataset.from === 'edit') {
+      if (await updatePaid(id, box.dataset.orig, { date, amt })) { closeSheet(); toast('Payment updated'); render(); reopenCard(id); }
+      return;
+    }
+    if (await markPaid(id, date, amt)) {
+      closeSheet(); toast('Premium recorded'); render();
+      const d = fromTile ? document.querySelector('.dtile.prem') : (document.querySelector(`[data-markpaid="${id}"]`) || {}).closest?.('details');
+      if (d) d.open = true;
+    }
+  }
+});
 
 /* ---- More: Documents (live view of the "My Asset Documents" Drive folder; view / download / upload / rename, no delete) ---- */
 const DC = { cache: store.get('dcache', {}), cur: { key: 'root', id: '' }, blobs: {} };
