@@ -393,22 +393,17 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .summary .bch{grid-column:1/-1;text-align:left;padding-top:14px;border-top:1px solid rgba(255,255,255,.25)}
 .summary .bch-h{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.7;margin-bottom:12px}
 .summary .bch-r+.bch-r{margin-top:13px}
-.summary .bch-r{display:grid;grid-template-columns:minmax(0,1fr) 44px;column-gap:10px;row-gap:6px;align-items:center}
-.summary .bch-t{grid-column:1;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.summary .bch-b{grid-column:1}
-.summary .bch-p{grid-column:2;grid-row:2}
-.summary .sx{grid-column:1/-1;display:grid;grid-template-rows:0fr;margin-top:-12px;transition:grid-template-rows .38s cubic-bezier(.32,.72,0,1),margin .38s cubic-bezier(.32,.72,0,1)}
-.summary .sxi{overflow:hidden;min-height:0;text-align:left}
-.summary.open .sx{grid-template-rows:1fr;margin-top:0}
+.summary .bch-t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.summary .sx{display:none;grid-column:1/-1}
+.summary.open .sx{display:block}
+.summary .sxi{text-align:left}
 .summary:has(.sx){cursor:pointer}
 .summary .sxi .bch+.bch{margin-top:14px}
-@media (prefers-reduced-motion:reduce){.summary .sx{transition:none}}
 .summary .bch-n{font-size:13.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.summary .bch-a{flex:none;font-size:13.5px;font-weight:600;opacity:.92;font-variant-numeric:tabular-nums}
-.summary .bch-l{display:flex;align-items:center;gap:10px;margin-top:6px}
-.summary .bch-b{min-width:0;height:9px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
-.summary .bch-b i{display:block;height:100%;border-radius:99px;box-shadow:0 0 8px rgba(255,255,255,.15)}
-.summary .bch-p{text-align:right;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.summary .bch-p{flex:none;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.summary .bch-b{position:relative;height:19px;margin-top:6px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden}
+.summary .bch-b i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;box-shadow:0 0 8px rgba(255,255,255,.15)}
+.summary .bch-a{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);font-variant-numeric:tabular-nums;white-space:nowrap}
 .summary .pie{display:flex;align-items:center;gap:18px}
 .summary .pie svg{flex:none;width:108px;height:108px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.2))}
 .summary .pie-lg{flex:1;min-width:0}
@@ -423,9 +418,9 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .ppill:active{opacity:.6}
 
 /* goals: darker, thicker divider next to an expanded goal */
-.goal.open+.goal,.goal+.goal.open{border-top:1.5px solid rgba(60,60,67,.38)}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .goal.open+.goal,:root:not([data-theme=light]) .goal+.goal.open{border-top-color:rgba(235,235,245,.3)}}
-:root[data-theme=dark] .goal.open+.goal,:root[data-theme=dark] .goal+.goal.open{border-top-color:rgba(235,235,245,.3)}
+.goal.open+.goal,.goal+.goal.open{border-top:.5px solid rgba(60,60,67,.55)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .goal.open+.goal,:root:not([data-theme=light]) .goal+.goal.open{border-top-color:rgba(235,235,245,.45)}}
+:root[data-theme=dark] .goal.open+.goal,:root[data-theme=dark] .goal+.goal.open{border-top-color:rgba(235,235,245,.45)}
 
 /* multiple purposes in the asset form */
 .pus{display:flex;flex-direction:column;gap:8px}
@@ -908,8 +903,8 @@ function barChart(rows, title) {
   const tot = sum(rows, r => r.v); if (!(tot > 0)) return '';
   return `<div class="bch">${title ? `<div class="bch-h">${esc(title)}</div>` : ''}` + rows.map(r => {
     const p = r.v / tot * 100;
-    return `<div class="bch-r"><div class="bch-t"><div class="bch-n">${esc(r.n)}</div><div class="bch-a">${S.hide ? '••••' : fmtCr(r.v)}</div></div>
-      <div class="bch-b"><i style="width:${Math.max(p, 2).toFixed(1)}%;background:linear-gradient(90deg,${r.c}99,${r.c})"></i></div><div class="bch-p">${p.toFixed(1)}%</div></div>`;
+    return `<div class="bch-r"><div class="bch-t"><div class="bch-n">${esc(r.n)}</div><div class="bch-p">${p.toFixed(1)}%</div></div>
+      <div class="bch-b"><i style="width:${Math.max(p, 2).toFixed(1)}%;background:linear-gradient(90deg,${r.c}99,${r.c})"></i><div class="bch-a">${S.hide ? '••••' : fmtCr(r.v)}</div></div></div>`;
   }).join('') + `</div>`;
 }
 function catBars(items) {                                  // one bar per investment category (house + land are grouped as Property)
@@ -1484,7 +1479,7 @@ function goalCard(g, c1, c2) {
         <div class="g-line"><div class="g-bar"><i style="width:${shown.toFixed(2)}%;background:linear-gradient(90deg,${c1},${c2})"></i></div><div class="g-pct">${p}%</div></div></div></div>
     <div class="g-more"><div><div class="g-stats"><div><span>Target</span><b>${fmtCr(st.target)}</b></div><div><span>Achieved</span><b>${fmtCr(st.achieved)}</b></div><div><span>Remaining</span><b>${fmtCr(st.remaining)}</b></div></div>
     <div class="g-src">${(g.sources || []).filter(s => s.ref).map(s => { const pc = num(s.pct), v = srcAmount(s) * pc / 100;
-      return `<div class="g-sr"><span>${esc(srcLabel(s))}${pc < 100 ? ' · ' + pc + '%' : ''}</span><b>${fmtCr(v)}</b></div>`; }).join('')}</div></div></div></div>`;
+      return `<div class="g-sr"><span>${esc(srcLabel(s))} · ${pc}%</span><b>${fmtCr(v)}</b></div>`; }).join('')}</div></div></div></div>`;
 }
 const GTARGET = '<svg viewBox="0 0 24 24"><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="C1"/><stop offset="1" stop-color="C2"/></linearGradient></defs><g stroke="url(#gg)"><circle cx="11" cy="13" r="7.5"/><circle cx="11" cy="13" r="3.5"/><path d="M11 13l9-9M16 4h4v4"/></g></svg>';
 const GEXP = new Set();                                 // goal cards whose details are expanded (kept across re-renders)
@@ -1750,8 +1745,15 @@ function fold(d) {                                              // smooth open /
   });
 }
 document.addEventListener('click', e => {                       // summary tile: tap to unfold the charts, tap again anywhere on it to fold
-  const s = e.target.closest('.summary'); if (!s || !s.querySelector('.sx')) return;
-  s.classList.toggle('open');
+  const s = e.target.closest('.summary'), x = s && s.querySelector('.sx'); if (!x || s._busy) return;
+  const opening = !s.classList.contains('open');
+  if (matchMedia('(prefers-reduced-motion:reduce)').matches) { s.classList.toggle('open'); return; }
+  s._busy = true; x.style.overflow = 'hidden';
+  if (opening) s.classList.add('open');
+  const h = x.offsetHeight + 'px';
+  const a = x.animate(opening ? [{ height: '0px', opacity: 0 }, { height: h, opacity: 1 }] : [{ height: h, opacity: 1 }, { height: '0px', opacity: 0 }],
+    { duration: opening ? 380 : 260, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'forwards' });
+  a.finished.catch(() => 0).then(() => { if (!opening) s.classList.remove('open'); a.cancel(); x.style.overflow = ''; s._busy = false; });
 });
 document.addEventListener('click', e => {
   const sm = e.target.closest('.acard > summary, .dtile > summary');
