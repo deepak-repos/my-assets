@@ -1593,8 +1593,8 @@ function anSpark(pts) {                                    // small static line 
     <path class="l1" d="${path('inv')}"/><path class="l2" d="${path('cur')}"/>${dots('inv', 'd1')}${dots('cur', 'd2')}
     <circle class="s1" cx="${sx(l.x).toFixed(1)}" cy="${sy(l.inv).toFixed(1)}" r="4"/><circle class="s2" cx="${sx(l.x).toFixed(1)}" cy="${sy(l.cur).toFixed(1)}" r="4"/></svg>`;
 }
-function homeGrowth() {                                    // All Investments, full history; whole tile opens Analytics
-  const res = anBuild(invAssets(), 0);
+function homeGrowth() {                                    // All Investments, last 1 year only; whole tile opens Analytics
+  const res = anBuild(invAssets(), 12);
   if (!res) return '';
   const pts = res.pts, last = pts[pts.length - 1], c = anChg(last.inv, last.cur);
   const g = last.cur - last.inv, pc = last.inv ? g / last.inv * 100 : 0;
