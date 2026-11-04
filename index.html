@@ -440,6 +440,19 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .g-sr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;font-size:14px}
 .g-sr span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.78}
 .g-sr b{flex:none;font-weight:600;opacity:.78;font-variant-numeric:tabular-nums}
+/* more: monthly expenses, tax harvesting, calculator */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 16px}
+.stats .stat{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+.stats .stat span{display:block;font-size:13px;color:var(--sub)}
+.stats .stat b{display:block;font-size:19px;font-weight:700;margin-top:3px;letter-spacing:-.3px}
+.card .mini{font-size:13px;color:var(--sub)}.card .bigv{font-size:26px;font-weight:700;letter-spacing:-.5px;margin:2px 0}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.item.static::after{display:none}.item .v b{font-weight:600;display:block;text-align:right}
+.item .v small{display:block;font-size:12px;font-weight:600;text-align:right}
+.res .row .l{max-width:64%}.res .row b.rv{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.res .row.hl b.rv{font-size:18px;font-weight:700}
+.calcnote{margin:-6px 32px 22px;font-size:13px;color:var(--sub)}
+.empty-s{padding:22px 16px;text-align:center;color:var(--sub);font-size:15px}
 </style>
 </head>
 <body>
@@ -599,9 +612,9 @@ const CAT_META = {
 /* ---------------------------------------------------------------------
    State & persistence
    --------------------------------------------------------------------- */
-const S = { hide: !!store.get('hide', false), assets: store.get('assets', []), goals: store.get('goals', []), history: store.get('history', []), cfg: store.get('cfg', null) };
+const S = { hide: !!store.get('hide', false), assets: store.get('assets', []), goals: store.get('goals', []), expenses: store.get('expenses', []), harvest: store.get('harvest', []), history: store.get('history', []), cfg: store.get('cfg', null) };
 const remote = () => !!(S.cfg && S.cfg.url && S.cfg.key);
-const persist = () => { store.set('assets', S.assets); store.set('history', S.history); store.set('goals', S.goals); };
+const persist = () => { store.set('assets', S.assets); store.set('history', S.history); store.set('goals', S.goals); store.set('expenses', S.expenses); store.set('harvest', S.harvest); };
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
@@ -727,8 +740,9 @@ async function sync(quiet) {
   if (!remote()) return;
   try {
     const r = await api('list');
-    S.assets = r.assets || []; S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals; persist();
-    if (!/^#\/(form|update)/.test(location.hash)) render();
+    S.assets = r.assets || []; S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals;
+    if (Array.isArray(r.expenses)) S.expenses = r.expenses; if (Array.isArray(r.harvest)) S.harvest = r.harvest; persist();
+    if (!/^#\/(form|update|expense\/|taxentry\/|calculator)/.test(location.hash)) render();
     if (!quiet) toast('Synced');
   } catch (e) { toast(quiet ? 'Offline – showing saved data' : e.message); }
 }
@@ -761,6 +775,18 @@ async function saveGoal(g) {
 async function removeGoal(id) {
   if (remote()) { try { await api('goaldelete', { id }); } catch (e) { if (!/Unknown action/i.test(e.message)) throw e; } }
   S.goals = S.goals.filter(x => x.id !== id); persist();
+}
+/* Monthly expenses + tax harvesting entries (same pattern as goals). The calculator saves nothing. */
+async function saveRec(list, act, rec) {
+  rec.updated = new Date().toISOString(); rec.created = rec.created || rec.updated;
+  let note = '';
+  if (remote()) { try { await api(act, { rec }); } catch (e) { if (/Unknown action/i.test(e.message)) note = 'Saved on this device – update Code.gs to sync'; else throw e; } }
+  const i = S[list].findIndex(x => x.id === rec.id); if (i >= 0) S[list][i] = rec; else S[list].push(rec);
+  persist(); return note;
+}
+async function removeRec(list, act, id) {
+  if (remote()) { try { await api(act, { id }); } catch (e) { if (!/Unknown action/i.test(e.message)) throw e; } }
+  S[list] = S[list].filter(x => x.id !== id); persist();
 }
 async function removeAsset(id) {
   if (remote()) await api('delete', { id });
@@ -1244,7 +1270,11 @@ function formPage(type, id) {
 
 /* ---- Analytics / Goals placeholders ---- */
 const morePage = () => ({ title: 'More', tab: 'more',
-  html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'), item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
+  html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
+    item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses', '', 'Average household spending'),
+    item('#/tax', '％', '#30b0c7', 'Tax Harvesting', '', 'Mutual fund gains booked each year'),
+    item('#/calculator', '🧮', '#34c759', 'Calculator', '', 'SIP growth and goal planning'),
+    item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
 /* ---- Analytics ----
    Line chart (with dots) of Investment amount vs Current amount, for all investments,
    one category (asset type) or one asset. A dot is drawn on every date something happened
@@ -1594,6 +1624,134 @@ function goalForm(id) {
 }
 const notFound = () => ({ title: 'Not found', back: '#/home', html: `<div class="soon-page"><div class="big">🤷</div><h2>Page not found</h2></div>`, tab: 'home' });
 
+/* ---- More: Monthly expenses ---- */
+const mm = n => S.hide ? '••••' : money(n);
+const curFY = () => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String(y + 1).slice(2); };
+function expensesPage() {
+  const fx = S.expenses.filter(e => e.kind !== 'variable'), vr = S.expenses.filter(e => e.kind === 'variable');
+  const F = sum(fx, e => num(e.amount)), V = sum(vr, e => num(e.amount)), Tm = F + V;
+  const em = srcAmount({ mode: 'purpose', ref: 'Emergency Fund' });
+  const list = l => l.length ? `<div class="group">${l.map(e => item('#/expense/' + e.id, '', '', e.name, mm(num(e.amount)))).join('')}</div>` : `<div class="group"><div class="empty-s">None yet.</div></div>`;
+  const h = `<div class="stats"><div class="stat"><span>Fixed</span><b>${mm(F)}</b></div><div class="stat"><span>Variable</span><b>${mm(V)}</b></div>
+    <div class="stat"><span>Total / month</span><b>${mm(Tm)}</b></div><div class="stat"><span>Total / year</span><b>${mm(Tm * 12)}</b></div></div>
+    ${em > 0 && Tm > 0 ? `<div class="card"><div class="mini">Emergency fund covers</div><div class="bigv">${S.hide ? '••••' : (em / Tm).toFixed(1) + ' months'}</div><div class="mini">${mm(em)} set aside against ${mm(Tm)} spent each month</div></div>` : ''}
+    <div class="gsec"><span>Fixed</span><em>${mm(F)}</em></div>${list(fx)}
+    <div class="gsec"><span>Variable</span><em>${mm(V)}</em></div>${list(vr)}`;
+  return { title: 'Monthly Expenses', back: '#/more', tab: 'more', right: `<a class="plus" href="#/expense/new" aria-label="Add expense">+</a>`, html: h };
+}
+function expenseForm(id) {
+  const ex = id && id !== 'new' ? S.expenses.find(e => e.id === id) : null;
+  if (id && id !== 'new' && !ex) return notFound();
+  const e0 = ex || { name: '', amount: '', kind: 'fixed' };
+  const h = `<form id="f" autocomplete="off"><div class="group">
+      <div class="row"><span class="l">Item</span><input name="name" value="${esc(e0.name)}" placeholder="e.g. Electricity" required></div>
+      <div class="row"><span class="l">Per Month</span><span class="pre">₹</span><input name="amount" type="number" inputmode="decimal" step="any" value="${esc(e0.amount)}" placeholder="0" required></div>
+      <div class="row"><span class="l">Type</span><select name="kind"><option value="fixed" ${e0.kind !== 'variable' ? 'selected' : ''}>Fixed</option><option value="variable" ${e0.kind === 'variable' ? 'selected' : ''}>Variable</option></select></div></div>
+    <button class="btn" type="submit">Save Expense</button>${ex ? '<button type="button" class="btn redtxt exdel">Delete Expense</button>' : ''}</form>`;
+  return { title: ex ? 'Edit Expense' : 'Add Expense', back: '#/expenses', html: h, notabs: true,
+    after() {
+      const form = $('#f');
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(form), name = String(fd.get('name') || '').trim(), amount = num(fd.get('amount'));
+        if (!name) return toast('Enter the item');
+        if (!(amount >= 0) || fd.get('amount') === '') return toast('Enter the amount');
+        const rec = { id: ex ? ex.id : uid(), name, amount, kind: fd.get('kind'), created: ex?.created };
+        const note = await run(() => saveRec('expenses', 'expsave', rec));
+        if (note !== null) { toast(note || 'Saved'); location.hash = '#/expenses'; }
+      });
+      form.addEventListener('click', e => {
+        if (e.target.closest('.exdel') && confirm('Delete this expense?')) run(async () => { await removeRec('expenses', 'expdelete', ex.id); return true; }).then(ok => { if (ok) { toast('Deleted'); location.hash = '#/expenses'; } });
+      });
+    } };
+}
+
+/* ---- More: Tax harvesting ---- */
+function taxPage() {
+  const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
+  const P = sum(l.filter(x => x.pl !== 'L'), x => num(x.amount)), L = sum(l.filter(x => x.pl === 'L'), x => num(x.amount));
+  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>
+      <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`).join('')}</div>`
+    : `<div class="group"><div class="empty-s">No entries yet.</div></div>`;
+  const h = `<div class="stats"><div class="stat"><span>Total profit</span><b class="pos">${mm(P)}</b></div><div class="stat"><span>Total loss</span><b class="neg">${mm(L)}</b></div></div>
+    <div class="card"><div class="mini">Net harvested</div><div class="bigv">${mm(P - L)}</div></div>
+    <div class="gsec"><span>By financial year</span></div>${rows}`;
+  return { title: 'Tax Harvesting', back: '#/more', tab: 'more', right: `<a class="plus" href="#/taxentry/new" aria-label="Add entry">+</a>`, html: h };
+}
+function taxForm(id) {
+  const ex = id && id !== 'new' ? S.harvest.find(x => x.id === id) : null;
+  if (id && id !== 'new' && !ex) return notFound();
+  const x0 = ex || { fy: curFY(), amount: '', pl: 'P', note: '' };
+  const h = `<form id="f" autocomplete="off"><div class="group">
+      <div class="row"><span class="l">Financial Year</span><input name="fy" value="${esc(x0.fy)}" placeholder="e.g. 2026-27" autocapitalize="off" required></div>
+      <div class="row"><span class="l">Amount</span><span class="pre">₹</span><input name="amount" type="number" inputmode="decimal" step="any" value="${esc(x0.amount)}" placeholder="0" required></div>
+      <div class="row"><span class="l">Result</span><select name="pl"><option value="P" ${x0.pl !== 'L' ? 'selected' : ''}>Profit</option><option value="L" ${x0.pl === 'L' ? 'selected' : ''}>Loss</option></select></div>
+      <div class="row col"><span class="l">Notes</span><textarea name="note" rows="2">${esc(x0.note)}</textarea></div></div>
+    <button class="btn" type="submit">Save Entry</button>${ex ? '<button type="button" class="btn redtxt txdel">Delete Entry</button>' : ''}</form>`;
+  return { title: ex ? 'Edit Entry' : 'Add Entry', back: '#/tax', html: h, notabs: true,
+    after() {
+      const form = $('#f');
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData(form), fy = String(fd.get('fy') || '').trim();
+        if (!/^\d{4}-\d{2}$/.test(fy)) return toast('Enter the year like 2026-27');
+        if (fd.get('amount') === '' || !(num(fd.get('amount')) >= 0)) return toast('Enter the amount');
+        const rec = { id: ex ? ex.id : uid(), fy, amount: num(fd.get('amount')), pl: fd.get('pl'), note: String(fd.get('note') || '').trim(), created: ex?.created };
+        const note = await run(() => saveRec('harvest', 'taxsave', rec));
+        if (note !== null) { toast(note || 'Saved'); location.hash = '#/tax'; }
+      });
+      form.addEventListener('click', e => {
+        if (e.target.closest('.txdel') && confirm('Delete this entry?')) run(async () => { await removeRec('harvest', 'taxdelete', ex.id); return true; }).then(ok => { if (ok) { toast('Deleted'); location.hash = '#/tax'; } });
+      });
+    } };
+}
+
+/* ---- More: Calculator (inputs are kept in memory only – nothing is saved to the sheet or the device) ---- */
+const CALC = { mode: 'grow', init: 0, sip: 25000, roi: 8, infl: 0, sipYears: 15, wdYears: 20, target: 10000000, years: 15 };
+function calcPage() {
+  const g = CALC.mode === 'grow';
+  const inp = (k, l, pre) => `<div class="row"><span class="l">${l}</span>${pre ? '<span class="pre">₹</span>' : ''}<input data-c="${k}" type="number" inputmode="decimal" step="any" value="${esc(CALC[k])}" placeholder="0"></div>`;
+  const fields = g ? inp('init', 'Initial Investment', 1) + inp('sip', 'Monthly SIP', 1) + inp('roi', 'Return (% / yr)') + inp('infl', 'Inflation (% / yr)') + inp('sipYears', 'SIP Runs (years)') + inp('wdYears', 'Withdraw After (years)')
+    : inp('target', 'Goal Amount', 1) + inp('years', 'Years To Goal') + inp('init', 'Already Invested', 1) + inp('roi', 'Return (% / yr)') + inp('infl', 'Inflation (% / yr)');
+  const h = `<div class="seg"><button data-cm="grow" class="${g ? 'on' : ''}">Future Value</button><button data-cm="goal" class="${g ? '' : 'on'}">Plan For A Goal</button></div>
+    <div class="group">${fields}</div>
+    <button type="button" class="btn plain" data-cfill>Use My Mutual Funds</button>
+    <div class="group res" id="calcOut"></div>
+    <div class="calcnote">Estimates only. Returns are not guaranteed. SIP is compounded monthly (annuity due); lump sums compound yearly. Inputs here are not saved.</div>`;
+  return { title: 'Calculator', back: '#/more', tab: 'more', html: h,
+    after() {
+      const out = $('#calcOut'), root = $('#app');
+      const v = k => num(CALC[k]);
+      const row = (l, x, b) => `<div class="row${b ? ' hl' : ''}"><span class="l">${l}</span><b class="rv">${mm(x)}</b></div>`;
+      const run_ = () => {
+        const roi = v('roi'), r = roi / 1200, infl = v('infl');
+        const real = (x, y) => infl > 0 ? row(`Worth in today's money`, x / Math.pow(1 + infl / 100, y)) : '';
+        let h2;
+        if (CALC.mode === 'grow') {
+          const D = v('sipYears'), n = D * 12, E = v('wdYears');
+          const sipFV = r > 0 ? v('sip') * ((Math.pow(1 + r, n) - 1) / r) * (1 + r) : v('sip') * n;
+          const lump = v('init') * Math.pow(1 + roi / 100, E), sipG = sipFV * Math.pow(1 + roi / 100, Math.max(E - D, 0));
+          const total = lump + sipG, inv = v('init') + v('sip') * n;
+          h2 = row(`SIP corpus after ${D} yrs`, sipFV) + row(`Initial amount after ${E} yrs`, lump) + row(`SIP corpus after ${E} yrs`, sipG) + row('Total you put in', inv) + row(`Total after ${E} years`, total, 1) + row('Growth earned', total - inv) + real(total, E);
+        } else {
+          const Y = v('years'), n = Y * 12, have = v('init') * Math.pow(1 + roi / 100, Y), need = v('target') - have;
+          const f = r > 0 ? ((Math.pow(1 + r, n) - 1) / r) * (1 + r) : n, sip = need > 0 && f > 0 ? need / f : 0;
+          h2 = row('Goal amount', v('target')) + row('Your investment grows to', have)
+            + (need > 0 ? row('Still to build', need) + row('Monthly SIP needed', sip, 1) + row('Total SIP over the period', sip * n) : `<div class="empty-s pos" style="font-weight:600">Your current investment alone reaches the goal.</div>`)
+            + (infl > 0 ? row(`Goal in today's money`, v('target') / Math.pow(1 + infl / 100, Y)) : '');
+        }
+        out.innerHTML = h2;
+      };
+      run_();
+      root.querySelectorAll('[data-c]').forEach(i => i.addEventListener('input', () => { CALC[i.dataset.c] = i.value; run_(); }));
+      root.querySelectorAll('[data-cm]').forEach(b => b.addEventListener('click', () => { CALC.mode = b.dataset.cm; render(); }));
+      root.querySelector('[data-cfill]').addEventListener('click', () => {
+        CALC.init = Math.round(sum(ofTypes(['mf']), curVal));
+        const el = root.querySelector('[data-c="init"]'); if (el) el.value = CALC.init; run_();
+      });
+    } };
+}
+
 /* ---- Settings ---- */
 function settingsPage(sub) {
   const theme = store.get('theme', 'auto');
@@ -1662,6 +1820,11 @@ function view(p) {
     case 'update': return updatePage(b);
     case 'add': return addPage(b, c);
     case 'form': return formPage(b, c);
+    case 'expenses': return expensesPage();
+    case 'expense': return expenseForm(b);
+    case 'tax': return taxPage();
+    case 'taxentry': return taxForm(b);
+    case 'calculator': return calcPage();
     case 'settings': return settingsPage(b);
     default: return notFound();
   }
