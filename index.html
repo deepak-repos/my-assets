@@ -473,6 +473,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dvnone{text-align:center;padding:30px;color:var(--sub)}.dvnone .big{font-size:52px}.dvnone .btn{margin:14px auto 0;max-width:280px}
 /* premium payments */
 .payrow{width:100%;text-align:left;font:inherit;font-size:14px;color:var(--text)}.payrow b::after{content:' ›';color:var(--sub);font-weight:400}.payrow:active{opacity:.6}
+#sheet .pdbtns{display:flex;gap:10px}#sheet .pdbtns .cancel,#sheet .pdbtns .btn{flex:1;width:auto;margin:0;padding:16px;border-radius:14px}
 #sheet .btn.danger{background:var(--card);color:var(--red)}
 .li.tap{cursor:pointer}.li.tap:active{opacity:.6}
 .acts{flex-wrap:wrap}.acts .btn.mp{flex:1 1 100%;width:100%;background:var(--green)}
@@ -1683,7 +1684,8 @@ function premDialog(id, o) {
     <div class="pdh"><b>${esc(o.title)}</b><small>${esc(ttl(a))}</small></div>
     <div class="row"><span class="l">Premium Date</span>${o.fixed ? `<span class="fx">${esc(fmtDate(o.date))}</span><input type="hidden" id="pdDate" value="${esc(o.date)}">` : `<input id="pdDate" type="date" value="${esc(o.date)}">`}</div>
     <div class="row"><span class="l">Premium Amount</span><span class="pre">₹</span><input id="pdAmt" type="number" inputmode="decimal" step="any" value="${esc(o.amt != null ? o.amt : (a.data.premium || ''))}" placeholder="0"></div></div>
-    <button class="btn" type="button" id="pdSave">Save</button>${o.edit ? '<button class="btn danger" type="button" id="pdDel">Delete Payment</button>' : ''}<button class="cancel" type="button" onclick="closeSheet()">Cancel</button></div>`;
+    ${o.edit ? '<button class="btn danger" type="button" id="pdDel">Delete Payment</button>' : ''}
+    <div class="pdbtns"><button class="cancel" type="button" onclick="closeSheet()">Cancel</button><button class="btn" type="button" id="pdSave">Save</button></div></div>`;
 }
 async function markPaid(id, date, amt) {
   const a = S.assets.find(x => x.id === id); if (!a) return false;
