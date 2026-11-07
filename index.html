@@ -2155,7 +2155,8 @@ function invwdPage() {
   const h = fyData().map(o => {
     const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
     const brk = rows.length ? rows.map(c => `<div class="li fyb"><b>${esc(T[c.t].label)}</b><div class="fyr"><div>${mm(c.inv)} (I)</div><div>${mm(c.wd)} (W)</div></div></div>`).join('') : `<div class="empty">Nothing in this year.</div>`;
-    return `<details class="acard"><summary class="fysum"><div class="fyl"><span>FY ${esc(o.fy)}</span><b>${mm(o.inv - o.wd)}</b></div></summary><div class="body">
+    const net = Math.round(o.inv - o.wd);
+    return `<details class="acard"><summary class="fysum"><div class="fyl"><span>FY ${esc(o.fy)}</span><b class="${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}">${net > 0 ? '+' : net < 0 ? '-' : ''}${mm(Math.abs(net))}</b></div></summary><div class="body">
       <div class="kv"><span>Total investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>${brk}</div></details>`;
   }).join('');
   return { title: 'Invested & Withdrawn', back: '#/more', tab: 'more', html: h };
