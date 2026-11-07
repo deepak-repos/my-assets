@@ -522,6 +522,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyl{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .fyl span{font-size:17px;font-weight:700}.fyl b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .li.fyb b{font-weight:600}
+.fyl b i{font-style:normal}
 .fyr{text-align:right;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.5}
 .dtile[data-go]>.body{cursor:pointer}
 </style>
@@ -2156,7 +2157,7 @@ function invwdPage() {
     const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
     const brk = rows.length ? rows.map(c => `<div class="li fyb"><b>${esc(T[c.t].label)}</b><div class="fyr"><div>${mm(c.inv)} (I)</div><div>${mm(c.wd)} (W)</div></div></div>`).join('') : `<div class="empty">Nothing in this year.</div>`;
     const net = Math.round(o.inv - o.wd);
-    return `<details class="acard"><summary class="fysum"><div class="fyl"><span>FY ${esc(o.fy)}</span><b class="${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}">${net > 0 ? '+' : net < 0 ? '-' : ''}${mm(Math.abs(net))}</b></div></summary><div class="body">
+    return `<details class="acard"><summary class="fysum"><div class="fyl"><span>FY ${esc(o.fy)}</span><b>${net > 0 ? '<i class="pos">(+)</i> ' : net < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(net))}</b></div></summary><div class="body">
       <div class="kv"><span>Total investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>${brk}</div></details>`;
   }).join('');
   return { title: 'Invested & Withdrawn', back: '#/more', tab: 'more', html: h };
