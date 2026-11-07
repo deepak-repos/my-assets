@@ -518,8 +518,9 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv span{display:block;font-size:12px;color:var(--sub)}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
+.acard summary.fysum{padding:27px 18px}
 .fyl{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.fyl span{font-size:14.5px;font-weight:600}.fyl b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fyl span{font-size:15.5px;font-weight:600}.fyl b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .li.fyb b{font-weight:600}
 .fyr{text-align:right;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.5}
 .dtile[data-go]>.body{cursor:pointer}
@@ -2154,7 +2155,7 @@ function invwdPage() {
   const h = fyData().map(o => {
     const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
     const brk = rows.length ? rows.map(c => `<div class="li fyb"><b>${esc(T[c.t].label)}</b><div class="fyr"><div>${mm(c.inv)} (I)</div><div>${mm(c.wd)} (W)</div></div></div>`).join('') : `<div class="empty">Nothing in this year.</div>`;
-    return `<details class="acard"><summary><div class="fyl"><span>Total investment for FY ${esc(o.fy)}</span><b>${mm(o.inv - o.wd)}</b></div></summary><div class="body">
+    return `<details class="acard"><summary class="fysum"><div class="fyl"><span>Total Invested - FY ${esc(o.fy)}</span><b>${mm(o.inv - o.wd)}</b></div></summary><div class="body">
       <div class="kv"><span>Total investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>${brk}</div></details>`;
   }).join('');
   return { title: 'Invested & Withdrawn', back: '#/more', tab: 'more', html: h };
