@@ -496,7 +496,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .btn.fillb{background:var(--fill);color:var(--blue)}
 .btn.fillb.wdc{color:var(--red)}
 .fys{flex:1;min-width:0}
-.fy-h{font-weight:700;font-size:16px;margin-bottom:10px}
+.fyname{margin:18px 32px 8px;font-size:16px;font-weight:700}
 .fy-c{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .fy-c span{display:block;font-size:12.5px;color:var(--sub);margin-bottom:2px}
 .fy-c b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -507,22 +507,6 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .card.wtile{padding:0;overflow:hidden}
 .dtile.wt+.dtile.wt{border-top:.5px solid var(--sep)}
 .dtile.pl>summary{font-size:15px}.dtile.pl .dl svg{width:15px;height:15px}.dtile.pl .body{padding-left:36px}
-.mg{display:grid;gap:12px;margin:0 16px 12px}
-.mg.g2{grid-template-columns:1fr 1fr}.mg.g3{grid-template-columns:repeat(3,1fr)}.mg.g1{grid-template-columns:1fr}
-.mt{position:relative;display:flex;flex-direction:column;gap:9px;min-width:0;padding:14px;border-radius:20px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;color:var(--text);transition:transform .15s ease}
-.mt{background:radial-gradient(130% 120% at 100% 0%,color-mix(in srgb,var(--c) 16%,transparent),transparent 64%),var(--card)}
-.mt:active{transform:scale(.97)}
-.mi{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:var(--fill);flex:none}
-.mi{background:color-mix(in srgb,var(--c) 20%,transparent)}
-.mn{font-size:13px;font-weight:600;color:var(--sub);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ma{font-size:19px;font-weight:700;letter-spacing:-.4px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:-3px}
-.ma.z{color:var(--sub);font-weight:600}
-.g3 .mt{padding:13px 6px;align-items:center;text-align:center;gap:7px;border-radius:18px}
-.g3 .mi{width:32px;height:32px;font-size:17px;border-radius:11px}
-.g3 .mn{font-size:12px;max-width:100%}.g3 .ma{font-size:14.5px;margin-top:-2px}
-.g1 .mt{flex-direction:row;align-items:center;gap:14px;padding:14px 16px}
-.g1 .mn{flex:1;font-size:16px;font-weight:600;color:var(--text)}.g1 .ma{font-size:17px;margin-top:0}
-.g1 .mt::after{content:"";width:8px;height:8px;border-top:2px solid var(--sep);border-right:2px solid var(--sep);transform:rotate(45deg);margin-left:2px;flex:none}
 /* asset card buttons */
 .btn.wdo{background:rgba(255,149,0,.16);color:#c25e00}
 .btn.edit{background:rgba(0,122,255,.13);color:#0a58ca}
@@ -998,18 +982,6 @@ function homeMenus(C, noIns) {                                    // the menu ti
     + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))
     + (noIns ? '' : solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : ''));
 }
-function homeGrid(C) {                                          // home menus: always shown, with their amounts
-  const v = ts => sum(ofTypes(ts), curVal);
-  const tile = (href, ico, c, name, val, shown) => `<a class="mt" href="${href}" style="--c:${c}"><span class="mi">${ico}</span><span class="mn">${esc(name)}</span><b class="ma${val > 0 ? '' : ' z'}">${val > 0 ? (shown || C(val)) : '—'}</b></a>`;
-  const inv = t => tile('#/list/' + t, T[t].ico, T[t].c, T[t].label, v([t]));
-  const row = (cls, html) => `<div class="mg ${cls}">${html.join('')}</div>`;
-  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
-  return row('g2', [inv('mf'), inv('fd')])
-    + row('g3', [inv('nps'), inv('epf'), inv('ppf')])
-    + row('g2', [inv('gratuity'), inv('sa')])
-    + row('g1', [tile('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover)])
-    + row('g2', [tile('#/property', '🏡', '#ff9f0a', 'Property', v(['house', 'land'])), tile('#/gold', '🪙', '#ffcc00', 'Gold', v(['gold']))]);
-}
 function netWorthPage() {
   const C = v => S.hide ? '••••' : fmtCr(v);
   const items = nwItems();
@@ -1070,7 +1042,7 @@ function home() {
   h += `<details class="dtile wt pl"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   h += '</div>';
 
-  h += homeGrid(C);
+  h += homeMenus(C);
   h += homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
@@ -2173,13 +2145,13 @@ function fyCats(o) {
   return rows.length ? rows.map(c => `<div class="li"><div><b>${esc(T[c.t].label)}</b></div><div class="r" style="align-items:flex-end">${mm(c.inv)}${c.wd > 0 ? `<small>Withdrawn ${mm(c.wd)}</small>` : ''}</div></div>`).join('')
     : `<div class="empty">No investments in this year.</div>`;
 }
-function fyCats2(o) {                                          // category-wise investment, and withdrawal where there is one
+function fyCats2(o) {                                          // category-wise investment and withdrawal (0 when none)
   const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
-  return rows.length ? rows.map(c => `<div class="li fyc"><b>${esc(T[c.t].label)}</b><div class="fyv${c.wd > 0 ? ' two' : ''}"><div><span>Investment</span><b>${mm(c.inv)}</b></div>${c.wd > 0 ? `<div><span>Withdrawal</span><b>${mm(c.wd)}</b></div>` : ''}</div></div>`).join('')
+  return rows.length ? rows.map(c => `<div class="li fyc"><b>${esc(T[c.t].label)}</b><div class="fyv two"><div><b>${mm(c.inv)}</b></div><div><b>${mm(c.wd)}</b></div></div></div>`).join('')
     : `<div class="empty">Nothing in this year.</div>`;
 }
 function invwdPage() {
-  const h = fyData().map(o => `<details class="acard"><summary><div class="fys"><div class="fy-h">FY ${esc(o.fy)}</div>
+  const h = fyData().map(o => `<div class="fyname">FY ${esc(o.fy)}</div><details class="acard"><summary><div class="fys">
     <div class="fy-c"><div><span>Investment</span><b>${mm(o.inv)}</b></div><div><span>Withdrawal</span><b>${mm(o.wd)}</b></div></div>
     <div class="fy-t"><span>Total investment for the year</span><b>${mm(o.inv - o.wd)}</b></div></div></summary><div class="body">${fyCats2(o)}</div></details>`).join('');
   return { title: 'Invest & Withdraw', back: '#/more', tab: 'more', html: h };
