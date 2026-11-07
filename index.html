@@ -45,7 +45,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* top bar: back / centred title / action, no tile behind it */
 .bar{position:-webkit-sticky;position:sticky;top:0;z-index:20;-webkit-transform:translateZ(0);transform:translateZ(0);display:flex;align-items:center;gap:12px;
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;margin-bottom:25px;background:var(--bg)}
-.bar::after{content:"";position:absolute;left:0;right:0;top:100%;height:25px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
 .bar .back{flex:none;width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .bar .back svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .bar .bt{position:absolute;left:0;right:0;top:calc(10px + env(safe-area-inset-top));height:36px;margin:0;padding:0 60px;text-align:center;font-weight:600;font-size:22px;line-height:36px;
@@ -1075,26 +1074,28 @@ function catBars(items) {                                  // one bar per invest
   });
   return xwrap(barChart([...mp.values()], 'By category'));
 }
-function mfCharts(items) {                                 // Mutual Fund page: bar per fund, then pie of fund groups (Arbitrage left out)
-  let h = barChart(items.map((a, i) => ({ n: ttl(a), v: curVal(a), c: PAL[i % PAL.length] })), 'By fund');
+function mfCharts(items) {                                 // Mutual Fund page: pie of 4 fund groups (Nifty 50, Nifty Next 50, Midcap 150, Small Cap), then bar per fund
+  const bar = barChart(items.map((a, i) => ({ n: ttl(a), v: curVal(a), c: PAL[i % PAL.length] })), 'By fund');
+  let h = '';
   const g = new Map();
+  const grp = t => { t = String(t || '').toLowerCase().replace(/\s+/g, ' '); return /next\s*50/.test(t) ? 'Nifty Next 50' : /nifty\s*50\b/.test(t) ? 'Nifty 50' : /mid\s*cap\s*150/.test(t) ? 'Midcap 150' : /small\s*cap/.test(t) ? 'Small Cap' : ''; };
   items.forEach(a => {
-    const n = String(a.data.fundGroup || '').trim() || 'Other';
-    if (/arbitrage/i.test(n)) return;
+    const n = grp(a.data.fundGroup);
+    if (!n) return;
     g.set(n, (g.get(n) || 0) + curVal(a));
   });
   const arr = [...g].map(([n, v]) => ({ n, v })).filter(x => x.v > 0).sort((x, y) => y.v - x.v), tot = sum(arr, x => x.v);
-  if (!tot) return xwrap(h);
+  if (!tot) return xwrap(bar);
   const R = 10.5, C = 2 * Math.PI * R; let cum = 0;
   const slices = arr.map((x, i) => {
     x.c = PAL[i % PAL.length];
     const len = x.v / tot * C, s = `<circle r="${R}" cx="21" cy="21" fill="none" stroke="${x.c}" stroke-width="21" stroke-dasharray="${Math.max(len - (arr.length > 1 ? .4 : 0), 0).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-cum).toFixed(2)}"/>`;
     cum += len; return s;
   }).join('');
-  h += `<div class="bch"><div class="bch-h">Fund group (excl. Arbitrage)</div><div class="pie">
+  h += `<div class="bch"><div class="bch-h">Fund group</div><div class="pie">
     <svg viewBox="0 0 42 42" role="img" aria-label="Fund group split"><g transform="rotate(-90 21 21)">${slices}</g></svg>
     <div class="pie-lg">${arr.map(x => `<div class="pie-r"><i style="background:${x.c}"></i><div class="pn">${esc(x.n)}</div><div class="pp2">${(x.v / tot * 100).toFixed(1)}%</div></div>`).join('')}</div></div></div>`;
-  return xwrap(h);
+  return xwrap(h + bar);
 }
 /* ---- Fund purposes (home pills + purpose page) ---- */
 function homePurposes() {
