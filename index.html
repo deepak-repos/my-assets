@@ -491,6 +491,18 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .row .calcv,.row .fx{flex:1;text-align:right;font-size:16px;font-weight:600}
 .row .calcv{color:var(--sub)}
 .pdh{padding:14px 16px 8px;display:flex;flex-direction:column;gap:2px;border-bottom:.5px solid var(--sep)}.pdh b{font-size:17px}.pdh small{color:var(--sub);font-size:14px}
+.acts .wdrow{flex:1 1 100%;display:flex;gap:10px}
+.acts .wdrow .btn{flex:1 1 0;width:auto}
+.btn.fillb{background:var(--fill);color:var(--blue)}
+.btn.fillb.wdc{color:var(--red)}
+.fys{flex:1;min-width:0}
+.fy-h{font-weight:700;font-size:16px;margin-bottom:10px}
+.fy-c{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fy-c span{display:block;font-size:12.5px;color:var(--sub);margin-bottom:2px}
+.fy-c b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.fy-c>div:last-child{text-align:right}
+.fy-t{margin-top:12px;padding-top:10px;border-top:.5px solid var(--sep);display:flex;justify-content:space-between;gap:10px;font-size:14px;font-weight:700}
+.fy-t span{font-weight:600;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -665,7 +677,7 @@ const persist = () => { store.set('assets', S.assets); store.set('history', S.hi
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
-const subOf = a => { if (a.type === 'fd' && !/^#\/list\/fd\/?$/.test(location.hash)) return 'Invested ' + money(invVal(a)); if (a.type === 'mf' || a.type === 'ppf' || a.type === 'epf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
+const subOf = a => { if (fdClosed(a)) return 'Withdrawn ' + fmtDate(wdOf(a)[0].date); if (a.type === 'fd' && !/^#\/list\/fd\/?$/.test(location.hash)) return 'Invested ' + money(invVal(a)); if (a.type === 'mf' || a.type === 'ppf' || a.type === 'epf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
 
 function fdValue(d, at) {
   // Quarterly compounding on the interest rate; simple interest on the part-quarter, like bank accrual.
@@ -684,7 +696,7 @@ function fdValue(d, at) {
   if (!mat || isNaN(e) || e <= s) return P;
   return P + (mat - P) * Math.min(1, Math.max(0, (now - s) / (e - s)));
 }
-const curVal = a => a.type === 'fd' ? fdValue(a.data) : num(a.data.current);
+const curVal = a => a.type === 'fd' ? (fdClosed(a) ? 0 : fdValue(a.data)) : num(a.data.current);
 const INV_TYPES = ['mf', 'epf', 'ppf', 'nps'];           // investments entered as dated splits
 const CONTRIB = {                                          // standing contribution field per type
   mf:  { k: 'monthlyAmt', lab: 'Monthly SIP' },
@@ -703,7 +715,23 @@ const pct = v => (v * 100).toFixed(1) + '%';
 const byDate = (x, y) => (x.date || '') < (y.date || '') ? -1 : (x.date || '') > (y.date || '') ? 1 : 0;
 
 /* Dated money-in list for an asset: [{date:'YYYY-MM-DD' or '', amt}] */
-function txOf(a) {
+/* Withdrawals: data.wd = [{id, date:'YYYY-MM-DD', inv, amt, th}]
+   th = tax-harvesting withdrawal (money is re-invested, so nothing about the holding changes).
+   Standard withdrawals remove `inv` of invested money, oldest investment first. */
+const wdOf = a => (Array.isArray(a.data.wd) ? a.data.wd : []).filter(Boolean);
+const fdClosed = a => a.type === 'fd' && wdOf(a).length > 0;
+const fyOf = iso => { const y = +String(iso).slice(0, 4), mo = +String(iso).slice(5, 7), st = mo >= 4 ? y : y - 1; return st + '-' + String(st + 1).slice(2); };
+function txOf(a) {                                          // investments still held (standard withdrawals taken from the oldest first)
+  const all = txAll(a);
+  if (a.type === 'fd') return fdClosed(a) ? [] : all;
+  if (!INV_TYPES.includes(a.type)) return all;
+  let left = wdOf(a).filter(w => !w.th).reduce((t, w) => t + num(w.inv), 0);
+  if (!(left > 0)) return all;
+  const s = all.map(z => ({ ...z })).sort(byDate);
+  for (const z of s) { if (left <= 0) break; const t = Math.min(z.amt, left); z.amt -= t; left -= t; }
+  return s.filter(z => z.amt > 0.005);
+}
+function txAll(a) {                                         // every investment ever made (used for the form and the financial-year totals)
   const d = a.data;
   if (INV_TYPES.includes(a.type)) {
     if (Array.isArray(d.tx)) return d.tx.map(z => ({ date: z.date || '', amt: num(z.amt) })).filter(z => z.amt > 0);
@@ -810,7 +838,7 @@ async function sync(quiet) {
     const r = await api('list');
     S.assets = r.assets || []; S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals;
     if (Array.isArray(r.expenses)) S.expenses = r.expenses; if (Array.isArray(r.harvest)) S.harvest = r.harvest; persist();
-    if (!/^#\/(form|update|expense\/|taxentry\/|calculator|documents)/.test(location.hash)) render();
+    if (!/^#\/(form|update|withdraw|expense\/|taxentry\/|calculator|documents)/.test(location.hash)) render();
     if (!quiet) toast('Synced');
   } catch (e) { toast(quiet ? 'Offline – showing saved data' : e.message); }
 }
@@ -987,6 +1015,8 @@ function home() {
   h += `<details class="dtile in prem"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
+  const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+  h += `<details class="dtile in prem"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   h += '</div>';
 
   h += homeMenus(C);
@@ -1086,9 +1116,13 @@ function card(a) {
     rows += kv('Total invested', money(invVal(a))) +
       `<div class="kv"><span>Investments (${list.length})</span><b></b></div><div class="txlist">${[...list].sort((p, q) => byDate(q, p)).map(z => kv(z.date ? fmtDate(z.date) : 'No date', money(z.amt))).join('')}</div>`;
   const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
+  const wds = INV_TYPES.includes(a.type) || a.type === 'fd' ? wdOf(a).slice().sort((p, q) => byDate(q, p)) : [];
+  const wdBlock = wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => `<button type="button" class="kv payrow" data-wddel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.th ? ' · Tax harvest' : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap a withdrawal to delete it.</div>` : '';
+  const wdBtns = UPD_ONE.includes(a.type) ? `<div class="wdrow"><a class="btn sm fillb wdc" href="#/withdraw/${a.id}">Withdraw</a><a class="btn sm fillb" href="#/update/${a.type}/${a.id}">Update</a></div>`
+    : (a.type === 'fd' && !fdClosed(a)) ? `<div class="wdrow"><a class="btn sm fillb wdc" href="#/withdraw/${a.id}">Withdraw</a></div>` : '';
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
     <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
-    <div class="body">${rows}${docs}<div class="acts">${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
+    <div class="body">${rows}${wdBlock}${docs}<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
     <a class="btn sm" href="#/form/${a.type}/${a.id}">Edit</a></div></div></details>`;
 }
 
@@ -1139,9 +1173,10 @@ function insuranceList(group) {
     right: `<a class="plus" href="#/add/insurance/${group}">+</a>`, html: h, tab: 'home' };
 }
 
-function updatePage(key) {
+function updatePage(key, only) {
   if (!UPDATABLE.includes(key)) return notFound();
-  const items = ofTypes(GROUPS[key]);
+  const items = ofTypes(GROUPS[key]).filter(a => !only || a.id === only);
+  if (only && !items.length) return notFound();
   const title = listTitle(key);
   const back = key === 'realestate' ? '#/realestate' : '#/list/' + key;
   const today = todayISO();
@@ -1158,7 +1193,7 @@ function updatePage(key) {
     return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
   }).join('');
   const h = `<form id="f">${blocks}<button class="savetile" type="submit">Save Current Value</button></form>`;
-  return { title: 'Update ' + title, back, html: h, notabs: true,
+  return { title: only ? 'Update ' + ttl(items[0]) : 'Update ' + title, back, html: h, notabs: true,
     after() {
       const f = $('#f');
       f.querySelectorAll('.group[data-id]').forEach(g => {            // SIP box ends where the "Invested so far" label ends
@@ -1187,7 +1222,7 @@ function updatePage(key) {
             if (sip !== num(a.data[c.k])) { data[c.k] = sip; dirty = true; if (a.type === 'mf' && sip > 0) data.freq = 'Monthly'; }
             if (add && sip > 0) {
               if (!date) return toast('Pick an investment date for ' + ttl(a));
-              const list = txOf(a).map(z => ({ ...z }));
+              const list = txAll(a).map(z => ({ ...z }));
               list.push({ date, amt: sip }); list.sort(byDate);
               data.tx = list; data.invested = list.reduce((tt, z) => tt + z.amt, 0); dirty = true;
             }
@@ -1297,7 +1332,7 @@ function formPage(type, id) {
   const existing = id ? S.assets.find(a => a.id === id) : null;
   if (id && !existing) return notFound();
   const d = existing ? existing.data : {};
-  const initTx = existing ? txOf(existing) : [];
+  const initTx = existing ? txAll(existing) : [];
   const initPd = existing ? pdatesOf(existing) : [];
   const selfHome = type === 'gold' ? '#/gold' : '#/property';
   let back = existing ? (t.cat === 'insurance' ? '#/insurance/' + t.group : t.cat === 'selfuse' ? selfHome : '#/list/' + type) : null;
@@ -1388,6 +1423,7 @@ const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
     item('#/documents', '📁', '#5856d6', 'Documents'),
     item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
+    item('#/invwd', '📅', '#5e5ce6', 'Investment vs Withdrawal'),
     item('#/tax', '％', '#30b0c7', 'Tax Harvesting'),
     item('#/calculator', '🧮', '#34c759', 'Calculator'),
     item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
@@ -1422,15 +1458,17 @@ function anPrep(a, snapsBy) {
   const created = anDay(new Date(a.created || a.updated || Date.now()).getTime());
   const fallback = snaps.length ? anDay(snaps[0].t) : anDay(Date.now());
   const base = isNaN(created) ? fallback : created;
-  const tx = txOf(a).map(z => { const t = z.date ? anIso(z.date) : NaN; return { t: isNaN(t) ? base : t, amt: z.amt }; });
+  const tx = txAll(a).map(z => { const t = z.date ? anIso(z.date) : NaN; return { t: isNaN(t) ? base : t, amt: z.amt }; });
+  const wds = wdOf(a).filter(w => !w.th && w.date && !isNaN(anIso(w.date))).map(w => ({ t: anIso(w.date), inv: num(w.inv) }));
+  const close = a.type === 'fd' && wds.length ? Math.min(...wds.map(w => w.t)) : null;
   const hasTx = tx.length > 0;
-  return { a, snaps, tx, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
+  return { a, snaps, tx, wds, close, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
 }
 function anVals(p, e) {                                    // [investment, current] of one asset at the end of a day
   if (e < p.start) return [0, 0];
-  const inv = p.hasTx ? p.tx.reduce((t, z) => t + (z.t <= e ? z.amt : 0), 0) : null;
+  const inv = p.hasTx ? p.tx.reduce((t, z) => t + (z.t <= e ? z.amt : 0), 0) - p.wds.reduce((t, w) => t + (w.t <= e ? w.inv : 0), 0) : null;
   let cur;
-  if (p.fd) cur = fdValue(p.a.data, new Date(Math.min(e, Date.now())));
+  if (p.fd) cur = p.close != null && e >= p.close ? 0 : fdValue(p.a.data, new Date(Math.min(e, Date.now())));
   else {
     let s = null; for (const x of p.snaps) { if (x.t <= e) s = x; else break; }
     if (s) { const sd = anDay(s.t); cur = s.cur + (p.hasTx ? p.tx.reduce((t, z) => t + (z.t > sd && z.t <= e ? z.amt : 0), 0) : 0); }
@@ -1450,7 +1488,7 @@ function anBuild(list, months) {
   from = Math.min(from, today);
   const ev = new Map(), days = new Set([from, today]);
   const mark = (t, upd) => { const d = anDay(t); if (d < from || d > today) return; ev.set(d, ev.get(d) || { upd: false }); if (upd) ev.get(d).upd = true; };
-  P.forEach(p => { p.tx.forEach(z => mark(z.t, false)); p.snaps.forEach(s => mark(s.t, true)); });
+  P.forEach(p => { p.wds.forEach(w => mark(w.t, true)); p.tx.forEach(z => mark(z.t, false)); p.snaps.forEach(s => mark(s.t, true)); });
   ev.forEach((o, d) => days.add(d));
   const pts = [...days].sort((x, y) => x - y).map(d => {
     let inv = 0, cur = 0; const e = anEnd(d);
@@ -1988,6 +2026,96 @@ function expenseForm(id) {
     } };
 }
 
+/* ---- Withdrawals ---- */
+const WD_TYPES = ['mf', 'epf', 'ppf', 'nps', 'fd'], UPD_ONE = ['mf', 'epf', 'ppf', 'nps'];
+function withdrawPage(id) {
+  const a = S.assets.find(x => x.id === id); if (!a || !WD_TYPES.includes(a.type)) return notFound();
+  const fd = a.type === 'fd', back = '#/list/' + a.type;
+  if (fdClosed(a)) return { title: 'Withdraw ' + ttl(a), back, notabs: true, html: `<div class="card"><div class="empty">This deposit has already been withdrawn.</div></div>` };
+  const inv = invVal(a), cur = curVal(a);
+  const h = `<form id="f" autocomplete="off">
+    <div class="group"><div class="row"><span class="l">Current Value</span><b class="v">${money(cur)}</b></div>
+      <div class="row"><span class="l">Invested Amount</span><b class="v">${money(inv)}</b></div></div>
+    <div class="group">
+      <div class="row"><span class="l">${fd ? 'Amount Received' : 'Withdrawal Amount'}</span><span class="pre">₹</span><input name="amt" type="number" inputmode="decimal" step="any" placeholder="0" required></div>
+      ${fd ? `<div class="row"><span class="l">Investment Amount</span><b class="v">${money(inv)}</b></div>`
+        : `<div class="row"><span class="l">Investment Amount</span><span class="pre">₹</span><input name="inv" type="number" inputmode="decimal" step="any" placeholder="0" required></div>`}
+      <div class="row"><span class="l">Date</span><input name="date" type="date" value="${todayISO()}" required></div>
+      ${a.type === 'mf' ? `<label class="row"><input class="chk" type="checkbox" name="th"><span class="l" style="max-width:none;flex:1">For Tax Harvesting</span></label>` : ''}</div>
+    <div class="gfoot" id="wdn" style="margin-top:-10px">${fd ? 'Enter the final amount you received (after any penalty if broken early).' : ''}</div>
+    <button class="btn" type="submit">Withdraw</button></form>`;
+  return { title: 'Withdraw ' + ttl(a), back, html: h, notabs: true,
+    after() {
+      const f = $('#f'), note = $('#wdn');
+      const upd = () => {
+        const amt = num(f.elements.amt.value), iv = fd ? inv : num(f.elements.inv.value), th = !!(f.elements.th && f.elements.th.checked);
+        if (!(amt > 0) || !(iv > 0)) return;
+        const g = amt - iv, fy = fyOf(f.elements.date.value || todayISO());
+        note.textContent = (g >= 0 ? 'Profit ' : 'Loss ') + money(Math.abs(g)) + ' will be added to Tax Harvesting for FY ' + fy + '. ' +
+          (th ? 'The money is re-invested, so your invested amount and XIRR stay the same.' : fd ? '' : 'Taken from your oldest investments first.');
+      };
+      f.addEventListener('input', upd); f.addEventListener('change', upd);
+      f.addEventListener('submit', async e => {
+        e.preventDefault();
+        const amt = num(f.elements.amt.value), iv = fd ? inv : num(f.elements.inv.value), date = f.elements.date.value, th = !!(f.elements.th && f.elements.th.checked);
+        if (!(amt > 0)) return toast('Enter the withdrawal amount');
+        if (!(iv > 0)) return toast('Enter the investment amount');
+        if (!date) return toast('Choose the date');
+        if (!fd && iv > inv + 0.5) return toast('Investment amount is more than what is invested (' + money(inv) + ')');
+        if (!fd && amt > cur + 0.5) return toast('Withdrawal amount is more than the current value (' + money(cur) + ')');
+        if (fd && !confirm('Mark this fixed deposit as withdrawn?')) return;
+        if (await run(async () => { await doWithdraw(a, { date, amt, inv: iv, th }); return true; })) { toast('Withdrawal saved'); location.hash = back; }
+      });
+    } };
+}
+async function doWithdraw(a, o) {
+  const rec = { id: uid(), date: o.date, inv: o.inv, amt: o.amt, th: !!o.th };
+  const data = { ...a.data, wd: [...wdOf(a), rec] };
+  if (!o.th && a.type !== 'fd') data.current = Math.max(num(a.data.current) - o.amt, 0);   // tax harvesting: money goes straight back in, value and investments unchanged
+  await saveAsset({ ...a, data });
+  const g = o.amt - o.inv;
+  if (Math.round(g * 100) !== 0)
+    await saveRec('harvest', 'taxsave', { id: uid(), fy: fyOf(o.date), amount: Math.round(Math.abs(g) * 100) / 100, pl: g < 0 ? 'L' : 'P',
+      note: (o.th ? 'Tax harvesting – ' : 'Withdrawal – ') + ttl(a), src: 'wd', wdId: rec.id, assetId: a.id });
+}
+document.addEventListener('click', async e => {                 // delete a withdrawal record (puts the money back for standard withdrawals)
+  const t = e.target.closest('[data-wddel]'); if (!t) return;
+  const [id, wid] = t.dataset.wddel.split('|'), a = S.assets.find(x => x.id === id), w = a && wdOf(a).find(z => z.id === wid); if (!w) return;
+  if (!confirm('Delete this withdrawal record? Its tax harvesting entry is removed too' + (!w.th && a.type !== 'fd' ? ' and the current value goes back up by ' + money(num(w.amt)) : '') + '.')) return;
+  const data = { ...a.data, wd: wdOf(a).filter(z => z.id !== wid) };
+  if (!w.th && a.type !== 'fd') data.current = num(a.data.current) + num(w.amt);
+  const ok = await run(async () => {
+    await saveAsset({ ...a, data });
+    const hv = S.harvest.find(x => x.wdId === wid); if (hv) await removeRec('harvest', 'taxdelete', hv.id);
+    return true;
+  });
+  if (ok) { toast('Withdrawal deleted'); render(); const d = document.querySelector(`[data-del="${id}"]`); if (d && d.closest('details')) d.closest('details').open = true; }
+});
+
+/* ---- Investment vs Withdrawal, per financial year (1 Apr – 31 Mar). Tax-harvesting withdrawals are left out of both sides. ---- */
+function fyData() {
+  const map = new Map();
+  const slot = fy => { let o = map.get(fy); if (!o) { o = { fy, inv: 0, wd: 0, cats: new Map() }; map.set(fy, o); } return o; };
+  const cat = (o, t) => { let c = o.cats.get(t); if (!c) { c = { t, inv: 0, wd: 0 }; o.cats.set(t, c); } return c; };
+  slot(fyOf(todayISO()));
+  invAssets().forEach(a => {
+    txAll(a).forEach(z => { if (!z.date) return; const o = slot(fyOf(z.date)); o.inv += z.amt; cat(o, a.type).inv += z.amt; });
+    wdOf(a).forEach(w => { if (w.th || !w.date) return; const o = slot(fyOf(w.date)), v = num(w.amt); o.wd += v; cat(o, a.type).wd += v; });
+  });
+  return [...map.values()].sort((x, y) => x.fy < y.fy ? 1 : -1);          // latest year first
+}
+function fyCats(o) {
+  const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
+  return rows.length ? rows.map(c => `<div class="li"><div><b>${esc(T[c.t].label)}</b></div><div class="r" style="align-items:flex-end">${mm(c.inv)}${c.wd > 0 ? `<small>Withdrawn ${mm(c.wd)}</small>` : ''}</div></div>`).join('')
+    : `<div class="empty">No investments in this year.</div>`;
+}
+function invwdPage() {
+  const h = fyData().map(o => `<details class="acard"><summary><div class="fys"><div class="fy-h">FY ${esc(o.fy)}</div>
+    <div class="fy-c"><div><span>Investment</span><b>${mm(o.inv)}</b></div><div><span>Withdrawal</span><b>${mm(o.wd)}</b></div></div>
+    <div class="fy-t"><span>Total investment for the year</span><b>${mm(o.inv - o.wd)}</b></div></div></summary><div class="body">${fyCats(o)}</div></details>`).join('');
+  return { title: 'Investment vs Withdrawal', back: '#/more', tab: 'more', html: h };
+}
+
 /* ---- More: Tax harvesting ---- */
 function taxPage() {
   const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
@@ -2139,7 +2267,9 @@ function view(p) {
     case 'purpose': return purposePage(b);
     case 'funds': return fundsPage('funds');
     case 'liquid': return fundsPage('liquid');
-    case 'update': return updatePage(b);
+    case 'update': return updatePage(b, c);
+    case 'withdraw': return withdrawPage(b);
+    case 'invwd': return invwdPage();
     case 'add': return addPage(b, c);
     case 'form': return formPage(b, c);
     case 'documents': return docsPage(b);
