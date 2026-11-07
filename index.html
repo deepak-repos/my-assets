@@ -725,11 +725,17 @@ function txOf(a) {                                          // investments still
   const all = txAll(a);
   if (a.type === 'fd') return fdClosed(a) ? [] : all;
   if (!INV_TYPES.includes(a.type)) return all;
-  let left = wdOf(a).filter(w => !w.th).reduce((t, w) => t + num(w.inv), 0);
-  if (!(left > 0)) return all;
-  const s = all.map(z => ({ ...z })).sort(byDate);
-  for (const z of s) { if (left <= 0) break; const t = Math.min(z.amt, left); z.amt -= t; left -= t; }
-  return s.filter(z => z.amt > 0.005);
+  const ws = wdOf(a).filter(w => !w.th || w.lot);
+  if (!ws.length) return all;
+  let s = all.map(z => ({ ...z }));
+  ws.map((w, i) => [w, i]).sort((x, y) => byDate(x[0], y[0]) || x[1] - y[1]).forEach(([w]) => {
+    let left = num(w.inv);
+    s.sort(byDate);
+    for (const z of s) { if (left <= 0) break; const t = Math.min(z.amt, left); z.amt -= t; left -= t; }
+    s = s.filter(z => z.amt > 0.005);
+    if (w.th && w.lot) s.push({ date: w.lot.date, amt: num(w.lot.amt) });     // tax harvest: re-invested money as one new dated investment
+  });
+  return s.sort(byDate);
 }
 function txAll(a) {                                         // every investment ever made (used for the form and the financial-year totals)
   const d = a.data;
@@ -1409,7 +1415,8 @@ function formPage(type, id) {
         }
         const ok = await run(async () => {
           const docsOut = existing ? [...(existing.docs || [])] : [];   // files attached earlier stay as they are
-          if (existing && Array.isArray(existing.data.paidPrem)) data.paidPrem = existing.data.paidPrem;   // payments recorded earlier are kept
+          if (existing && Array.isArray(existing.data.paidPrem)) data.paidPrem = existing.data.paidPrem;
+          if (existing && Array.isArray(existing.data.wd)) data.wd = existing.data.wd;   // withdrawals recorded earlier are kept   // payments recorded earlier are kept
           const asset = { id: existing ? existing.id : uid(), cat: t.cat, type, data, docs: docsOut, created: existing?.created };
           await saveAsset(asset); return true;
         });
@@ -1459,7 +1466,7 @@ function anPrep(a, snapsBy) {
   const fallback = snaps.length ? anDay(snaps[0].t) : anDay(Date.now());
   const base = isNaN(created) ? fallback : created;
   const tx = txAll(a).map(z => { const t = z.date ? anIso(z.date) : NaN; return { t: isNaN(t) ? base : t, amt: z.amt }; });
-  const wds = wdOf(a).filter(w => !w.th && w.date && !isNaN(anIso(w.date))).map(w => ({ t: anIso(w.date), inv: num(w.inv) }));
+  const wds = wdOf(a).filter(w => (!w.th || w.lot) && w.date && !isNaN(anIso(w.date))).map(w => ({ t: anIso(w.date), inv: w.th ? num(w.inv) - num(w.lot.amt) : num(w.inv) }));
   const close = a.type === 'fd' && wds.length ? Math.min(...wds.map(w => w.t)) : null;
   const hasTx = tx.length > 0;
   return { a, snaps, tx, wds, close, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
@@ -2052,7 +2059,7 @@ function withdrawPage(id) {
         if (!(amt > 0) || !(iv > 0)) return;
         const g = amt - iv, fy = fyOf(f.elements.date.value || todayISO());
         note.textContent = (g >= 0 ? 'Profit ' : 'Loss ') + money(Math.abs(g)) + ' will be added to Tax Harvesting for FY ' + fy + '. ' +
-          (th ? 'The money is re-invested, so your invested amount and XIRR stay the same.' : fd ? '' : 'Taken from your oldest investments first.');
+          (th ? (() => { const L = harvestLot(a, { date: f.elements.date.value || todayISO(), inv: iv }); return L ? 'Your oldest ' + money(iv) + ' is replaced by a new investment of ' + money(L.amt) + ' dated ' + fmtDate(L.date) + ', so the XIRR stays the same.' : 'XIRR needs 30+ days of history, so ' + money(amt) + ' is re-invested as is.'; })() : fd ? '' : 'Taken from your oldest investments first.');
       };
       f.addEventListener('input', upd); f.addEventListener('change', upd);
       f.addEventListener('submit', async e => {
@@ -2068,10 +2075,22 @@ function withdrawPage(id) {
       });
     } };
 }
+/* Tax harvest: the old money (oldest first) is replaced by ONE new investment dated on the harvest day.
+   Its amount is chosen so the fund's XIRR is exactly what it was: each old piece is grown at the current XIRR up to today
+   (C = sum of piece * (1+r)^years), then C is brought back to the harvest date at the same rate. */
+function harvestLot(a, o) {
+  const r = assetXirr(a), Y = 365 * 864e5, now = Date.now(), ld = d => new Date(d + 'T00:00:00').getTime();
+  if (r == null) return null;
+  let left = o.inv, C = 0;
+  for (const z of txOf(a).sort(byDate)) { if (left <= 0) break; const t = Math.min(z.amt, left); left -= t; C += t * Math.pow(1 + r, (now - ld(z.date)) / Y); }
+  if (left > 0.5) return null;
+  return { date: o.date, amt: Math.round(C / Math.pow(1 + r, Math.max(0, now - ld(o.date)) / Y) * 100) / 100 };
+}
 async function doWithdraw(a, o) {
   const rec = { id: uid(), date: o.date, inv: o.inv, amt: o.amt, th: !!o.th };
+  if (o.th) rec.lot = harvestLot(a, o) || { date: o.date, amt: o.amt };   // no XIRR yet (under 30 days): re-invest the withdrawn amount as is
   const data = { ...a.data, wd: [...wdOf(a), rec] };
-  if (!o.th && a.type !== 'fd') data.current = Math.max(num(a.data.current) - o.amt, 0);   // tax harvesting: money goes straight back in, value and investments unchanged
+  if (!o.th && a.type !== 'fd') data.current = Math.max(num(a.data.current) - o.amt, 0);   // tax harvesting: money goes straight back in, so the current value is unchanged
   await saveAsset({ ...a, data });
   const g = o.amt - o.inv;
   if (Math.round(g * 100) !== 0)
