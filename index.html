@@ -503,6 +503,37 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fy-c>div:last-child{text-align:right}
 .fy-t{margin-top:12px;padding-top:10px;border-top:.5px solid var(--sep);display:flex;justify-content:space-between;gap:10px;font-size:14px;font-weight:700}
 .fy-t span{font-weight:600;color:var(--sub)}
+/* home: white tile + menu grid */
+.card.wtile{padding:0;overflow:hidden}
+.dtile.wt+.dtile.wt{border-top:.5px solid var(--sep)}
+.dtile.pl>summary{font-size:15px}.dtile.pl .dl svg{width:15px;height:15px}.dtile.pl .body{padding-left:36px}
+.mg{display:grid;gap:12px;margin:0 16px 12px}
+.mg.g2{grid-template-columns:1fr 1fr}.mg.g3{grid-template-columns:repeat(3,1fr)}.mg.g1{grid-template-columns:1fr}
+.mt{position:relative;display:flex;flex-direction:column;gap:9px;min-width:0;padding:14px;border-radius:20px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;color:var(--text);transition:transform .15s ease}
+.mt{background:radial-gradient(130% 120% at 100% 0%,color-mix(in srgb,var(--c) 16%,transparent),transparent 64%),var(--card)}
+.mt:active{transform:scale(.97)}
+.mi{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:var(--fill);flex:none}
+.mi{background:color-mix(in srgb,var(--c) 20%,transparent)}
+.mn{font-size:13px;font-weight:600;color:var(--sub);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ma{font-size:19px;font-weight:700;letter-spacing:-.4px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:-3px}
+.ma.z{color:var(--sub);font-weight:600}
+.g3 .mt{padding:13px 6px;align-items:center;text-align:center;gap:7px;border-radius:18px}
+.g3 .mi{width:32px;height:32px;font-size:17px;border-radius:11px}
+.g3 .mn{font-size:12px;max-width:100%}.g3 .ma{font-size:14.5px;margin-top:-2px}
+.g1 .mt{flex-direction:row;align-items:center;gap:14px;padding:14px 16px}
+.g1 .mn{flex:1;font-size:16px;font-weight:600;color:var(--text)}.g1 .ma{font-size:17px;margin-top:0}
+.g1 .mt::after{content:"";width:8px;height:8px;border-top:2px solid var(--sep);border-right:2px solid var(--sep);transform:rotate(45deg);margin-left:2px;flex:none}
+/* asset card buttons */
+.btn.wdo{background:rgba(255,149,0,.16);color:#c25e00}
+.btn.edit{background:rgba(0,122,255,.13);color:#0a58ca}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .btn.wdo{background:rgba(255,159,10,.2);color:#ffb340}:root:not([data-theme=light]) .btn.edit{background:rgba(10,132,255,.22);color:#4da3ff}}
+:root[data-theme=dark] .btn.wdo{background:rgba(255,159,10,.2);color:#ffb340}:root[data-theme=dark] .btn.edit{background:rgba(10,132,255,.22);color:#4da3ff}
+/* invest & withdraw card body */
+.li.fyc{display:block}
+.fyc .fyv{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+.fyc .fyv span{display:block;font-size:12px;color:var(--sub)}
+.fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.fyc .fyv.two>div:last-child{text-align:right}
 </style>
 </head>
 <body>
@@ -967,6 +998,18 @@ function homeMenus(C, noIns) {                                    // the menu ti
     + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))
     + (noIns ? '' : solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : ''));
 }
+function homeGrid(C) {                                          // home menus: always shown, with their amounts
+  const v = ts => sum(ofTypes(ts), curVal);
+  const tile = (href, ico, c, name, val, shown) => `<a class="mt" href="${href}" style="--c:${c}"><span class="mi">${ico}</span><span class="mn">${esc(name)}</span><b class="ma${val > 0 ? '' : ' z'}">${val > 0 ? (shown || C(val)) : '—'}</b></a>`;
+  const inv = t => tile('#/list/' + t, T[t].ico, T[t].c, T[t].label, v([t]));
+  const row = (cls, html) => `<div class="mg ${cls}">${html.join('')}</div>`;
+  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
+  return row('g2', [inv('mf'), inv('fd')])
+    + row('g3', [inv('nps'), inv('epf'), inv('ppf')])
+    + row('g2', [inv('gratuity'), inv('sa')])
+    + row('g1', [tile('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover)])
+    + row('g2', [tile('#/property', '🏡', '#ff9f0a', 'Property', v(['house', 'land'])), tile('#/gold', '🪙', '#ffcc00', 'Gold', v(['gold']))]);
+}
 function netWorthPage() {
   const C = v => S.hide ? '••••' : fmtCr(v);
   const items = nwItems();
@@ -1016,16 +1059,18 @@ function home() {
     `<div class="li tap" data-prem="${esc(u.a.id)}|${isoOf(u.date)}" role="button"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
+  h += '</div>';
+  h += '<div class="card wtile">';
 
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
-  h += `<details class="dtile in prem"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
+  h += `<details class="dtile wt pl"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
   const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
-  h += `<details class="dtile in prem"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
+  h += `<details class="dtile wt pl"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   h += '</div>';
 
-  h += homeMenus(C);
+  h += homeGrid(C);
   h += homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
@@ -1124,12 +1169,12 @@ function card(a) {
   const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
   const wds = INV_TYPES.includes(a.type) || a.type === 'fd' ? wdOf(a).slice().sort((p, q) => byDate(q, p)) : [];
   const wdBlock = wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => `<button type="button" class="kv payrow" data-wddel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.th ? ' · Tax harvest' : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap a withdrawal to delete it.</div>` : '';
-  const wdBtns = UPD_ONE.includes(a.type) ? `<div class="wdrow"><a class="btn sm fillb wdc" href="#/withdraw/${a.id}">Withdraw</a><a class="btn sm fillb" href="#/update/${a.type}/${a.id}">Update</a></div>`
-    : (a.type === 'fd' && !fdClosed(a)) ? `<div class="wdrow"><a class="btn sm fillb wdc" href="#/withdraw/${a.id}">Withdraw</a></div>` : '';
+  const wdBtns = UPD_ONE.includes(a.type) ? `<div class="wdrow"><a class="btn sm wdo" href="#/withdraw/${a.id}">Withdraw</a><a class="btn sm" href="#/update/${a.type}/${a.id}">Update</a></div>`
+    : (a.type === 'fd' && !fdClosed(a)) ? `<div class="wdrow"><a class="btn sm wdo" href="#/withdraw/${a.id}">Withdraw</a></div>` : '';
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
     <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
     <div class="body">${rows}${wdBlock}${docs}<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
-    <a class="btn sm" href="#/form/${a.type}/${a.id}">Edit</a></div></div></details>`;
+    <a class="btn sm edit" href="#/form/${a.type}/${a.id}">Edit</a></div></div></details>`;
 }
 
 function fundsPage(kind) {
@@ -1430,7 +1475,7 @@ const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
     item('#/documents', '📁', '#5856d6', 'Documents'),
     item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
-    item('#/invwd', '📅', '#5e5ce6', 'Investment vs Withdrawal'),
+    item('#/invwd', '📅', '#5e5ce6', 'Investment & Withdrawal'),
     item('#/tax', '％', '#30b0c7', 'Tax Harvesting'),
     item('#/calculator', '🧮', '#34c759', 'Calculator'),
     item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
@@ -2128,11 +2173,16 @@ function fyCats(o) {
   return rows.length ? rows.map(c => `<div class="li"><div><b>${esc(T[c.t].label)}</b></div><div class="r" style="align-items:flex-end">${mm(c.inv)}${c.wd > 0 ? `<small>Withdrawn ${mm(c.wd)}</small>` : ''}</div></div>`).join('')
     : `<div class="empty">No investments in this year.</div>`;
 }
+function fyCats2(o) {                                          // category-wise investment, and withdrawal where there is one
+  const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
+  return rows.length ? rows.map(c => `<div class="li fyc"><b>${esc(T[c.t].label)}</b><div class="fyv${c.wd > 0 ? ' two' : ''}"><div><span>Investment</span><b>${mm(c.inv)}</b></div>${c.wd > 0 ? `<div><span>Withdrawal</span><b>${mm(c.wd)}</b></div>` : ''}</div></div>`).join('')
+    : `<div class="empty">Nothing in this year.</div>`;
+}
 function invwdPage() {
   const h = fyData().map(o => `<details class="acard"><summary><div class="fys"><div class="fy-h">FY ${esc(o.fy)}</div>
     <div class="fy-c"><div><span>Investment</span><b>${mm(o.inv)}</b></div><div><span>Withdrawal</span><b>${mm(o.wd)}</b></div></div>
-    <div class="fy-t"><span>Total investment for the year</span><b>${mm(o.inv - o.wd)}</b></div></div></summary><div class="body">${fyCats(o)}</div></details>`).join('');
-  return { title: 'Investment vs Withdrawal', back: '#/more', tab: 'more', html: h };
+    <div class="fy-t"><span>Total investment for the year</span><b>${mm(o.inv - o.wd)}</b></div></div></summary><div class="body">${fyCats2(o)}</div></details>`).join('');
+  return { title: 'Invest & Withdraw', back: '#/more', tab: 'more', html: h };
 }
 
 /* ---- More: Tax harvesting ---- */
