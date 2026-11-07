@@ -518,6 +518,11 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv span{display:block;font-size:12px;color:var(--sub)}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
+.fyl{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.fyl span{font-size:14.5px;font-weight:600}.fyl b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.li.fyb b{font-weight:600}
+.fyr{text-align:right;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.5}
+.dtile[data-go]>.body{cursor:pointer}
 </style>
 </head>
 <body>
@@ -1039,7 +1044,7 @@ function home() {
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
   const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
-  h += `<details class="dtile wt pl"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
+  h += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   h += '</div>';
 
   h += homeMenus(C);
@@ -1447,7 +1452,7 @@ const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
     item('#/documents', '📁', '#5856d6', 'Documents'),
     item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
-    item('#/invwd', '📅', '#5e5ce6', 'Investment & Withdrawal'),
+    item('#/invwd', '📅', '#5e5ce6', 'Invested & Withdrawn'),
     item('#/tax', '％', '#30b0c7', 'Tax Harvesting'),
     item('#/calculator', '🧮', '#34c759', 'Calculator'),
     item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
@@ -2145,16 +2150,14 @@ function fyCats(o) {
   return rows.length ? rows.map(c => `<div class="li"><div><b>${esc(T[c.t].label)}</b></div><div class="r" style="align-items:flex-end">${mm(c.inv)}${c.wd > 0 ? `<small>Withdrawn ${mm(c.wd)}</small>` : ''}</div></div>`).join('')
     : `<div class="empty">No investments in this year.</div>`;
 }
-function fyCats2(o) {                                          // category-wise investment and withdrawal (0 when none)
-  const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
-  return rows.length ? rows.map(c => `<div class="li fyc"><b>${esc(T[c.t].label)}</b><div class="fyv two"><div><b>${mm(c.inv)}</b></div><div><b>${mm(c.wd)}</b></div></div></div>`).join('')
-    : `<div class="empty">Nothing in this year.</div>`;
-}
 function invwdPage() {
-  const h = fyData().map(o => `<div class="fyname">FY ${esc(o.fy)}</div><details class="acard"><summary><div class="fys">
-    <div class="fy-c"><div><span>Investment</span><b>${mm(o.inv)}</b></div><div><span>Withdrawal</span><b>${mm(o.wd)}</b></div></div>
-    <div class="fy-t"><span>Total investment for the year</span><b>${mm(o.inv - o.wd)}</b></div></div></summary><div class="body">${fyCats2(o)}</div></details>`).join('');
-  return { title: 'Invest & Withdraw', back: '#/more', tab: 'more', html: h };
+  const h = fyData().map(o => {
+    const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
+    const brk = rows.length ? rows.map(c => `<div class="li fyb"><b>${esc(T[c.t].label)}</b><div class="fyr"><div>${mm(c.inv)} (I)</div><div>${mm(c.wd)} (W)</div></div></div>`).join('') : `<div class="empty">Nothing in this year.</div>`;
+    return `<details class="acard"><summary><div class="fyl"><span>Total investment for FY ${esc(o.fy)}</span><b>${mm(o.inv - o.wd)}</b></div></summary><div class="body">
+      <div class="kv"><span>Total investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>${brk}</div></details>`;
+  }).join('');
+  return { title: 'Invested & Withdrawn', back: '#/more', tab: 'more', html: h };
 }
 
 /* ---- More: Tax harvesting ---- */
@@ -2421,6 +2424,9 @@ document.addEventListener('click', e => {                       // goal cards: n
   on ? GEXP.add(id) : GEXP.delete(id);
 });
 
+document.addEventListener('click', e => {                       // expanded "Invested so far" tile → Invested & Withdrawn page
+  const b = e.target.closest('.dtile[data-go] > .body'); if (b) location.hash = b.parentElement.dataset.go;
+});
 function fold(d) {                                              // smooth open / close of an asset card (<details>)
   const body = d.querySelector('.body');
   if (!body || d._busy) return;
