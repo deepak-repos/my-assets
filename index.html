@@ -554,13 +554,14 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dtile[data-go]>.body{cursor:pointer}
 
 .gsec.fyh{margin:20px 32px 10px 32px}
-.gsec.fyh em{font-size:19px;font-weight:700;letter-spacing:0;text-transform:none}
+.gsec.fyh em{font-size:15px;font-weight:700;letter-spacing:0;text-transform:none}
 .calov{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;padding:16px;animation:calf .15s ease}
 @keyframes calf{from{opacity:0}to{opacity:1}}
-.cal{width:min(340px,100%);background:var(--card);color:var(--text);border-radius:22px;padding:14px 12px 10px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-.cal .ch{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+.cal{width:min(320px,100%);background:var(--card);color:var(--text);border-radius:22px;padding:14px 12px 10px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.cal .ch{display:flex;align-items:center;justify-content:center;gap:2px;margin-bottom:8px}
+.cal .bd{height:276px}
 .cal .ch button{border:0;background:var(--fill);color:var(--blue);width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1;display:grid;place-items:center;cursor:pointer}
-.cal .ch .ct{flex:1;width:auto;height:auto;border-radius:10px;background:none;color:var(--text);font-size:16px;font-weight:700;padding:6px 8px}
+.cal .ch .ct{flex:none;min-width:150px;width:auto;height:auto;border-radius:10px;background:none;color:var(--text);font-size:16px;font-weight:700;padding:6px 8px}
 .cal .wk,.cal .dg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
 .cal .wk span{font-size:12px;font-weight:600;color:var(--sub);padding:4px 0}
 .cal .dg button{border:0;background:none;color:var(--text);height:40px;border-radius:50%;font-size:15px;cursor:pointer;font-family:inherit}
@@ -571,6 +572,24 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .cal .dg.mg button,.cal .dg.yg button{border-radius:12px;height:46px}
 .cal .cf{display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:.5px solid var(--sep)}
 .cal .cf button{border:0;background:none;color:var(--blue);font-size:15px;font-weight:600;padding:8px 10px;cursor:pointer;font-family:inherit}
+
+#sheet .pane.big{height:75%;max-height:75%;display:flex;flex-direction:column;background:var(--bg);border-radius:22px 22px 0 0;padding:0 0 env(safe-area-inset-bottom)}
+#sheet .shh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 16px 10px 20px}
+#sheet .shl{display:flex;flex-direction:column;gap:2px;min-width:0}#sheet .shl b{font-size:20px}#sheet .shl small{color:var(--sub);font-size:14px}
+#sheet .xbtn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--fill);color:var(--sub);display:grid;place-items:center;border:0;cursor:pointer}
+#sheet .xbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
+#sheet .sbody{flex:1;overflow-y:auto;padding:6px 8px 16px}
+#sheet .sbody .group{margin:0 8px 12px}#sheet .sbody .btn.danger{margin:0 8px 8px}#sheet .pdbtns{margin:16px 8px 0}
+
+.adlg{position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:24px;animation:calf .15s ease}
+.adbox{width:min(300px,100%);background:var(--card);color:var(--text);border-radius:18px;padding:20px 18px 14px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.adbox h3{margin:0 0 6px;font-size:17px;font-weight:700}
+.adbox p{margin:0 0 14px;font-size:14px;line-height:1.4;color:var(--sub)}
+.adbox .adin{width:100%;box-sizing:border-box;margin:6px 0 14px;padding:11px 12px;border-radius:10px;border:0;background:var(--fill);color:var(--text);font-size:16px;text-align:left}
+.adbt{display:flex;gap:10px;margin-top:6px}
+.adbt button{flex:1;padding:12px;border-radius:12px;border:0;background:var(--fill);color:var(--blue);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+.adbt button[data-ad="1"]{background:var(--blue);color:#fff}.adbt button.dg{background:var(--red)!important;color:#fff!important}
+.dvbody pre.dvtext{align-self:flex-start;width:100%;box-sizing:border-box;margin:0;padding:14px 16px;white-space:pre-wrap;word-break:break-word;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--text);text-align:left}
 </style>
 </head>
 <body>
@@ -1090,15 +1109,15 @@ function home() {
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
   h += '</div>';
-  const stat = '<div class="hsec" style="margin-top:20px">Investment status</div><div class="card wtile">';
+  const stat = '<div class="hsec" style="margin-top:26px">Investment status</div><div class="card wtile">';
   let st = stat;
 
+  const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+  st += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
   st += `<details class="dtile wt pl"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
-  const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
-  st += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   st += '</div>';
 
   const sq = (href, ico, c, name, amt) => `<a class="sq" href="${href}"><span class="ico" style="background:${c}">${ico}</span><span class="sqt"><b>${esc(name)}</b><span>${amt}</span></span></a>`;
@@ -1521,8 +1540,8 @@ const morePage = () => ({ title: 'More', tab: 'more',
     item('#/tax', '％', '#30b0c7', 'Realized Returns'),
     item('#/historical', '🗄️', '#8e8e93', 'Historical Investment'),
     item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
-    item('#/documents', '📁', '#5856d6', 'Documents'),
     item('#/calculator', '🧮', '#34c759', 'Calculator'),
+    item('#/documents', '📁', '#5856d6', 'Documents'),
     item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
 /* ---- Analytics ----
    Line chart (with dots) of Investment amount vs Current amount, for all investments,
@@ -1860,7 +1879,7 @@ function goalForm(id) {
         if (e.target.closest('.srcadd')) { sources.push(blank()); draw(); box.lastElementChild?.previousElementSibling?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
         const del = e.target.closest('.srcdel');
         if (del) { sources.splice(+del.closest('.group').dataset.i, 1); draw(); return; }
-        if (e.target.closest('.goaldel') && confirm('Delete this goal?')) run(async () => { await removeGoal(existing.id); return true; }).then(ok => { if (ok) { toast('Goal deleted'); location.hash = '#/goals'; } });
+        if (e.target.closest('.goaldel')) askConfirm('Delete goal?', 'This goal and its progress tracking will be removed permanently.', 'Delete').then(y => y && run(async () => { await removeGoal(existing.id); return true; }).then(ok => { if (ok) { toast('Goal deleted'); location.hash = '#/goals'; } }));
       });
       form.addEventListener('submit', async e => {
         e.preventDefault();
@@ -1882,12 +1901,14 @@ const notFound = () => ({ title: 'Not found', back: '#/home', html: `<div class=
 function premDialog(id, o) {
   const a = S.assets.find(x => x.id === id); if (!a) return;
   const s = $('#sheet'); s.hidden = false;
-  s.innerHTML = `<div class="pane"><div class="group" id="pdlg" data-id="${esc(id)}" data-from="${o.edit ? 'edit' : o.fixed ? 'tile' : 'card'}" data-orig="${esc(o.orig || '')}">
-    <div class="pdh"><b>${esc(o.title)}</b><small>${esc(ttl(a))}</small></div>
+  s.innerHTML = `<div class="pane big"><div class="shh"><div class="shl"><b>${esc(o.title)}</b><small>${esc(ttl(a))}</small></div>
+    <button class="xbtn" type="button" onclick="closeSheet()" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="sbody"><div class="group" id="pdlg" data-id="${esc(id)}" data-from="${o.edit ? 'edit' : o.fixed ? 'tile' : 'card'}" data-orig="${esc(o.orig || '')}">
     <div class="row"><span class="l">Premium Date</span>${o.fixed ? `<span class="fx">${esc(fmtDate(o.date))}</span><input type="hidden" id="pdDate" value="${esc(o.date)}">` : `<input id="pdDate" type="date" value="${esc(o.date)}">`}</div>
     <div class="row"><span class="l">Premium Amount</span><span class="pre">₹</span><input id="pdAmt" type="number" inputmode="decimal" step="any" value="${esc(o.amt != null ? o.amt : (a.data.premium || ''))}" placeholder="0"></div></div>
     ${o.edit ? '<button class="btn danger" type="button" id="pdDel">Delete Payment</button>' : ''}
-    <div class="pdbtns"><button class="cancel" type="button" onclick="closeSheet()">Cancel</button><button class="btn" type="button" id="pdSave">Save</button></div></div>`;
+    <div class="pdbtns"><button class="btn" type="button" id="pdSave">Save</button></div></div></div>`;
+  openMark();
   const vv = window.visualViewport;                  // keep Cancel / Save above the on-screen keyboard
   if (vv) {
     const fit = () => {
@@ -1923,7 +1944,7 @@ document.addEventListener('click', async e => {
     return premDialog(id, { title: 'Edit Payment', date, amt: p.amt, edit: true, orig: date });
   }
   if (e.target.closest('#pdDel')) {
-    const box = $('#pdlg'); if (!confirm('Delete this payment record?')) return;
+    const box = $('#pdlg'); if (!(await askConfirm('Delete payment?', 'This premium payment will be removed from the policy’s paid list.', 'Delete'))) return;
     if (await updatePaid(box.dataset.id, box.dataset.orig, null)) { closeSheet(); toast('Payment deleted'); render(); reopenCard(box.dataset.id); }
     return;
   }
@@ -1956,7 +1977,8 @@ const DC = { cache: store.get('dcache', {}), cur: { key: 'root', id: '' }, blobs
 const dcSave = (k, v) => { delete DC.cache[k]; DC.cache[k] = v; const ks = Object.keys(DC.cache); if (ks.length > 40) ks.slice(0, ks.length - 40).forEach(x => delete DC.cache[x]); store.set('dcache', DC.cache); };
 const MAX_UP = 15 * 1024 * 1024;
 const isNative = m => String(m || '').indexOf('application/vnd.google-apps') === 0 && m !== 'application/vnd.google-apps.shortcut';
-const canView = m => m === 'application/pdf' || String(m || '').indexOf('image/') === 0 || isNative(m);
+const isText = (m, n) => /^text\//.test(m || '') || /(json|xml|javascript|x-sh|yaml|csv)/.test(m || '') || /\.(txt|md|csv|log|json|xml|ya?ml|ini|cfg|conf|js|css|html?)$/i.test(n || '');
+const canView = (m, n) => m === 'application/pdf' || String(m || '').indexOf('image/') === 0 || isNative(m) || isText(m, n);
 const dIcon = m => m === 'application/pdf' ? '📕' : /^image\//.test(m) ? '🖼️' : /sheet|excel|csv/.test(m) ? '📊' : /presentation|powerpoint/.test(m) ? '📽️' : /document|word|text\/plain/.test(m) ? '📝' : '📎';
 const fmtSize = n => !n ? '' : n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
 const docBack = (id, c) => { if (!id) return '#/more'; const par = c && c.path && c.path.length > 1 ? c.path[c.path.length - 2] : null; return par && !par.root ? '#/documents/' + par.id : '#/documents'; };
@@ -2037,16 +2059,22 @@ async function docView(f) {
   const v = document.createElement('div'); v.id = 'dview';
   const shell = body => { v.innerHTML = `<div class="dvbar"><button type="button" data-dvx>Close</button><b>${esc(f.name)}</b><button type="button" data-dvd>Download</button></div><div class="dvbody">${body}</div>`; };
   document.body.appendChild(v);
-  if (!canView(f.mime)) { shell(`<div class="dvnone"><div class="big">${dIcon(f.mime)}</div><p>This file type can't be previewed here.</p><a class="btn" href="${esc(f.url)}" target="_blank" rel="noopener">Open in Drive</a></div>`); return; }
+  if (!canView(f.mime, f.name)) { shell(`<div class="dvnone"><div class="big">${dIcon(f.mime)}</div><p>This file type can't be previewed here.</p><a class="btn" href="${esc(f.url)}" target="_blank" rel="noopener">Open in Drive</a></div>`); return; }
   shell('<div class="dvnone">Loading…</div>');
   const r = await docFetch(f); if (!r) { closeView(); return; }
   if (!$('#dview')) return;
   const u = URL.createObjectURL(r.blob); v.dataset.u = u; v.dataset.id = f.id;
+  if (r.blob.type.indexOf('image/') !== 0 && isText(f.mime, f.name) && r.blob.type !== 'application/pdf') {      // text files open right here
+    let txt = ''; try { txt = await r.blob.text(); } catch (x) {}
+    if (!$('#dview')) return;
+    if (txt.length > 400000) txt = txt.slice(0, 400000) + '\n\n… (shortened – download the file to read the rest)';
+    return shell(`<pre class="dvtext">${esc(txt) || 'This file is empty.'}</pre>`);
+  }
   shell(r.blob.type.indexOf('image/') === 0 ? `<img src="${u}" alt="${esc(f.name)}">` : `<iframe src="${u}" title="${esc(f.name)}"></iframe>`);
 }
 async function docDownload(f) { const r = await docFetch(f); if (r) { saveBlob(r.blob, r.name); toast('Downloaded'); } }
 async function docRename(it) {
-  const nn = (prompt('Rename ' + (it.kind === 'folder' ? 'folder' : 'file'), it.name) || '').trim();
+  const nn = ((await askPrompt('Rename ' + (it.kind === 'folder' ? 'folder' : 'file'), it.name, 'Rename', 'Name')) || '').trim();
   if (!nn || nn === it.name) return;
   if (await run(async () => { await api('drename', { id: it.id, name: nn }); return true; })) {
     const c = DC.cache[DC.cur.key]; if (c) { const x = (it.kind === 'folder' ? c.folders : c.files).find(y => y.id === it.id); if (x) x.name = nn; dcSave(DC.cur.key, c); docsPaint(DC.cur.key); }
@@ -2054,7 +2082,7 @@ async function docRename(it) {
   }
 }
 async function docNewFolder() {
-  const name = (prompt('New folder name') || '').trim(); if (!name) return;
+  const name = ((await askPrompt('New folder', '', 'Create', 'Folder name', 'Create a folder in the current location.')) || '').trim(); if (!name) return;
   const folder = DC.cur.id;
   if (await run(async () => { await api('dmkdir', { folder, name }); return true; })) { toast('Folder created'); docsLoad(folder); }
 }
@@ -2121,7 +2149,7 @@ function expenseForm(id) {
         if (note !== null) { toast(note || 'Saved'); location.hash = '#/expenses'; }
       });
       form.addEventListener('click', e => {
-        if (e.target.closest('.exdel') && confirm('Delete this expense?')) run(async () => { await removeRec('expenses', 'expdelete', ex.id); return true; }).then(ok => { if (ok) { toast('Deleted'); location.hash = '#/expenses'; } });
+        if (e.target.closest('.exdel')) askConfirm('Delete expense?', 'This expense will be removed from your monthly totals.', 'Delete').then(y => y && run(async () => { await removeRec('expenses', 'expdelete', ex.id); return true; }).then(ok => { if (ok) { toast('Deleted'); location.hash = '#/expenses'; } }));
       });
     } };
 }
@@ -2163,7 +2191,7 @@ function withdrawPage(id) {
         if (!date) return toast('Choose the date');
         if (!fd && iv > inv + 0.5) return toast('Investment amount is more than what is invested (' + money(inv) + ')');
         if (!fd && amt > cur + 0.5) return toast('Withdrawal amount is more than the current value (' + money(cur) + ')');
-        if (fd && !confirm('Mark this fixed deposit as withdrawn?')) return;
+        if (fd && !(await askConfirm('Mark as withdrawn?', 'This fixed deposit will be recorded as withdrawn and moved to Realized Returns.', 'Withdraw', false))) return;
         if (await run(async () => { await doWithdraw(a, { date, amt, inv: iv, th }); return true; })) { toast('Withdrawal saved'); location.hash = back; }
       });
     } };
@@ -2193,7 +2221,7 @@ async function doWithdraw(a, o) {
 document.addEventListener('click', async e => {                 // delete a withdrawal record (puts the money back for standard withdrawals)
   const t = e.target.closest('[data-wddel]'); if (!t) return;
   const [id, wid] = t.dataset.wddel.split('|'), a = S.assets.find(x => x.id === id), w = a && wdOf(a).find(z => z.id === wid); if (!w) return;
-  if (!confirm('Delete this withdrawal record? Its Realized Returns entry is removed too' + (!w.th && a.type !== 'fd' ? ' and the current value goes back up by ' + money(num(w.amt)) : '') + '.')) return;
+  if (!(await askConfirm('Delete withdrawal?', 'Its Realized Returns entry will be removed too' + (!w.th && a.type !== 'fd' ? ', and the current value goes back up by ' + money(num(w.amt)) : '') + '.', 'Delete'))) return;
   const data = { ...a.data, wd: wdOf(a).filter(z => z.id !== wid) };
   if (!w.th && a.type !== 'fd') data.current = num(a.data.current) + num(w.amt);
   const ok = await run(async () => {
@@ -2264,9 +2292,13 @@ function fyDetailPage(fy) {
 const hasN = v => v !== '' && v != null && !isNaN(Number(v));
 function taxPage() {
   const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
-  const short = n => String(n || '').replace(/^\s*Withdrawal\s*[–—-]\s*/i, 'W - ').replace(/^\s*Tax harvesting\s*[–—-]\s*/i, 'H - ');   // auto notes → W - <asset> / H - <asset>
-  const row = x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>${esc(short(x.note) || (x.date ? fmtDate(x.date) : 'Entry'))}</b>${x.note && x.date ? `<small>${esc(fmtDate(x.date))}</small>` : ''}</span>
-      <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`;
+  const parts = x => {                                           // auto notes "Withdrawal – <asset>" / "Tax harvesting – <asset>" → asset name + kind
+    const n = String(x.note || ''), m = /^\s*(Withdrawal|Tax harvesting)\s*[–—-]\s*(.*)$/i.exec(n), d = x.date ? fmtDate(x.date) : '';
+    if (m) return { t: m[2] || n, s: (/^w/i.test(m[1]) ? 'Withdrawn' : 'Harvested') + (d ? ' · ' + d : '') };
+    return { t: n || d || 'Entry', s: n ? d : '' };
+  };
+  const row = x => { const p = parts(x); return `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>${esc(p.t)}</b>${p.s ? `<small>${esc(p.s)}</small>` : ''}</span>
+      <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`; };
   const yrs = [...new Set(l.map(x => String(x.fy)))];
   const h = yrs.length ? yrs.map(fy => {
     const es = l.filter(x => String(x.fy) === fy), net = sum(es, x => x.pl === 'L' ? -num(x.amount) : num(x.amount));
@@ -2306,7 +2338,7 @@ function taxForm(id) {
         if (note !== null) { toast(note || 'Saved'); location.hash = '#/tax'; }
       });
       form.addEventListener('click', e => {
-        if (e.target.closest('.txdel') && confirm('Delete this entry?')) run(async () => { await removeRec('harvest', 'taxdelete', ex.id); return true; }).then(ok => { if (ok) { toast('Deleted'); location.hash = '#/tax'; } });
+        if (e.target.closest('.txdel')) askConfirm('Delete entry?', 'This Realized Returns entry will be removed permanently.', 'Delete').then(y => y && run(async () => { await removeRec('harvest', 'taxdelete', ex.id); return true; }).then(ok => { if (ok) { toast('Deleted'); location.hash = '#/tax'; } }));
       });
     } };
 }
@@ -2503,7 +2535,7 @@ document.addEventListener('click', async e => {
   if (t.dataset.pick) { store.set('theme', t.dataset.pick); applyTheme(); return render(); }
   if (t.dataset.del) {
     const da = S.assets.find(x => x.id === t.dataset.del);
-    if (!confirm(da && HIST_TYPES.includes(da.type) ? 'Delete this asset? It will move to Historical Investment and stay in your yearly totals and Realized Returns.' : 'Delete this asset? This cannot be undone.')) return;
+    if (!(await (da && HIST_TYPES.includes(da.type) ? askConfirm('Delete asset?', 'It will move to Historical Investment and stay in your yearly totals and Realized Returns.', 'Delete') : askConfirm('Delete asset?', 'This asset and its records will be removed. This cannot be undone.', 'Delete')))) return;
     if (await run(async () => { await removeAsset(t.dataset.del); return true; })) { toast('Deleted'); render(); }
     return;
   }
@@ -2522,7 +2554,13 @@ function openSheet() {
     <button class="cancel" type="button" onclick="closeSheet()">Cancel</button></div>`;
   s.querySelectorAll('a').forEach(a => a.addEventListener('click', closeSheet));
 }
-function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; }
+let sheetMark = false;                                          // a history entry is pushed while the bottom page is open, so Back closes it
+function openMark() { if (sheetMark) return; try { history.pushState({ nav: history.state && history.state.nav, sheet: 1 }, ''); sheetMark = true; } catch (x) {} }
+function closeSheet() {
+  const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; s.style.top = s.style.height = s.style.bottom = '';
+  if (sheetMark) { sheetMark = false; if (history.state && history.state.sheet) history.back(); }
+}
+window.addEventListener('popstate', () => { if (sheetMark && !(history.state && history.state.sheet)) { sheetMark = false; const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; s.style.top = s.style.height = s.style.bottom = ''; } });
 window.closeSheet = closeSheet;
 
 document.addEventListener('click', e => {                       // Details button: expand / collapse every goal card
@@ -2591,6 +2629,38 @@ document.addEventListener('click', e => {
 }, true);
 
 /* ---------------------------------------------------------------------
+   Custom pop-ups (replace the browser's confirm / prompt boxes)
+   --------------------------------------------------------------------- */
+let dlgOpen = null;
+function ask(o) {                                               // resolves true / false (confirm) or the typed text / null (input)
+  return new Promise(res => {
+    if (dlgOpen) dlgOpen(false);
+    const ov = document.createElement('div'); ov.className = 'adlg';
+    ov.innerHTML = `<div class="adbox" role="dialog" aria-modal="true"><h3>${esc(o.title || 'Are you sure?')}</h3>${o.msg ? `<p>${esc(o.msg)}</p>` : ''}
+      ${o.input ? `<input type="text" class="adin" value="${esc(o.value || '')}" placeholder="${esc(o.ph || '')}" autocomplete="off">` : ''}
+      <div class="adbt"><button type="button" data-ad="0">${esc(o.cancel || 'Cancel')}</button><button type="button" data-ad="1" class="${o.danger ? 'dg' : ''}">${esc(o.ok || 'OK')}</button></div></div>`;
+    document.body.appendChild(ov);
+    let marked = false, done = false;
+    try { history.pushState({ nav: history.state && history.state.nav, sheet: history.state && history.state.sheet, dlg: 1 }, ''); marked = true; } catch (x) {}
+    const inp = ov.querySelector('.adin');
+    const finish = v => {
+      if (done) return; done = true; dlgOpen = null; window.removeEventListener('popstate', onPop); document.removeEventListener('keydown', onKey, true);
+      ov.remove();
+      if (marked && history.state && history.state.dlg) history.back();
+      res(o.input ? (v ? inp.value.trim() : null) : !!v);
+    };
+    const onPop = () => { marked = false; finish(false); };
+    const onKey = e => { if (e.key === 'Escape') finish(false); else if (e.key === 'Enter' && o.input) { e.preventDefault(); finish(true); } };
+    window.addEventListener('popstate', onPop); document.addEventListener('keydown', onKey, true);
+    ov.addEventListener('click', e => { e.stopPropagation(); if (e.target === ov) return finish(false); const b = e.target.closest('[data-ad]'); if (b) finish(b.dataset.ad === '1'); });
+    dlgOpen = finish;
+    if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 60);
+  });
+}
+const askConfirm = (title, msg, ok, danger = true) => ask({ title, msg, ok, danger });
+const askPrompt = (title, value, ok, ph, msg) => ask({ title, msg, input: true, value, ok, ph });
+
+/* ---------------------------------------------------------------------
    Custom calendar: replaces the browser's date picker everywhere – tapping a day fills the field straight away
    --------------------------------------------------------------------- */
 function openCal(inp) {
@@ -2623,7 +2693,7 @@ function openCal(inp) {
       title = y0 + ' – ' + (y0 + 11);
       body = '<div class="dg yg">' + Array.from({ length: 12 }, (_, i) => y0 + i).map(y => `<button type="button" data-y="${y}" class="${sel && sel.y === y ? 's' : tdy.y === y ? 't' : ''}">${y}</button>`).join('') + '</div>';
     }
-    ov.innerHTML = `<div class="cal"><div class="ch"><button type="button" data-prev aria-label="Previous">‹</button><button type="button" class="ct" data-title>${title}</button><button type="button" data-next aria-label="Next">›</button></div>${body}
+    ov.innerHTML = `<div class="cal"><div class="ch"><button type="button" data-prev aria-label="Previous">‹</button><button type="button" class="ct" data-title>${title}</button><button type="button" data-next aria-label="Next">›</button></div><div class="bd">${body}</div>
       <div class="cf"><button type="button" data-today>Today</button>${inp.required ? '' : '<button type="button" data-clear>Clear</button>'}<button type="button" data-close>Close</button></div></div>`;
   };
   ov.addEventListener('click', e => {
