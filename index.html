@@ -552,6 +552,25 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .li.fyb>b,.li.fyb>.fytot{text-align:right}.li.fyb>b{font-size:15px;opacity:.65}.fytot i{font-style:normal}
 .row.delrow{width:100%;justify-content:center;border:0;border-top:.5px solid var(--sep);background:transparent;color:var(--red);font:inherit;font-size:16px;font-weight:600;cursor:pointer;-webkit-appearance:none}
 .dtile[data-go]>.body{cursor:pointer}
+
+.gsec.fyh{margin:20px 32px 10px 32px}
+.gsec.fyh em{font-size:19px;font-weight:700;letter-spacing:0;text-transform:none}
+.calov{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;padding:16px;animation:calf .15s ease}
+@keyframes calf{from{opacity:0}to{opacity:1}}
+.cal{width:min(340px,100%);background:var(--card);color:var(--text);border-radius:22px;padding:14px 12px 10px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.cal .ch{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+.cal .ch button{border:0;background:var(--fill);color:var(--blue);width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1;display:grid;place-items:center;cursor:pointer}
+.cal .ch .ct{flex:1;width:auto;height:auto;border-radius:10px;background:none;color:var(--text);font-size:16px;font-weight:700;padding:6px 8px}
+.cal .wk,.cal .dg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal .wk span{font-size:12px;font-weight:600;color:var(--sub);padding:4px 0}
+.cal .dg button{border:0;background:none;color:var(--text);height:40px;border-radius:50%;font-size:15px;cursor:pointer;font-family:inherit}
+.cal .dg button.t{box-shadow:inset 0 0 0 1.5px var(--blue);color:var(--blue)}
+.cal .dg button.s{background:var(--blue);color:#fff;font-weight:700;box-shadow:none}
+.cal .dg button:disabled{opacity:.25;cursor:default}
+.cal .dg.mg,.cal .dg.yg{grid-template-columns:repeat(3,1fr);gap:6px}
+.cal .dg.mg button,.cal .dg.yg button{border-radius:12px;height:46px}
+.cal .cf{display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:.5px solid var(--sep)}
+.cal .cf button{border:0;background:none;color:var(--blue);font-size:15px;font-weight:600;padding:8px 10px;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -2245,12 +2264,13 @@ function fyDetailPage(fy) {
 const hasN = v => v !== '' && v != null && !isNaN(Number(v));
 function taxPage() {
   const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
-  const row = x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>${esc(x.note || (x.date ? fmtDate(x.date) : 'Entry'))}</b>${x.note && x.date ? `<small>${esc(fmtDate(x.date))}</small>` : ''}</span>
+  const short = n => String(n || '').replace(/^\s*Withdrawal\s*[–—-]\s*/i, 'W - ').replace(/^\s*Tax harvesting\s*[–—-]\s*/i, 'H - ');   // auto notes → W - <asset> / H - <asset>
+  const row = x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>${esc(short(x.note) || (x.date ? fmtDate(x.date) : 'Entry'))}</b>${x.note && x.date ? `<small>${esc(fmtDate(x.date))}</small>` : ''}</span>
       <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`;
   const yrs = [...new Set(l.map(x => String(x.fy)))];
   const h = yrs.length ? yrs.map(fy => {
     const es = l.filter(x => String(x.fy) === fy), net = sum(es, x => x.pl === 'L' ? -num(x.amount) : num(x.amount));
-    return `<div class="gsec"><span>FY ${esc(fy)}</span><em class="${net < 0 ? 'neg' : 'pos'}">${net < 0 ? '−' : ''}${mm(Math.abs(net))}</em></div><div class="group">${es.map(row).join('')}</div>`;
+    return `<div class="gsec fyh"><span>FY ${esc(fy)}</span><em class="${net < 0 ? 'neg' : 'pos'}">${net < 0 ? '−' : ''}${mm(Math.abs(net))}</em></div><div class="group">${es.map(row).join('')}</div>`;
   }).join('') : `<div class="group"><div class="empty-s">No entries yet.</div></div>`;
   return { title: 'Realized Returns', back: '#/more', tab: 'more', right: `<a class="plus" href="#/taxentry/new" aria-label="Add entry">+</a>`, html: h };
 }
@@ -2262,8 +2282,8 @@ function taxForm(id) {
       <div class="row"><span class="l">Financial Year</span><input name="fy" value="${esc(x0.fy)}" placeholder="e.g. 2026-27" autocapitalize="off" required></div>
       <div class="row"><span class="l">Date of withdrawal</span><input name="date" type="date" value="${esc(x0.date || '')}"></div>
       <div class="row"><span class="l">Invested Amount</span><span class="pre">₹</span><input name="invested" type="number" inputmode="decimal" step="any" value="${esc(x0.invested ?? '')}" placeholder="0"></div>
-      <div class="row"><span class="l">Withdrawal Amount</span><span class="pre">₹</span><input name="withdrawn" type="number" inputmode="decimal" step="any" value="${esc(x0.withdrawn ?? '')}" placeholder="0"></div>
-      <div class="row"><span class="l">Amount</span><span class="pre">₹</span><input name="amount" type="number" inputmode="decimal" step="any" value="${esc(x0.amount)}" placeholder="0" required></div>
+      <div class="row"><span class="l">Withdrawn</span><span class="pre">₹</span><input name="withdrawn" type="number" inputmode="decimal" step="any" value="${esc(x0.withdrawn ?? '')}" placeholder="0"></div>
+      <div class="row"><span class="l">Profit/Loss</span><span class="pre">₹</span><input name="amount" type="number" inputmode="decimal" step="any" value="${esc(x0.amount)}" placeholder="0" required></div>
       <div class="row"><span class="l">Result</span><select name="pl"><option value="P" ${x0.pl !== 'L' ? 'selected' : ''}>Profit</option><option value="L" ${x0.pl === 'L' ? 'selected' : ''}>Loss</option></select></div>
       <div class="row col"><span class="l">Notes</span><textarea name="note" rows="2">${esc(x0.note)}</textarea></div>${ex ? '<button type="button" class="row delrow txdel">Delete Entry</button>' : ''}</div>
     <button class="btn" type="submit">Save Entry</button></form>`;
@@ -2570,18 +2590,115 @@ document.addEventListener('click', e => {
   if (e.target.closest('a,button,summary,.item,.chip,.dpick,input[type=checkbox],[data-act],[data-del],[data-pick],[data-n]')) haptic();
 }, true);
 
-let prevHash = '', curHash = location.hash;
-const navStack = [{ hash: location.hash, y: 0 }];                // remembers where each page was scrolled to
+/* ---------------------------------------------------------------------
+   Custom calendar: replaces the browser's date picker everywhere – tapping a day fills the field straight away
+   --------------------------------------------------------------------- */
+function openCal(inp) {
+  if (document.querySelector('.calov')) return;
+  const pad = n => String(n).padStart(2, '0'), iso = (y, m, d) => y + '-' + pad(m + 1) + '-' + pad(d);
+  const parse = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null; };
+  const now = new Date(), tdy = { y: now.getFullYear(), m: now.getMonth(), d: now.getDate() }, sel = parse(inp.value), cur = sel || tdy;
+  const MN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  let vy = cur.y, vm = cur.m, mode = 'days', y0 = vy - (vy % 12);
+  const min = inp.min || '', max = inp.max || '';
+  const ov = document.createElement('div'); ov.className = 'calov'; document.body.appendChild(ov);
+  const close = () => ov.remove();
+  const pick = v => { inp.value = v; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); close(); };
+  const draw = () => {
+    let title, body;
+    if (mode === 'days') {
+      title = MN[vm] + ' ' + vy;
+      const first = new Date(vy, vm, 1).getDay(), dim = new Date(vy, vm + 1, 0).getDate();
+      let g = '';
+      for (let i = 0; i < first; i++) g += '<span></span>';
+      for (let d = 1; d <= dim; d++) {
+        const v = iso(vy, vm, d), off = (min && v < min) || (max && v > max);
+        g += `<button type="button" data-d="${d}" class="${sel && sel.y === vy && sel.m === vm && sel.d === d ? 's' : tdy.y === vy && tdy.m === vm && tdy.d === d ? 't' : ''}"${off ? ' disabled' : ''}>${d}</button>`;
+      }
+      body = '<div class="wk">' + ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(x => `<span>${x}</span>`).join('') + '</div><div class="dg">' + g + '</div>';
+    } else if (mode === 'months') {
+      title = String(vy);
+      body = '<div class="dg mg">' + MN.map((n, i) => `<button type="button" data-m="${i}" class="${sel && sel.y === vy && sel.m === i ? 's' : tdy.y === vy && tdy.m === i ? 't' : ''}">${n.slice(0, 3)}</button>`).join('') + '</div>';
+    } else {
+      title = y0 + ' – ' + (y0 + 11);
+      body = '<div class="dg yg">' + Array.from({ length: 12 }, (_, i) => y0 + i).map(y => `<button type="button" data-y="${y}" class="${sel && sel.y === y ? 's' : tdy.y === y ? 't' : ''}">${y}</button>`).join('') + '</div>';
+    }
+    ov.innerHTML = `<div class="cal"><div class="ch"><button type="button" data-prev aria-label="Previous">‹</button><button type="button" class="ct" data-title>${title}</button><button type="button" data-next aria-label="Next">›</button></div>${body}
+      <div class="cf"><button type="button" data-today>Today</button>${inp.required ? '' : '<button type="button" data-clear>Clear</button>'}<button type="button" data-close>Close</button></div></div>`;
+  };
+  ov.addEventListener('click', e => {
+    e.stopPropagation();
+    if (e.target === ov || e.target.closest('[data-close]')) return close();
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.d) return pick(iso(vy, vm, +b.dataset.d));
+    if (b.dataset.m !== undefined) { vm = +b.dataset.m; mode = 'days'; return draw(); }
+    if (b.dataset.y) { vy = +b.dataset.y; mode = 'months'; return draw(); }
+    if ('today' in b.dataset) return pick(iso(tdy.y, tdy.m, tdy.d));
+    if ('clear' in b.dataset) return pick('');
+    if ('title' in b.dataset) { if (mode === 'days') mode = 'months'; else if (mode === 'months') { mode = 'years'; y0 = vy - (vy % 12); } else mode = 'days'; return draw(); }
+    const dir = 'next' in b.dataset ? 1 : -1;
+    if (mode === 'days') { vm += dir; if (vm < 0) { vm = 11; vy--; } else if (vm > 11) { vm = 0; vy++; } }
+    else if (mode === 'months') vy += dir; else y0 += dir * 12;
+    draw();
+  }, true);
+  draw();
+}
+(() => {
+  let tStart = null, lastTouch = 0;
+  const isDate = t => t && t.matches && t.matches('input[type=date]');
+  const open = (e, t) => { e.preventDefault(); e.stopPropagation(); try { t.blur(); } catch (x) {} openCal(t); };
+  document.addEventListener('touchstart', e => { tStart = e.touches[0] ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true, capture: true });
+  document.addEventListener('touchend', e => {
+    const t = e.target; if (!isDate(t)) return;
+    const c = e.changedTouches[0];
+    if (tStart && c && Math.hypot(c.clientX - tStart.x, c.clientY - tStart.y) > 8) return;      // it was a scroll, not a tap
+    lastTouch = Date.now(); open(e, t);
+  }, { passive: false, capture: true });
+  ['pointerdown', 'mousedown'].forEach(ev => document.addEventListener(ev, e => { if (isDate(e.target)) e.preventDefault(); }, true));
+  document.addEventListener('click', e => { if (isDate(e.target)) { if (Date.now() - lastTouch < 700) return e.preventDefault(); open(e, e.target); } }, true);
+  document.addEventListener('keydown', e => { if (isDate(e.target) && (e.key === 'Enter' || e.key === ' ')) open(e, e.target); }, true);
+})();
+
+/* ---------------------------------------------------------------------
+   Back behaviour: first fold any open card, then go to the page you actually came from
+   --------------------------------------------------------------------- */
+function collapseOpen() {
+  let any = false;
+  document.querySelectorAll('#app details[open]').forEach(d => { any = true; fold(d); });
+  document.querySelectorAll('#app .goal.open').forEach(c => { any = true; c.classList.remove('open'); GEXP.delete(c.dataset.gid); });
+  document.querySelectorAll('#app [data-gdet].on').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#app .summary.open').forEach(s => { any = true; s.click(); });
+  return any;
+}
+document.addEventListener('click', e => {                        // the on-screen Back arrow
+  const b = e.target.closest('.bar .back'); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  if (collapseOpen()) return;
+  if (navStack.length > 1) history.back(); else location.hash = b.getAttribute('href');
+}, true);
+
+let prevHash = '', curHash = location.hash, skipHash = false;
+const navStack = [{ hash: location.hash, y: 0 }];                // the pages visited in this trail; each one is one browser history entry
+try { history.replaceState({ nav: 0 }, ''); } catch (x) {}
 window.addEventListener('hashchange', () => {
-  const h = location.hash, top = navStack[navStack.length - 1], before = navStack[navStack.length - 2];
-  top.y = $('#app').scrollTop;
-  let y = 0;
-  if (before && before.hash === h) { navStack.pop(); y = before.y; }   // going back → restore position
-  else { navStack.push({ hash: h, y: 0 }); if (navStack.length > 60) navStack.shift(); }
+  if (skipHash) { skipHash = false; return; }
+  const h = location.hash, st = history.state, si = st && typeof st.nav === 'number' ? st.nav : -1;
+  const top = navStack[navStack.length - 1]; top.y = $('#app').scrollTop;
+  let y = 0, unwind = 0;
+  if (si >= 0 && si < navStack.length - 1 && navStack[si].hash === h) {            // Back (arrow, swipe or phone button)
+    if (collapseOpen()) { skipHash = true; history.go(navStack.length - 1 - si); return; }   // an open card folds first; stay on this page
+    navStack.length = si + 1; y = navStack[si].y;
+  } else {
+    let i = -1; for (let k = navStack.length - 1; k >= 0; k--) if (navStack[k].hash === h) { i = k; break; }
+    if (i >= 0) {                                                  // tapped a link to a page already in the trail (e.g. Save → list): drop the pages in between
+      y = navStack[i].y; unwind = i - navStack.length; navStack.length = i + 1;
+    } else { navStack.push({ hash: h, y: 0 }); try { history.replaceState({ nav: navStack.length - 1 }, ''); } catch (x) {} }
+  }
   if (/^#\/(analytics|goals)\/?$/.test(h)) {                      // entering Analytics / Goals always starts fresh
     Object.assign(AN, { cat: 'all', ast: 'all', rng: 'all', lim: 40 }); GEXP.clear(); y = 0; navStack[navStack.length - 1].y = 0;
   }
   prevHash = curHash; curHash = h; closeSheet(); render(y);
+  if (unwind < 0) history.go(unwind);                             // keep the browser's own Back in step with the trail
 });
 applyTheme();
 showLock();
