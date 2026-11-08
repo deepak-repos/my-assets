@@ -262,6 +262,8 @@ button.btn{width:calc(100% - 32px)}
 #tabbar svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #tabbar .on{color:var(--blue)}
 #tabbar.off{display:none}
+#tabbar{transition:transform .28s cubic-bezier(.4,0,.2,1),margin-bottom .28s cubic-bezier(.4,0,.2,1)}
+#tabbar.hide{transform:translateY(100%);margin-bottom:calc(var(--tbh,64px) * -1)}
 
 /* sheet */
 #sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
@@ -2492,6 +2494,7 @@ function render(goTo) {
   document.querySelectorAll('#tabbar [data-tab]').forEach(el => el.classList.toggle('on', el.dataset.tab === v.tab));
   $('#tabbar').classList.toggle('off', !!v.notabs);
   $('#app').scrollTop = y;
+  tabShow(y);
   v.after && v.after();
 }
 
@@ -2758,6 +2761,21 @@ document.addEventListener('click', e => {                        // the on-scree
   if (collapseOpen()) return;
   if (navStack.length > 1) history.back(); else location.hash = b.getAttribute('href');
 }, true);
+
+/* Bottom menu: hides while you scroll down the page, comes back as soon as you scroll up */
+let tabLast = 0;
+function tabShow(y) { tabLast = y || 0; const tb = $('#tabbar'); if (tb) tb.classList.remove('hide'); }
+$('#app').addEventListener('scroll', () => {
+  const app = $('#app'), tb = $('#tabbar'), y = Math.max(app.scrollTop, 0), d = y - tabLast;
+  if (!tb || tb.classList.contains('off')) { tabLast = y; return; }
+  if (y <= 8) { tb.classList.remove('hide'); tabLast = y; return; }
+  if (Math.abs(d) < 8) return;                                   // ignore tiny movements
+  if (d > 0) {
+    const room = app.scrollHeight - app.clientHeight;
+    if (!tb.classList.contains('hide') && room > tb.offsetHeight + 80) { tb.style.setProperty('--tbh', tb.offsetHeight + 'px'); tb.classList.add('hide'); }
+  } else tb.classList.remove('hide');
+  tabLast = y;
+}, { passive: true });
 
 let prevHash = '', curHash = location.hash, skipHash = false;
 const navStack = [{ hash: location.hash, y: 0 }];                // the pages visited in this trail; each one is one browser history entry
