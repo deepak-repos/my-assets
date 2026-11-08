@@ -1024,14 +1024,24 @@ function nextOccurrence(iso, from) {                  // next yearly occurrence 
   if (dt < from) dt = at(from.getFullYear() + 1);
   return dt;
 }
-function upcomingPremiums(days = 90) {                // personal policies only, due within `days`
-  const now = new Date(), from = new Date(now.getFullYear(), now.getMonth(), now.getDate()), out = [];
+function prevOccurrence(iso, from) {                 // the most recent yearly occurrence of a date before `from`
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!m || !d) return null;
+  const at = yr => new Date(yr, m - 1, Math.min(d, new Date(yr, m, 0).getDate()));
+  let dt = at(from.getFullYear());
+  if (dt >= from) dt = at(from.getFullYear() - 1);
+  return dt;
+}
+function upcomingPremiums(days = 90) {                // personal policies: due within `days`, plus every earlier one not yet marked completed (overdue)
+  const now = new Date(), from = new Date(now.getFullYear(), now.getMonth(), now.getDate()), out = [], dayDiff = dt => Math.round((dt - from) / 864e5);
   ofTypes(ORDER.personal).forEach(a => {
-    let best = null;
-    pdatesOf(a).forEach(iso => { const dt = nextOccurrence(iso, from); if (dt && !isPaidFor(a, dt) && (!best || dt < best)) best = dt; });
-    if (!best) return;
-    const diff = Math.round((best - from) / 864e5);
-    if (diff <= days) out.push({ a, diff, date: best, amt: num(a.data.premium) });
+    let best = null; const seen = new Set();
+    pdatesOf(a).forEach(iso => {
+      const pv = prevOccurrence(iso, from);                                   // missed → stays until marked completed, however old
+      if (pv && !isPaidFor(a, pv) && !seen.has(+pv)) { seen.add(+pv); out.push({ a, diff: dayDiff(pv), date: pv, amt: num(a.data.premium) }); }
+      const dt = nextOccurrence(iso, from); if (dt && !isPaidFor(a, dt) && (!best || dt < best)) best = dt;
+    });
+    if (best && dayDiff(best) <= days) out.push({ a, diff: dayDiff(best), date: best, amt: num(a.data.premium) });
   });
   return out.sort((x, y) => x.diff - y.diff);
 }
@@ -1104,10 +1114,10 @@ function home() {
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
-  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' bglow' : ''}">${icoBell}Premiums Due (in 90 days)</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
+  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' bglow' : ''}">${icoBell}Premiums Due</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
     `<div class="li tap" data-prem="${esc(u.a.id)}|${isoOf(u.date)}" role="button"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
-     <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
-    : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
+     <div class="r">${u.amt ? money(u.amt) : '—'}<small${u.diff < 0 ? ' class="neg"' : ''}>${u.diff < 0 ? 'Overdue by ' + (-u.diff) + (u.diff === -1 ? ' day' : ' days') : u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
+    : `<div class="empty">No premiums due in the next 90 days and none overdue.</div>`) + `</div></details>`;
   h += '</div>';
   const stat = '<div class="hsec" style="margin-top:26px">Investment status</div><div class="card wtile">';
   let st = stat;
@@ -1181,7 +1191,10 @@ function homePurposes() {
 function purposePage(raw) {
   let name = ''; try { name = decodeURIComponent(raw || ''); } catch (e) {}
   const key = name.trim().toLowerCase();
-  const items = invAssets().map(a => { const s = purposeShares(a).find(x => x.n.toLowerCase() === key); return s ? { a, v: curVal(a) * s.pct / 100 } : null; }).filter(Boolean);
+  let items = invAssets().map(a => { const s = purposeShares(a).find(x => x.n.toLowerCase() === key); return s ? { a, v: curVal(a) * s.pct / 100 } : null; }).filter(Boolean);
+  const fdName = z => String(z.a.data.owner || z.a.data.bank || '').trim();
+  items = [...items.filter(z => z.a.type !== 'fd').sort((p, q) => q.v - p.v),                       // biggest amount first
+    ...items.filter(z => z.a.type === 'fd').sort((p, q) => fdName(p).localeCompare(fdName(q), undefined, { sensitivity: 'base' }) || q.v - p.v)];   // fixed deposits: by name, then amount
   const disp = purposeList().find(p => p.toLowerCase() === key) || name || 'Purpose';
   const h = items.length
     ? `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(sum(items, z => z.v))}</b></div></div>` + items.map(z => {
@@ -1249,7 +1262,7 @@ function fundsPage(kind) {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + fundCats(types);
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + fundCats([...types.filter(t => t !== 'sa'), ...types.filter(t => t === 'sa')]);   // Savings Account always last
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
 }
