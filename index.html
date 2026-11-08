@@ -2212,7 +2212,8 @@ function fyDetailPage(fy) {
   const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
   const tiles = rows.map(c => {
     const n = Math.round(c.inv - c.wd);
-    const ins = c.items.filter(z => z.k === 'I').sort((p, q) => byDate(q, p)), wds = c.items.filter(z => z.k === 'W').sort((p, q) => byDate(q, p));
+    const cmp = (p, q) => ttl(p.a).localeCompare(ttl(q.a), undefined, { sensitivity: 'base' }) || byDate(q, p) || q.amt - p.amt;   // asset name, then latest date first, then bigger amount first
+    const ins = c.items.filter(z => z.k === 'I').sort(cmp), wds = c.items.filter(z => z.k === 'W').sort(cmp);
     const row = (z, first) => `<div class="li fyi${first && ins.length ? ' fysep' : ''}"><div class="fyx"><div class="fya"><b>${esc(ttl(z.a))}${isClosed(z.a) ? ' (closed)' : ''}</b><span>${z.k === 'I' ? 'Invested' : 'Withdrawn'}</span></div><div class="fyb2"><span>${z.date ? esc(fmtDate(z.date)) : 'No date'}</span><b>${mm(z.amt)}</b></div></div></div>`;
     const items = ins.map(z => row(z, false)).join('') + wds.map((z, k) => row(z, k === 0)).join('');
     return `<details class="acard"><summary class="fcs"><div class="fcd"><div class="fr1"><b>${esc(T[c.t].label)}</b><b>${sgn(n)}${mm(Math.abs(n))}</b></div>
