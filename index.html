@@ -518,12 +518,16 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
 .brown{display:inline-block;filter:sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(.62) contrast(1.1)}
+.sqb{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:24px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
+.sqb:active{transform:scale(.97)}
+.sqb .ico{width:64px;height:64px;border-radius:18px;font-size:32px}
+.sqb b{font-size:17px;font-weight:600}
 .sqg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 16px}
 .sq{display:flex;align-items:center;gap:10px;min-height:92px;padding:14px 12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
 .sq:active{transform:scale(.97)}
 .sq .sqt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:3px}
 .sq .sqt b{font-size:14px;font-weight:600;white-space:nowrap}
-.sq .sqt span{opacity:.7;font-size:16px;font-weight:560;letter-spacing:-.3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sq .sqt span{color:var(--sub);font-size:15px;font-weight:400;white-space:nowrap}
 .item .v small.xirr.up{color:var(--green)}.item .v small.xirr.dn{color:var(--red)}
 .acard.fylink{display:flex;align-items:center;gap:14px;padding:27px 18px;color:inherit;text-decoration:none;position:relative}
 .acard.fylink .fyl b{position:absolute;left:max(calc(50% + 26px),172px);top:50%;transform:translateY(-50%);text-align:left}
@@ -1067,7 +1071,7 @@ function home() {
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
   h += '</div>';
-  const stat = '<div class="hsec">Investment Status</div><div class="card wtile">';
+  const stat = '<div class="hsec">Investment status</div><div class="card wtile">';
   let st = stat;
 
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
@@ -1080,7 +1084,7 @@ function home() {
 
   const sq = (href, ico, c, name, amt) => `<a class="sq" href="${href}"><span class="ico" style="background:${c}">${ico}</span><span class="sqt"><b>${esc(name)}</b><span>${amt}</span></span></a>`;
   h += `<div class="sqg">${sq('#/funds', '<span class="brown">' + T.fd.ico + '</span>', T.sa.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ffcc00', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
-  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
+  const pCover = sum(ofTypes(['term', 'pmed']), a => num(a.data.cover));      // term + medical cover only
   h += `<div class="group solo hm">${item('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')}</div>`;
   h += st;
   h += homeGoals() + homeGrowth() + homePurposes();
@@ -1230,9 +1234,9 @@ function listPage(key) {
 }
 
 function insuranceMenu() {
+  const big = (href, ico, c, name) => `<a class="sqb" href="${href}"><span class="ico" style="background:${c}">${ico}</span><b>${esc(name)}</b></a>`;
   return { title: 'Insurance', back: backHome(), large: 'Insurance', tab: 'home',
-    html: soloList([item('#/insurance/personal', '👤', '#0a84ff', 'Personal', ''),
-      item('#/insurance/company', '🏢', '#5e5ce6', 'Company', '')]) };
+    html: `<div class="sqg">${big('#/insurance/personal', '👤', '#0a84ff', 'Personal')}${big('#/insurance/company', '🏢', '#5e5ce6', 'Company')}</div>` };
 }
 function insuranceList(group) {
   if (!['personal', 'company'].includes(group)) return notFound();
