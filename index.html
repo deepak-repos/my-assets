@@ -517,12 +517,17 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv span{display:block;font-size:12px;color:var(--sub)}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
-.acard.fylink{display:flex;align-items:center;gap:14px;padding:27px 18px;color:inherit;text-decoration:none}
+.acard.fylink{display:flex;align-items:center;gap:14px;padding:27px 18px;color:inherit;text-decoration:none;position:relative}
+.acard.fylink .fyl b{position:absolute;left:max(50%,172px);top:50%;transform:translateY(-50%);text-align:left}
 .fytop .kv{padding:12px 0;font-size:15.5px}.fytop .kv:last-child{border-bottom:0}.fytop .kv b{font-weight:600}.fytop .kv:last-child b{font-weight:700}.fytop .kv i,.fr1 i{font-style:normal}
 .acard summary.fcs{padding:14px 16px}.fcd{flex:1;min-width:0}
 .fr1{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:16px}.fr1 b{font-weight:700;font-variant-numeric:tabular-nums}
 .fr2{display:flex;justify-content:space-between;gap:12px;margin-top:6px;font-size:13.5px;color:var(--sub);font-variant-numeric:tabular-nums}
-.li.fyi b{font-size:14.5px;font-variant-numeric:tabular-nums}.li.fyi>b{white-space:nowrap}
+.li.fyi{display:block}.fyx{width:100%}
+.fya,.fyb2{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.fya b{font-size:14.5px;min-width:0}.fya span{flex:none;font-size:13px;color:var(--sub)}
+.fyb2{margin-top:3px}.fyb2 span{font-size:13px;color:var(--sub)}.fyb2 b{font-size:14.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.li.fyi.fysep{border-top:1px solid color-mix(in srgb,var(--sub) 45%,transparent)}
 .fyl{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .fyl span{font-size:17px;font-weight:700}.fyl b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .li.fyb b{font-weight:600}
@@ -2207,7 +2212,9 @@ function fyDetailPage(fy) {
   const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
   const tiles = rows.map(c => {
     const n = Math.round(c.inv - c.wd);
-    const items = [...c.items.filter(z => z.k === 'I').sort((p, q) => byDate(q, p)), ...c.items.filter(z => z.k === 'W').sort((p, q) => byDate(q, p))].map(z => `<div class="li fyi"><div><b>${esc(ttl(z.a))}${isClosed(z.a) ? ' (closed)' : ''}</b><small>${z.k === 'I' ? 'Invested' : 'Withdrawn'} · ${z.date ? esc(fmtDate(z.date)) : 'No date'}</small></div><b>${mm(z.amt)}</b></div>`).join('');
+    const ins = c.items.filter(z => z.k === 'I').sort((p, q) => byDate(q, p)), wds = c.items.filter(z => z.k === 'W').sort((p, q) => byDate(q, p));
+    const row = (z, first) => `<div class="li fyi${first && ins.length ? ' fysep' : ''}"><div class="fyx"><div class="fya"><b>${esc(ttl(z.a))}${isClosed(z.a) ? ' (closed)' : ''}</b><span>${z.k === 'I' ? 'Invested' : 'Withdrawn'}</span></div><div class="fyb2"><span>${z.date ? esc(fmtDate(z.date)) : 'No date'}</span><b>${mm(z.amt)}</b></div></div></div>`;
+    const items = ins.map(z => row(z, false)).join('') + wds.map((z, k) => row(z, k === 0)).join('');
     return `<details class="acard"><summary class="fcs"><div class="fcd"><div class="fr1"><b>${esc(T[c.t].label)}</b><b>${sgn(n)}${mm(Math.abs(n))}</b></div>
       <div class="fr2"><span>Invested: ${mm(c.inv)}</span><span>Withdrawn: ${mm(c.wd)}</span></div></div></summary><div class="body">${items || '<div class="empty">No entries.</div>'}</div></details>`;
   }).join('') || `<div class="card"><div class="empty">Nothing in this year.</div></div>`;
