@@ -2200,13 +2200,10 @@ function invwdPage() {
 const hasN = v => v !== '' && v != null && !isNaN(Number(v));
 function taxPage() {
   const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
-  const P = sum(l.filter(x => x.pl !== 'L'), x => num(x.amount)), L = sum(l.filter(x => x.pl === 'L'), x => num(x.amount));
-  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.date ? `<small>Withdrawn on ${esc(fmtDate(x.date))}</small>` : ''}${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>
+  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>
       <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`).join('')}</div>`
     : `<div class="group"><div class="empty-s">No entries yet.</div></div>`;
-  const h = `<div class="stats"><div class="stat"><span>Total profit</span><b class="pos">${mm(P)}</b></div><div class="stat"><span>Total loss</span><b class="neg">${mm(L)}</b></div></div>
-    <div class="card"><div class="mini">Net realized</div><div class="bigv">${mm(P - L)}</div></div>
-    <div class="gsec"><span>By financial year</span></div>${rows}`;
+  const h = `<div class="gsec"><span>By financial year</span></div>${rows}`;
   return { title: 'Realized Returns', back: '#/more', tab: 'more', right: `<a class="plus" href="#/taxentry/new" aria-label="Add entry">+</a>`, html: h };
 }
 function taxForm(id) {
