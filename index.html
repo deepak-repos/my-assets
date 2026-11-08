@@ -517,6 +517,13 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv span{display:block;font-size:12px;color:var(--sub)}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
+.sqg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 16px}
+.sq{display:flex;align-items:center;gap:10px;min-height:92px;padding:14px 12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
+.sq:active{transform:scale(.97)}
+.sq .sqt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px}
+.sq .sqt b{font-size:14px;font-weight:600;white-space:nowrap}
+.sq .sqt span{font-size:16px;font-weight:700;letter-spacing:-.3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.item .v small.xirr.up{color:var(--green)}.item .v small.xirr.dn{color:var(--red)}
 .acard.fylink{display:flex;align-items:center;gap:14px;padding:27px 18px;color:inherit;text-decoration:none;position:relative}
 .acard.fylink .fyl b{position:absolute;left:max(calc(50% + 26px),172px);top:50%;transform:translateY(-50%);text-align:left}
 .fytop .kv{padding:12px 0;font-size:15.5px}.fytop .kv:last-child{border-bottom:0}.fytop .kv b{font-weight:600}.fytop .kv:last-child b{font-weight:700}.fytop .kv i,.fr1 i{font-style:normal}
@@ -1000,7 +1007,7 @@ function nextMonthPayments() {
 const pct2 = v => Math.abs(v * 100).toFixed(1) + '%';
 const xCells = x => x == null ? { ar: '', pc: '<em class="xp na">—</em>' }
   : { ar: `<i class="ar ${x >= 0 ? 'up' : 'dn'}">${x >= 0 ? '▲' : '▼'}</i>`, pc: `<em class="xp">${pct2(x)}</em>` };
-const backHome = () => { const b = navStack[navStack.length - 2]; return b && b.hash === '#/networth' ? '#/networth' : '#/home'; };
+const backHome = () => { const b = navStack[navStack.length - 2]; return b && ['#/networth', '#/funds', '#/liquid'].includes(b.hash) ? b.hash : '#/home'; };
 const nwItems = () => [...byCat('investment'), ...byCat('selfuse')];
 
 function homeMenus(C, noIns) {                                    // the menu tiles on the home screen (also used on the Net Worth page)
@@ -1049,13 +1056,8 @@ function home() {
     return { html: h, tab: 'home', nobar: true };
   }
 
-  const xN = xCells(groupXirr(nwItems())), xF = xCells(groupXirr(inv)), xL = xCells(groupXirr(ofTypes(['mf', 'fd', 'sa']))),
-        xP = xCells(groupXirr(ofTypes(['house', 'land']))), xG = xCells(groupXirr(ofTypes(['gold'])));
   const nwX = groupXirr(nwItems()), xNW = nwX == null ? '<em class="xp na">XIRR —</em>' : `<em class="xp"><i class="ar ${nwX >= 0 ? 'up' : 'dn'}">${nwX >= 0 ? '▲' : '▼'}</i>XIRR ${pct2(nwX)}</em>`;
-  const box = (href, name, amt, x) => `<a href="${href}"><span>${name}</span><b>${amt}</b></a>`;
-  h += `<section class="hero"><a class="top" href="#/networth" aria-label="Open net worth"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>${xNW}</a>
-    <div class="cols">${box('#/funds', 'Total Funds', C(funds), xF)}${box('#/liquid', 'Liquid Funds', C(liquid), xL)}</div>
-    <div class="cols">${box('#/property', 'Property', C(prop), xP)}${box('#/gold', 'Gold', C(gld), xG)}</div></section>`;
+    h += `<section class="hero"><a class="top" href="#/networth" aria-label="Open net worth"><div class="lbl">Your Net Worth</div><div class="amt">${C(funds + real)}</div>${xNW}</a></section>`;
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
@@ -1074,7 +1076,10 @@ function home() {
   h += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   h += '</div>';
 
-  h += homeMenus(C);
+  const sq = (href, ico, c, name, amt) => `<a class="sq" href="${href}"><span class="ico" style="background:${c}">${ico}</span><span class="sqt"><b>${esc(name)}</b><span>${amt}</span></span></a>`;
+  h += `<div class="sqg">${sq('#/funds', T.fd.ico, T.fd.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ff9f0a', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
+  const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
+  h += `<div class="group solo hm">${item('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')}</div>`;
   h += homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
@@ -1183,6 +1188,13 @@ function card(a) {
     <a class="btn sm edit" href="#/form/${a.type}/${a.id}">Edit</a></div></div></details>`;
 }
 
+function fundCats(types) {                                      // same menu rows as the home screen, plus invested amount and XIRR
+  const C = v => S.hide ? '••••' : fmtCr(v), invOf = a => txOf(a).length ? invVal(a) : curVal(a);
+  return types.filter(t => ofTypes([t]).length).map(t => {
+    const its = ofTypes([t]), x = groupXirr(its);
+    return `<div class="group solo hm"><a class="item" href="#/list/${t}"><span class="ico" style="background:${T[t].c}">${T[t].ico}</span><span class="t"><b>${esc(T[t].label)}</b><small>Invested ${C(sum(its, invOf))}</small></span><span class="v"><b>${C(sum(its, curVal))}</b>${x != null ? `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>` : ''}</span></a></div>`;
+  }).join('');
+}
 function fundsPage(kind) {
   const liq = kind === 'liquid';
   const types = liq ? ['mf', 'fd', 'sa'] : ORDER.investment;
@@ -1192,7 +1204,7 @@ function fundsPage(kind) {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + items.map(card).join('');
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + fundCats(types);
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
 }
