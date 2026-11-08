@@ -1114,7 +1114,7 @@ function home() {
 
   const up = upcomingPremiums(90), upTot = sum(up, u => u.amt);
   h += '<div class="card outer">';
-  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' bglow' : ''}">${icoBell}Premiums Due</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
+  h += `<details class="dtile in prem"><summary><span class="dl${upTot > 0 ? ' bglow' : ''}">${icoBell}Premiums Due (in 90 days)</span><span class="dr">${money(upTot)}</span></summary><div class="body">` + (up.length ? up.map(u =>
     `<div class="li tap" data-prem="${esc(u.a.id)}|${isoOf(u.date)}" role="button"><div><b>${esc(ttl(u.a))}</b><small>${esc(fmtDate(u.date))}</small></div>
      <div class="r">${u.amt ? money(u.amt) : '—'}<small${u.diff < 0 ? ' class="neg"' : ''}>${u.diff < 0 ? 'Overdue by ' + (-u.diff) + (u.diff === -1 ? ' day' : ' days') : u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days and none overdue.</div>`) + `</div></details>`;
@@ -1192,15 +1192,14 @@ function purposePage(raw) {
   let name = ''; try { name = decodeURIComponent(raw || ''); } catch (e) {}
   const key = name.trim().toLowerCase();
   let items = invAssets().map(a => { const s = purposeShares(a).find(x => x.n.toLowerCase() === key); return s ? { a, v: curVal(a) * s.pct / 100 } : null; }).filter(Boolean);
-  const fdName = z => String(z.a.data.owner || z.a.data.bank || '').trim();
-  items = [...items.filter(z => z.a.type !== 'fd').sort((p, q) => q.v - p.v),                       // biggest amount first
-    ...items.filter(z => z.a.type === 'fd').sort((p, q) => fdName(p).localeCompare(fdName(q), undefined, { sensitivity: 'base' }) || q.v - p.v)];   // fixed deposits: by name, then amount
+  const cats = ORDER.investment.map(t => { const list = items.filter(z => z.a.type === t).sort((p, q) => ttl(p.a).localeCompare(ttl(q.a), undefined, { sensitivity: 'base' }) || q.v - p.v); return { t, list, tot: sum(list, z => z.v) }; })
+    .filter(c => c.list.length).sort((p, q) => q.tot - p.tot);       // categories: biggest amount first; inside each, cards in name order
   const disp = purposeList().find(p => p.toLowerCase() === key) || name || 'Purpose';
   const h = items.length
-    ? `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(sum(items, z => z.v))}</b></div></div>` + items.map(z => {
+    ? `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(sum(items, z => z.v))}</b></div></div>` + cats.map(c => `<div class="gsec"><span>${esc(T[c.t].label)}</span><em>${esc(fmtCr(c.tot))}</em></div>` + c.list.map(z => {
         const t = typeOf(z.a);
         return `<div class="acard"><div class="prow"><span class="ico" style="background:${t.c}">${t.ico}</span><span class="ttl"><b>${esc(ttl(z.a))}</b></span><span class="val">${esc(money(z.v))}</span></div></div>`;
-      }).join('')
+      }).join('')).join('')
     : `<div class="card"><div class="empty">No assets for this purpose.</div></div>`;
   return { title: disp, back: '#/home', html: h, tab: 'home' };
 }
