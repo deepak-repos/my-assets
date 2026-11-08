@@ -517,7 +517,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv span{display:block;font-size:12px;color:var(--sub)}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
-.acard.fylink{display:flex;padding:27px 18px;color:inherit;text-decoration:none}
+.acard.fylink{display:flex;align-items:center;gap:14px;padding:27px 18px;color:inherit;text-decoration:none}
 .fytop .kv{padding:12px 0;font-size:15.5px}.fytop .kv:last-child{border-bottom:0}.fytop .kv b{font-weight:600}.fytop .kv:last-child b{font-weight:700}.fytop .kv i,.fr1 i{font-style:normal}
 .acard summary.fcs{padding:14px 16px}.fcd{flex:1;min-width:0}
 .fr1{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:16px}.fr1 b{font-weight:700;font-variant-numeric:tabular-nums}
@@ -2195,19 +2195,19 @@ const sgn = n => n > 0 ? '<i class="pos">(+)</i> ' : n < 0 ? '<i class="neg">(-)
 function invwdPage() {
   const h = fyData().map(o => {
     const net = Math.round(o.inv - o.wd);
-    return `<a class="acard fylink" href="#/invwd/${esc(o.fy)}"><div class="fyl"><span>FY ${esc(o.fy)}</span><b>${sgn(net)}${mm(Math.abs(net))}</b></div></a>`;
+    return `<a class="acard fylink" href="#/invwd/${esc(o.fy)}"><span class="ico" style="background:#5e5ce6">📅</span><div class="fyl"><span>FY ${esc(o.fy)}</span><b>${sgn(net)}${mm(Math.abs(net))}</b></div></a>`;
   }).join('');
   return { title: 'Invested & Withdrawn', back: '#/more', tab: 'more', html: h };
 }
 function fyDetailPage(fy) {
   const o = fyData().find(x => x.fy === fy); if (!o) return notFound();
   const net = Math.round(o.inv - o.wd);
-  const top = `<div class="card fytop"><div class="kv"><span>Total Investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>
-    <div class="kv"><span>Overall (+I/-W)</span><b>${sgn(net)}${mm(Math.abs(net))}</b></div></div>`;
+  const top = `<div class="summary"><div><span>Total Investment</span><b>${mm(o.inv)}</b></div><div><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>
+    <div class="gain"><span>Overall (+I/-W)</span><span>${net > 0 ? '<i class="ar up">(+)</i> ' : net < 0 ? '<i class="ar dn">(-)</i> ' : ''}<b style="font-size:15px">${mm(Math.abs(net))}</b></span></div></div>`;
   const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
   const tiles = rows.map(c => {
     const n = Math.round(c.inv - c.wd);
-    const items = c.items.slice().sort((p, q) => byDate(q, p)).map(z => `<div class="li fyi"><div><b>${esc(ttl(z.a))}${isClosed(z.a) ? ' (closed)' : ''}</b><small>${z.k === 'I' ? 'Invested' : 'Withdrawn'} · ${z.date ? esc(fmtDate(z.date)) : 'No date'}</small></div><b>${mm(z.amt)}</b></div>`).join('');
+    const items = [...c.items.filter(z => z.k === 'I').sort((p, q) => byDate(q, p)), ...c.items.filter(z => z.k === 'W').sort((p, q) => byDate(q, p))].map(z => `<div class="li fyi"><div><b>${esc(ttl(z.a))}${isClosed(z.a) ? ' (closed)' : ''}</b><small>${z.k === 'I' ? 'Invested' : 'Withdrawn'} · ${z.date ? esc(fmtDate(z.date)) : 'No date'}</small></div><b>${mm(z.amt)}</b></div>`).join('');
     return `<details class="acard"><summary class="fcs"><div class="fcd"><div class="fr1"><b>${esc(T[c.t].label)}</b><b>${sgn(n)}${mm(Math.abs(n))}</b></div>
       <div class="fr2"><span>Invested: ${mm(c.inv)}</span><span>Withdrawn: ${mm(c.wd)}</span></div></div></summary><div class="body">${items || '<div class="empty">No entries.</div>'}</div></details>`;
   }).join('') || `<div class="card"><div class="empty">Nothing in this year.</div></div>`;
