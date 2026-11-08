@@ -2245,10 +2245,13 @@ function fyDetailPage(fy) {
 const hasN = v => v !== '' && v != null && !isNaN(Number(v));
 function taxPage() {
   const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
-  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>
-      <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`).join('')}</div>`
-    : `<div class="group"><div class="empty-s">No entries yet.</div></div>`;
-  const h = `<div class="gsec"><span>By financial year</span></div>${rows}`;
+  const row = x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>${esc(x.note || (x.date ? fmtDate(x.date) : 'Entry'))}</b>${x.note && x.date ? `<small>${esc(fmtDate(x.date))}</small>` : ''}</span>
+      <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`;
+  const yrs = [...new Set(l.map(x => String(x.fy)))];
+  const h = yrs.length ? yrs.map(fy => {
+    const es = l.filter(x => String(x.fy) === fy), net = sum(es, x => x.pl === 'L' ? -num(x.amount) : num(x.amount));
+    return `<div class="gsec"><span>FY ${esc(fy)}</span><em class="${net < 0 ? 'neg' : 'pos'}">${net < 0 ? '−' : ''}${mm(Math.abs(net))}</em></div><div class="group">${es.map(row).join('')}</div>`;
+  }).join('') : `<div class="group"><div class="empty-s">No entries yet.</div></div>`;
   return { title: 'Realized Returns', back: '#/more', tab: 'more', right: `<a class="plus" href="#/taxentry/new" aria-label="Add entry">+</a>`, html: h };
 }
 function taxForm(id) {
