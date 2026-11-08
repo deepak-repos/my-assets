@@ -255,15 +255,16 @@ button.btn{width:calc(100% - 32px)}
 .soon-page .big{font-size:56px}.soon-page h2{color:var(--text);margin:10px 0 6px}
 
 /* tab bar */
-#tabbar{position:relative;flex:none;z-index:30;display:flex;justify-content:center;
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;
   padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--blur);border-top:.5px solid var(--sep);
   -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
 #tabbar>*{flex:1;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--sub);font-size:11px;font-weight:500;padding:4px 0}
 #tabbar svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #tabbar .on{color:var(--blue)}
 #tabbar.off{display:none}
-#tabbar{transition:transform .28s cubic-bezier(.4,0,.2,1),margin-bottom .28s cubic-bezier(.4,0,.2,1)}
-#tabbar.hide{transform:translateY(100%);margin-bottom:calc(var(--tbh,64px) * -1)}
+#tabbar{transition:transform .28s cubic-bezier(.4,0,.2,1)}
+#tabbar.hide{transform:translateY(100%)}
+#app{padding-bottom:var(--tbh,0px)}body.notabs #app{padding-bottom:0}
 
 /* sheet */
 #sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s}
@@ -637,8 +638,8 @@ const store = {
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const nf = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
-const money = n => '₹' + nf.format(Math.round(n || 0));
-const fmtCr = n => { n = Math.round(n || 0); const a = Math.abs(n);
+const money = n => S.hide ? '••••' : '₹' + nf.format(Math.round(n || 0));          // every amount in the app goes through here, so the eye icon hides them all
+const fmtCr = n => { if (S.hide) return '••••'; n = Math.round(n || 0); const a = Math.abs(n);
   return a >= 1e7 ? '₹' + (n / 1e7).toFixed(2) + ' Cr' : a >= 1e5 ? '₹' + (n / 1e5).toFixed(2) + ' L' : money(n); };
 const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); };
 const fmtDT = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }); };
@@ -2492,7 +2493,7 @@ function render(goTo) {
   $('#app').innerHTML = `<div class="page${goTo === undefined ? ' noanim' : ''}${v.tab === 'more' ? ' more' : ''}">${bar}${v.html}</div>`;
   // list pages already include their own large title in html
   document.querySelectorAll('#tabbar [data-tab]').forEach(el => el.classList.toggle('on', el.dataset.tab === v.tab));
-  $('#tabbar').classList.toggle('off', !!v.notabs);
+  $('#tabbar').classList.toggle('off', !!v.notabs); document.body.classList.toggle('notabs', !!v.notabs); tabMeasure();
   $('#app').scrollTop = y;
   tabShow(y);
   v.after && v.after();
@@ -2555,7 +2556,11 @@ document.addEventListener('click', async e => {
     return;
   }
   switch (t.dataset.act) {
-    case 'eye': S.hide = !S.hide; store.set('hide', S.hide); return render();
+    case 'eye':
+      if (S.hide && store.get('lock')) {                          // amounts are hidden and App Lock is on: the PIN is needed to show them again
+        return showLock({ cancel() {}, onOk() { S.hide = false; store.set('hide', false); render(); } });
+      }
+      S.hide = !S.hide; store.set('hide', S.hide); return render();
     case 'refresh': return remote() ? sync() : toast('Local mode – nothing to sync');
     case 'disconnect': S.cfg = null; store.del('cfg'); toast('Disconnected'); return render();
     case 'lockoff': store.del('lock'); store.del('lockLen'); toast('App lock off'); return render();
@@ -2762,20 +2767,24 @@ document.addEventListener('click', e => {                        // the on-scree
   if (navStack.length > 1) history.back(); else location.hash = b.getAttribute('href');
 }, true);
 
-/* Bottom menu: hides while you scroll down the page, comes back as soon as you scroll up */
-let tabLast = 0;
-function tabShow(y) { tabLast = y || 0; const tb = $('#tabbar'); if (tb) tb.classList.remove('hide'); }
+/* Bottom menu: slides away while you scroll down the page and comes back when you scroll up.
+   It floats over the page (no layout change), so it can never trigger itself while you are pulling at the bottom. */
+let tabLast = 0, tabAcc = 0;
+function tabMeasure() { const tb = $('#tabbar'); if (tb && tb.offsetHeight) document.documentElement.style.setProperty('--tbh', tb.offsetHeight + 'px'); }
+function tabShow(y) { tabLast = y || 0; tabAcc = 0; const tb = $('#tabbar'); if (tb) tb.classList.remove('hide'); }
+window.addEventListener('resize', tabMeasure);
 $('#app').addEventListener('scroll', () => {
-  const app = $('#app'), tb = $('#tabbar'), y = Math.max(app.scrollTop, 0), d = y - tabLast;
-  if (!tb || tb.classList.contains('off')) { tabLast = y; return; }
-  if (y <= 8) { tb.classList.remove('hide'); tabLast = y; return; }
-  if (Math.abs(d) < 8) return;                                   // ignore tiny movements
-  if (d > 0) {
-    const room = app.scrollHeight - app.clientHeight;
-    if (!tb.classList.contains('hide') && room > tb.offsetHeight + 80) { tb.style.setProperty('--tbh', tb.offsetHeight + 'px'); tb.classList.add('hide'); }
-  } else tb.classList.remove('hide');
+  const app = $('#app'), tb = $('#tabbar'), max = app.scrollHeight - app.clientHeight, y = Math.min(Math.max(app.scrollTop, 0), Math.max(max, 0)), d = y - tabLast;
   tabLast = y;
+  if (!tb || tb.classList.contains('off')) return;
+  if (y <= 8) { tb.classList.remove('hide'); tabAcc = 0; return; }
+  if (max - y < 4 || d === 0) return;                            // resting at the very bottom / bouncing back: leave it as it is
+  if (Math.sign(d) !== Math.sign(tabAcc)) tabAcc = 0;            // changed direction → start counting again
+  tabAcc += d;
+  if (tabAcc > 28 && max > 140) { tb.classList.add('hide'); tabAcc = 0; }
+  else if (tabAcc < -14) { tb.classList.remove('hide'); tabAcc = 0; }
 }, { passive: true });
+setTimeout(tabMeasure, 0);
 
 let prevHash = '', curHash = location.hash, skipHash = false;
 const navStack = [{ hash: location.hash, y: 0 }];                // the pages visited in this trail; each one is one browser history entry
