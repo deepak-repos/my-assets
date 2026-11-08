@@ -526,8 +526,11 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
 .brown{display:inline-block;filter:sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(.62) contrast(1.1)}
-.ins2{gap:12px}.ins2 .ih{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0;color:inherit;text-decoration:none;text-align:center}
-.ins2 .ih b{font-size:16px;font-weight:500}.ins2 .ih small{font-size:13px;color:var(--sub)}
+.ins2{gap:0;padding:0;height:56px;min-height:56px}
+.ins2 .ih{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;gap:10px;color:inherit;text-decoration:none}
+.ins2 .ii{font-size:26px;line-height:1;flex:none}
+.ins2 .it{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ins2 .it b{font-size:16px;font-weight:500}.ins2 .it small{font-size:13px;color:var(--sub)}
 .ins2 .ih:active{opacity:.55}.ins2 .iv{flex:none;width:1px;height:30px;background:var(--sep)}
 .sqg{display:grid;grid-template-columns:1fr 1fr;gap:15px 12px;margin:0 16px 20px}
 .sq{display:flex;align-items:center;gap:10px;min-height:92px;padding:14px 12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
@@ -1139,8 +1142,8 @@ function home() {
 
   const sq = (href, ico, c, name, amt) => `<a class="sq" href="${href}"><span class="ico" style="background:${c}">${ico}</span><span class="sqt"><b>${esc(name)}</b><span>${amt}</span></span></a>`;
   h += `<div class="sqg">${sq('#/funds', '<span class="brown">' + T.fd.ico + '</span>', T.sa.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ffcc00', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
-  h += `<div class="group solo hm"><div class="item nochev ins2"><span class="ico" style="background:#ff375f">🛡️</span>
-    <a class="ih" href="#/insurance/company"><b>Company</b><small>Insurance</small></a><i class="iv"></i><a class="ih" href="#/insurance/personal"><b>Personal</b><small>Insurance</small></a></div></div>`;
+  h += `<div class="group solo hm"><div class="item nochev ins2">
+    <a class="ih" href="#/insurance/company"><span class="ii">🛡️</span><span class="it"><b>Company</b><small>Insurance</small></span></a><i class="iv"></i><a class="ih" href="#/insurance/personal"><span class="ii">🛡️</span><span class="it"><b>Personal</b><small>Insurance</small></span></a></div></div>`;
   h += st;
   h += homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
