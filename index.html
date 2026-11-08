@@ -524,7 +524,10 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyl b i{font-style:normal}
 .fyr{text-align:left;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.55}
 .fyr .fytot{margin-top:2px}.fyr i,.fytot i{font-style:normal}
-.li.fyb>b{text-align:right;font-size:15px}
+.li.fyb{display:grid;grid-template-columns:1fr auto;gap:3px 14px;align-items:baseline}
+.li.fyb>*{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.li.fyb>b,.li.fyb>.fytot{text-align:right}.li.fyb>b{font-size:15px}.fytot i{font-style:normal}
+.row.delrow{width:100%;justify-content:center;border:0;border-top:.5px solid var(--sep);background:transparent;color:var(--red);font:inherit;font-size:16px;font-weight:600;cursor:pointer;-webkit-appearance:none}
 .dtile[data-go]>.body{cursor:pointer}
 </style>
 </head>
@@ -1466,10 +1469,10 @@ function formPage(type, id) {
 const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
     item('#/invwd', '📅', '#5e5ce6', 'Invested & Withdrawn'),
-    item('#/historical', '🗄️', '#8e8e93', 'Historical Investment'),
-    item('#/documents', '📁', '#5856d6', 'Documents'),
-    item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
     item('#/tax', '％', '#30b0c7', 'Realized Returns'),
+    item('#/historical', '🗄️', '#8e8e93', 'Historical Investment'),
+    item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
+    item('#/documents', '📁', '#5856d6', 'Documents'),
     item('#/calculator', '🧮', '#34c759', 'Calculator'),
     item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
 /* ---- Analytics ----
@@ -2135,7 +2138,7 @@ async function doWithdraw(a, o) {
   await saveAsset({ ...a, data });
   const g = o.amt - o.inv;
   if (Math.round(g * 100) !== 0)
-    await saveRec('harvest', 'taxsave', { id: uid(), fy: fyOf(o.date), amount: Math.round(Math.abs(g) * 100) / 100, pl: g < 0 ? 'L' : 'P', invested: o.inv, withdrawn: o.amt,
+    await saveRec('harvest', 'taxsave', { id: uid(), fy: fyOf(o.date), amount: Math.round(Math.abs(g) * 100) / 100, pl: g < 0 ? 'L' : 'P', date: o.date, invested: o.inv, withdrawn: o.amt,
       note: (o.th ? 'Tax harvesting – ' : 'Withdrawal – ') + ttl(a), src: 'wd', wdId: rec.id, assetId: a.id });
 }
 document.addEventListener('click', async e => {                 // delete a withdrawal record (puts the money back for standard withdrawals)
@@ -2185,7 +2188,7 @@ function historicalPage() {
 function invwdPage() {
   const h = fyData().map(o => {
     const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
-    const brk = rows.length ? rows.map(c => { const n = Math.round(c.inv - c.wd); return `<div class="li fyb"><div class="fyr"><div>Invested: ${mm(c.inv)}</div><div>Withdrawn: ${mm(c.wd)}</div><div class="fytot">Total: ${n > 0 ? '<i class="pos">(+)</i> ' : n < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(n))}</div></div><b>${esc(T[c.t].label)}</b></div>`; }).join('') : `<div class="empty">Nothing in this year.</div>`;
+    const brk = rows.length ? rows.map(c => { const n = Math.round(c.inv - c.wd); return `<div class="li fyb"><span>Invested: ${mm(c.inv)}</span><b>${esc(T[c.t].label)}</b><span>Withdrawn: ${mm(c.wd)}</span><span class="fytot">${n > 0 ? '<i class="pos">(+)</i> ' : n < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(n))}</span></div>`; }).join('') : `<div class="empty">Nothing in this year.</div>`;
     const net = Math.round(o.inv - o.wd);
     return `<details class="acard"><summary class="fysum"><div class="fyl"><span>FY ${esc(o.fy)}</span><b>${net > 0 ? '<i class="pos">(+)</i> ' : net < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(net))}</b></div></summary><div class="body">
       <div class="kv"><span>Total investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>${brk}</div></details>`;
@@ -2198,7 +2201,7 @@ const hasN = v => v !== '' && v != null && !isNaN(Number(v));
 function taxPage() {
   const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
   const P = sum(l.filter(x => x.pl !== 'L'), x => num(x.amount)), L = sum(l.filter(x => x.pl === 'L'), x => num(x.amount));
-  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}${hasN(x.invested) || hasN(x.withdrawn) ? `<small>${hasN(x.invested) ? 'Invested ' + mm(num(x.invested)) : ''}${hasN(x.invested) && hasN(x.withdrawn) ? ' · ' : ''}${hasN(x.withdrawn) ? 'Withdrawn ' + mm(num(x.withdrawn)) : ''}</small>` : ''}</span>
+  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.date ? `<small>Withdrawn on ${esc(fmtDate(x.date))}</small>` : ''}${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>
       <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`).join('')}</div>`
     : `<div class="group"><div class="empty-s">No entries yet.</div></div>`;
   const h = `<div class="stats"><div class="stat"><span>Total profit</span><b class="pos">${mm(P)}</b></div><div class="stat"><span>Total loss</span><b class="neg">${mm(L)}</b></div></div>
@@ -2209,15 +2212,16 @@ function taxPage() {
 function taxForm(id) {
   const ex = id && id !== 'new' ? S.harvest.find(x => x.id === id) : null;
   if (id && id !== 'new' && !ex) return notFound();
-  const x0 = ex || { fy: curFY(), invested: '', withdrawn: '', amount: '', pl: 'P', note: '' };
+  const x0 = ex || { fy: curFY(), date: '', invested: '', withdrawn: '', amount: '', pl: 'P', note: '' };
   const h = `<form id="f" autocomplete="off"><div class="group">
       <div class="row"><span class="l">Financial Year</span><input name="fy" value="${esc(x0.fy)}" placeholder="e.g. 2026-27" autocapitalize="off" required></div>
+      <div class="row"><span class="l">Date of withdrawal</span><input name="date" type="date" value="${esc(x0.date || '')}"></div>
       <div class="row"><span class="l">Invested Amount</span><span class="pre">₹</span><input name="invested" type="number" inputmode="decimal" step="any" value="${esc(x0.invested ?? '')}" placeholder="0"></div>
       <div class="row"><span class="l">Withdrawal Amount</span><span class="pre">₹</span><input name="withdrawn" type="number" inputmode="decimal" step="any" value="${esc(x0.withdrawn ?? '')}" placeholder="0"></div>
       <div class="row"><span class="l">Amount</span><span class="pre">₹</span><input name="amount" type="number" inputmode="decimal" step="any" value="${esc(x0.amount)}" placeholder="0" required></div>
       <div class="row"><span class="l">Result</span><select name="pl"><option value="P" ${x0.pl !== 'L' ? 'selected' : ''}>Profit</option><option value="L" ${x0.pl === 'L' ? 'selected' : ''}>Loss</option></select></div>
-      <div class="row col"><span class="l">Notes</span><textarea name="note" rows="2">${esc(x0.note)}</textarea></div></div>
-    <button class="btn" type="submit">Save Entry</button>${ex ? '<button type="button" class="btn redtxt txdel">Delete Entry</button>' : ''}</form>`;
+      <div class="row col"><span class="l">Notes</span><textarea name="note" rows="2">${esc(x0.note)}</textarea></div>${ex ? '<button type="button" class="row delrow txdel">Delete Entry</button>' : ''}</div>
+    <button class="btn" type="submit">Save Entry</button></form>`;
   return { title: ex ? 'Edit Entry' : 'Add Entry', back: '#/tax', html: h, notabs: true,
     after() {
       const form = $('#f');
@@ -2225,13 +2229,14 @@ function taxForm(id) {
         const i = form.elements.invested.value, w = form.elements.withdrawn.value; if (i === '' || w === '') return;
         const g = num(w) - num(i); form.elements.amount.value = Math.round(Math.abs(g) * 100) / 100; form.elements.pl.value = g < 0 ? 'L' : 'P';
       };
+      form.elements.date.addEventListener('change', () => { const v = form.elements.date.value; if (v) form.elements.fy.value = fyOf(v); });   // financial year follows the withdrawal date
       form.elements.invested.addEventListener('input', calc); form.elements.withdrawn.addEventListener('input', calc);
       form.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(form), fy = String(fd.get('fy') || '').trim();
         if (!/^\d{4}-\d{2}$/.test(fy)) return toast('Enter the year like 2026-27');
         if (fd.get('amount') === '' || !(num(fd.get('amount')) >= 0)) return toast('Enter the amount');
-        const rec = { ...(ex || {}), id: ex ? ex.id : uid(), fy, invested: fd.get('invested') === '' ? '' : num(fd.get('invested')), withdrawn: fd.get('withdrawn') === '' ? '' : num(fd.get('withdrawn')), amount: num(fd.get('amount')), pl: fd.get('pl'), note: String(fd.get('note') || '').trim(), created: ex?.created };
+        const rec = { ...(ex || {}), id: ex ? ex.id : uid(), fy, date: String(fd.get('date') || ''), invested: fd.get('invested') === '' ? '' : num(fd.get('invested')), withdrawn: fd.get('withdrawn') === '' ? '' : num(fd.get('withdrawn')), amount: num(fd.get('amount')), pl: fd.get('pl'), note: String(fd.get('note') || '').trim(), created: ex?.created };
         const note = await run(() => saveRec('harvest', 'taxsave', rec));
         if (note !== null) { toast(note || 'Saved'); location.hash = '#/tax'; }
       });
