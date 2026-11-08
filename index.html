@@ -1131,7 +1131,7 @@ function home() {
      <div class="r">${u.amt ? money(u.amt) : '—'}<small${u.diff < 0 ? ' class="neg"' : ''}>${u.diff < 0 ? 'Overdue by ' + (-u.diff) + (u.diff === -1 ? ' day' : ' days') : u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days and none overdue.</div>`) + `</div></details>`;
   h += '</div>';
-  const stat = '<div class="hsec" style="margin-top:26px">Investment status</div><div class="card wtile">';
+  const stat = '<div class="hsec" style="margin-top:26px">Investment</div><div class="card wtile">';
   let st = stat;
 
   const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
