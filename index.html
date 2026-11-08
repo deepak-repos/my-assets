@@ -522,7 +522,9 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyl span{font-size:17px;font-weight:700}.fyl b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .li.fyb b{font-weight:600}
 .fyl b i{font-style:normal}
-.fyr{text-align:right;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.5}
+.fyr{text-align:left;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.55}
+.fyr .fytot{margin-top:2px}.fyr i,.fytot i{font-style:normal}
+.li.fyb>b{text-align:right;font-size:15px}
 .dtile[data-go]>.body{cursor:pointer}
 </style>
 </head>
@@ -693,8 +695,11 @@ const CAT_META = {
    State & persistence
    --------------------------------------------------------------------- */
 const S = { hide: !!store.get('hide', false), assets: store.get('assets', []), goals: store.get('goals', []), expenses: store.get('expenses', []), harvest: store.get('harvest', []), history: store.get('history', []), cfg: store.get('cfg', null) };
+const isClosed = a => !!(a && a.data && a.data.closed);
+function splitClosed(all) { S.closed = all.filter(isClosed); S.assets = all.filter(a => !isClosed(a)); }   // closed = deleted MF/FD/NPS/EPF/PPF kept for history
+splitClosed(S.assets);
 const remote = () => !!(S.cfg && S.cfg.url && S.cfg.key);
-const persist = () => { store.set('assets', S.assets); store.set('history', S.history); store.set('goals', S.goals); store.set('expenses', S.expenses); store.set('harvest', S.harvest); };
+const persist = () => { store.set('assets', S.assets.concat(S.closed)); store.set('history', S.history); store.set('goals', S.goals); store.set('expenses', S.expenses); store.set('harvest', S.harvest); };
 
 const typeOf = a => T[a.type];
 const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
@@ -863,7 +868,7 @@ async function sync(quiet) {
   if (!remote()) return;
   try {
     const r = await api('list');
-    S.assets = r.assets || []; S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals;
+    splitClosed(r.assets || []); S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals;
     if (Array.isArray(r.expenses)) S.expenses = r.expenses; if (Array.isArray(r.harvest)) S.harvest = r.harvest; persist();
     if (!/^#\/(form|update|withdraw|expense\/|taxentry\/|calculator|documents)/.test(location.hash)) render();
     if (!quiet) toast('Synced');
@@ -911,7 +916,14 @@ async function removeRec(list, act, id) {
   if (remote()) { try { await api(act, { id }); } catch (e) { if (!/Unknown action/i.test(e.message)) throw e; } }
   S[list] = S[list].filter(x => x.id !== id); persist();
 }
+const HIST_TYPES = ['mf', 'fd', 'nps', 'epf', 'ppf'];
 async function removeAsset(id) {
+  const a = S.assets.find(x => x.id === id);
+  if (a && HIST_TYPES.includes(a.type)) {                 // treated as closed: stays in the sheet, in Realized Returns and in every year's totals
+    const c = { ...a, data: { ...a.data, closed: todayISO() }, updated: new Date().toISOString() };
+    if (remote()) await api('save', { asset: c, history: [] });
+    S.assets = S.assets.filter(x => x.id !== id); S.closed.push(c); persist(); return;
+  }
   if (remote()) await api('delete', { id });
   S.assets = S.assets.filter(a => a.id !== id); persist();
 }
@@ -1454,9 +1466,10 @@ function formPage(type, id) {
 const morePage = () => ({ title: 'More', tab: 'more',
   html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
     item('#/invwd', '📅', '#5e5ce6', 'Invested & Withdrawn'),
+    item('#/historical', '🗄️', '#8e8e93', 'Historical Investment'),
     item('#/documents', '📁', '#5856d6', 'Documents'),
     item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
-    item('#/tax', '％', '#30b0c7', 'Tax Harvesting'),
+    item('#/tax', '％', '#30b0c7', 'Realized Returns'),
     item('#/calculator', '🧮', '#34c759', 'Calculator'),
     item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
 /* ---- Analytics ----
@@ -1494,10 +1507,11 @@ function anPrep(a, snapsBy) {
   const wds = wdOf(a).filter(w => (!w.th || w.lot) && w.date && !isNaN(anIso(w.date))).map(w => ({ t: anIso(w.date), inv: w.th ? num(w.inv) - num(w.lot.amt) : num(w.inv) }));
   const close = a.type === 'fd' && wds.length ? Math.min(...wds.map(w => w.t)) : null;
   const hasTx = tx.length > 0;
-  return { a, snaps, tx, wds, close, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
+  return { a, snaps, tx, wds, close, closedAt: a.data.closed && !isNaN(anIso(a.data.closed)) ? anIso(a.data.closed) : null, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
 }
 function anVals(p, e) {                                    // [investment, current] of one asset at the end of a day
   if (e < p.start) return [0, 0];
+  if (p.closedAt != null && e >= p.closedAt) return [0, 0];   // deleted (closed) asset: counted in earlier periods, zero from the day it was closed
   const inv = p.hasTx ? p.tx.reduce((t, z) => t + (z.t <= e ? z.amt : 0), 0) - p.wds.reduce((t, w) => t + (w.t <= e ? w.inv : 0), 0) : null;
   let cur;
   if (p.fd) cur = p.close != null && e >= p.close ? 0 : fdValue(p.a.data, new Date(Math.min(e, Date.now())));
@@ -1508,6 +1522,8 @@ function anVals(p, e) {                                    // [investment, curre
   }
   return [inv == null ? cur : inv, cur];
 }
+const anAssets = () => invAssets().concat(S.closed.filter(a => T[a.type] && T[a.type].cat === 'investment'));   // open + closed investments
+const anLbl = a => ttl(a) + (isClosed(a) ? ' (closed)' : '');
 function anBuild(list, months) {
   if (!list.length) return null;
   const snapsBy = {};
@@ -1520,7 +1536,7 @@ function anBuild(list, months) {
   from = Math.min(from, today);
   const ev = new Map(), days = new Set([from, today]);
   const mark = (t, upd) => { const d = anDay(t); if (d < from || d > today) return; ev.set(d, ev.get(d) || { upd: false }); if (upd) ev.get(d).upd = true; };
-  P.forEach(p => { p.wds.forEach(w => mark(w.t, true)); p.tx.forEach(z => mark(z.t, false)); p.snaps.forEach(s => mark(s.t, true)); });
+  P.forEach(p => { if (p.closedAt != null) mark(p.closedAt, true); p.wds.forEach(w => mark(w.t, true)); p.tx.forEach(z => mark(z.t, false)); p.snaps.forEach(s => mark(s.t, true)); });
   ev.forEach((o, d) => days.add(d));
   const pts = [...days].sort((x, y) => x - y).map(d => {
     let inv = 0, cur = 0; const e = anEnd(d);
@@ -1574,7 +1590,7 @@ function anTip(e) {
 }
 
 function anDraw() {
-  const L = invAssets();
+  const L = anAssets();
   if (AN.cat !== 'all' && !L.some(a => a.type === AN.cat)) AN.cat = 'all';
   const inCat = AN.cat === 'all' ? L : L.filter(a => a.type === AN.cat);
   if (AN.ast !== 'all' && !inCat.some(a => a.id === AN.ast)) AN.ast = 'all';
@@ -1583,12 +1599,12 @@ function anDraw() {
   const opt = (v, label, on) => `<option value="${esc(v)}"${on ? ' selected' : ''}>${esc(label)}</option>`;
   const types = ORDER.investment.filter(t => L.some(a => a.type === t));
   const catHtml = opt('all', 'All Investments', AN.cat === 'all') + types.map(t => opt(t, T[t].label, AN.cat === t)).join('');
-  const names = inCat.map(ttl), dup = n => names.filter(x => x === n).length > 1;
+  const names = inCat.map(anLbl), dup = n => names.filter(x => x === n).length > 1;
   const astHtml = AN.cat === 'all' ? '' : opt('all', 'All ' + T[AN.cat].label, AN.ast === 'all') +
     inCat.map((a, i) => opt(a.id, dup(names[i]) ? names[i] + ' ' + (a.data.accountNo ? '•' + String(a.data.accountNo).slice(-4) : '#' + (i + 1)) : names[i], AN.ast === a.id)).join('');
   const rngHtml = AN_RNG.map(r => `<button data-rng="${r[0]}" class="${AN.rng === r[0] ? 'on' : ''}">${r[1]}</button>`).join('');
 
-  const scope = AN.ast !== 'all' ? ttl(sel[0]) : AN.cat !== 'all' ? T[AN.cat].label : 'All Investments';
+  const scope = AN.ast !== 'all' ? anLbl(sel[0]) : AN.cat !== 'all' ? T[AN.cat].label : 'All Investments';
   const months = (AN_RNG.find(r => r[0] === AN.rng) || [])[2] || 0;
   const res = anBuild(sel, months);
   let body = '';
@@ -1670,7 +1686,7 @@ function anSpark(pts) {                                    // small static line 
     <circle class="s1" cx="${sx(l.x).toFixed(1)}" cy="${sy(l.inv).toFixed(1)}" r="4"/><circle class="s2" cx="${sx(l.x).toFixed(1)}" cy="${sy(l.cur).toFixed(1)}" r="4"/></svg>`;
 }
 function homeGrowth() {                                    // All Investments, last 1 year only; whole tile opens Analytics
-  const res = anBuild(invAssets(), 12);
+  const res = anBuild(anAssets(), 12);
   if (!res) return '';
   const pts = res.pts, last = pts[pts.length - 1], c = anChg(last.inv, last.cur);
   const g = last.cur - last.inv, pc = last.inv ? g / last.inv * 100 : 0;
@@ -2083,7 +2099,7 @@ function withdrawPage(id) {
         const amt = num(f.elements.amt.value), iv = fd ? inv : num(f.elements.inv.value), th = !!(f.elements.th && f.elements.th.checked);
         if (!(amt > 0) || !(iv > 0)) return;
         const g = amt - iv, fy = fyOf(f.elements.date.value || todayISO());
-        note.textContent = (g >= 0 ? 'Profit ' : 'Loss ') + money(Math.abs(g)) + ' will be added to Tax Harvesting for FY ' + fy + '. ' +
+        note.textContent = (g >= 0 ? 'Profit ' : 'Loss ') + money(Math.abs(g)) + ' will be added to Realized Returns for FY ' + fy + '. ' +
           (th ? (() => { const L = harvestLot(a, { date: f.elements.date.value || todayISO(), inv: iv }); return L ? 'Your oldest ' + money(iv) + ' is replaced by a new investment of ' + money(L.amt) + ' dated ' + fmtDate(L.date) + ', so the XIRR stays the same.' : 'XIRR needs 30+ days of history, so ' + money(amt) + ' is re-invested as is.'; })() : fd ? '' : 'Taken from your oldest investments first.');
       };
       f.addEventListener('input', upd); f.addEventListener('change', upd);
@@ -2119,13 +2135,13 @@ async function doWithdraw(a, o) {
   await saveAsset({ ...a, data });
   const g = o.amt - o.inv;
   if (Math.round(g * 100) !== 0)
-    await saveRec('harvest', 'taxsave', { id: uid(), fy: fyOf(o.date), amount: Math.round(Math.abs(g) * 100) / 100, pl: g < 0 ? 'L' : 'P',
+    await saveRec('harvest', 'taxsave', { id: uid(), fy: fyOf(o.date), amount: Math.round(Math.abs(g) * 100) / 100, pl: g < 0 ? 'L' : 'P', invested: o.inv, withdrawn: o.amt,
       note: (o.th ? 'Tax harvesting – ' : 'Withdrawal – ') + ttl(a), src: 'wd', wdId: rec.id, assetId: a.id });
 }
 document.addEventListener('click', async e => {                 // delete a withdrawal record (puts the money back for standard withdrawals)
   const t = e.target.closest('[data-wddel]'); if (!t) return;
   const [id, wid] = t.dataset.wddel.split('|'), a = S.assets.find(x => x.id === id), w = a && wdOf(a).find(z => z.id === wid); if (!w) return;
-  if (!confirm('Delete this withdrawal record? Its tax harvesting entry is removed too' + (!w.th && a.type !== 'fd' ? ' and the current value goes back up by ' + money(num(w.amt)) : '') + '.')) return;
+  if (!confirm('Delete this withdrawal record? Its Realized Returns entry is removed too' + (!w.th && a.type !== 'fd' ? ' and the current value goes back up by ' + money(num(w.amt)) : '') + '.')) return;
   const data = { ...a.data, wd: wdOf(a).filter(z => z.id !== wid) };
   if (!w.th && a.type !== 'fd') data.current = num(a.data.current) + num(w.amt);
   const ok = await run(async () => {
@@ -2142,21 +2158,34 @@ function fyData() {
   const slot = fy => { let o = map.get(fy); if (!o) { o = { fy, inv: 0, wd: 0, cats: new Map() }; map.set(fy, o); } return o; };
   const cat = (o, t) => { let c = o.cats.get(t); if (!c) { c = { t, inv: 0, wd: 0 }; o.cats.set(t, c); } return c; };
   slot(fyOf(todayISO()));
-  invAssets().forEach(a => {
+  invAssets().concat(S.closed.filter(a => T[a.type] && T[a.type].cat === 'investment')).forEach(a => {
     txAll(a).forEach(z => { if (!z.date) return; const o = slot(fyOf(z.date)); o.inv += z.amt; cat(o, a.type).inv += z.amt; });
     wdOf(a).forEach(w => { if (w.th || !w.date) return; const o = slot(fyOf(w.date)), v = num(w.amt); o.wd += v; cat(o, a.type).wd += v; });
   });
   return [...map.values()].sort((x, y) => x.fy < y.fy ? 1 : -1);          // latest year first
 }
-function fyCats(o) {
+function fyCats(o) {                                            // home tile: net (invested - withdrawn) per category
   const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
-  return rows.length ? rows.map(c => `<div class="li"><div><b>${esc(T[c.t].label)}</b></div><div class="r" style="align-items:flex-end">${mm(c.inv)}${c.wd > 0 ? `<small>Withdrawn ${mm(c.wd)}</small>` : ''}</div></div>`).join('')
+  return rows.length ? rows.map(c => { const n = Math.round(c.inv - c.wd); return `<div class="li"><div><b>${esc(T[c.t].label)}</b></div><div class="r" style="align-items:flex-end">${n < 0 ? '-' : ''}${mm(Math.abs(n))}</div></div>`; }).join('')
     : `<div class="empty">No investments in this year.</div>`;
+}
+function historicalPage() {
+  const l = S.closed.filter(a => HIST_TYPES.includes(a.type)).sort((x, y) => String(y.data.closed) < String(x.data.closed) ? -1 : 1);
+  if (!l.length) return { title: 'Historical Investment', back: '#/more', tab: 'more', html: `<div class="card"><div class="empty">No closed investments yet. Mutual funds, FDs, NPS, EPF and PPF you delete are kept here.</div></div>` };
+  const kv = (a, b) => `<div class="kv"><span>${esc(a)}</span><b>${b}</b></div>`;
+  const h = l.map(a => {
+    const t = typeOf(a), tx = txAll(a).sort(byDate), inv = sum(tx, z => z.amt), wds = wdOf(a).slice().sort((p, q) => byDate(q, p)), out = sum(wds.filter(w => !w.th), w => num(w.amt));
+    return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span><span class="ttl"><b>${esc(ttl(a))}</b><small>Closed ${esc(fmtDate(a.data.closed))}</small></span><span class="val">${mm(inv)}</span></summary>
+      <div class="body">${kv('Type', esc(t.label))}${kv('Total invested', mm(inv))}${kv('Total withdrawn', mm(out))}${kv('Closed on', esc(fmtDate(a.data.closed)))}
+      ${tx.length ? `<div class="kv"><span>Investments (${tx.length})</span><b></b></div><div class="txlist">${[...tx].reverse().map(z => kv(z.date ? fmtDate(z.date) : 'No date', mm(z.amt))).join('')}</div>` : ''}
+      ${wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => kv(fmtDate(w.date) + (w.th ? ' · Tax harvest' : ''), mm(num(w.amt)))).join('')}</div>` : ''}</div></details>`;
+  }).join('');
+  return { title: 'Historical Investment', back: '#/more', tab: 'more', html: h };
 }
 function invwdPage() {
   const h = fyData().map(o => {
     const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
-    const brk = rows.length ? rows.map(c => `<div class="li fyb"><b>${esc(T[c.t].label)}</b><div class="fyr"><div>${mm(c.inv)} (I)</div><div>${mm(c.wd)} (W)</div></div></div>`).join('') : `<div class="empty">Nothing in this year.</div>`;
+    const brk = rows.length ? rows.map(c => { const n = Math.round(c.inv - c.wd); return `<div class="li fyb"><div class="fyr"><div>Invested: ${mm(c.inv)}</div><div>Withdrawn: ${mm(c.wd)}</div><div class="fytot">Total: ${n > 0 ? '<i class="pos">(+)</i> ' : n < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(n))}</div></div><b>${esc(T[c.t].label)}</b></div>`; }).join('') : `<div class="empty">Nothing in this year.</div>`;
     const net = Math.round(o.inv - o.wd);
     return `<details class="acard"><summary class="fysum"><div class="fyl"><span>FY ${esc(o.fy)}</span><b>${net > 0 ? '<i class="pos">(+)</i> ' : net < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(net))}</b></div></summary><div class="body">
       <div class="kv"><span>Total investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>${brk}</div></details>`;
@@ -2164,24 +2193,27 @@ function invwdPage() {
   return { title: 'Invested & Withdrawn', back: '#/more', tab: 'more', html: h };
 }
 
-/* ---- More: Tax harvesting ---- */
+/* ---- More: Realized Returns (profit / loss booked on withdrawals) ---- */
+const hasN = v => v !== '' && v != null && !isNaN(Number(v));
 function taxPage() {
   const l = S.harvest.slice().sort((a, b) => String(a.fy) < String(b.fy) ? 1 : -1);
   const P = sum(l.filter(x => x.pl !== 'L'), x => num(x.amount)), L = sum(l.filter(x => x.pl === 'L'), x => num(x.amount));
-  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span>
+  const rows = l.length ? `<div class="group">${l.map(x => `<a class="item" href="#/taxentry/${x.id}"><span class="t"><b>FY ${esc(x.fy)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}${hasN(x.invested) || hasN(x.withdrawn) ? `<small>${hasN(x.invested) ? 'Invested ' + mm(num(x.invested)) : ''}${hasN(x.invested) && hasN(x.withdrawn) ? ' · ' : ''}${hasN(x.withdrawn) ? 'Withdrawn ' + mm(num(x.withdrawn)) : ''}</small>` : ''}</span>
       <span class="v"><b>${mm(num(x.amount))}</b><small class="${x.pl === 'L' ? 'neg' : 'pos'}">${x.pl === 'L' ? 'Loss' : 'Profit'}</small></span></a>`).join('')}</div>`
     : `<div class="group"><div class="empty-s">No entries yet.</div></div>`;
   const h = `<div class="stats"><div class="stat"><span>Total profit</span><b class="pos">${mm(P)}</b></div><div class="stat"><span>Total loss</span><b class="neg">${mm(L)}</b></div></div>
-    <div class="card"><div class="mini">Net harvested</div><div class="bigv">${mm(P - L)}</div></div>
+    <div class="card"><div class="mini">Net realized</div><div class="bigv">${mm(P - L)}</div></div>
     <div class="gsec"><span>By financial year</span></div>${rows}`;
-  return { title: 'Tax Harvesting', back: '#/more', tab: 'more', right: `<a class="plus" href="#/taxentry/new" aria-label="Add entry">+</a>`, html: h };
+  return { title: 'Realized Returns', back: '#/more', tab: 'more', right: `<a class="plus" href="#/taxentry/new" aria-label="Add entry">+</a>`, html: h };
 }
 function taxForm(id) {
   const ex = id && id !== 'new' ? S.harvest.find(x => x.id === id) : null;
   if (id && id !== 'new' && !ex) return notFound();
-  const x0 = ex || { fy: curFY(), amount: '', pl: 'P', note: '' };
+  const x0 = ex || { fy: curFY(), invested: '', withdrawn: '', amount: '', pl: 'P', note: '' };
   const h = `<form id="f" autocomplete="off"><div class="group">
       <div class="row"><span class="l">Financial Year</span><input name="fy" value="${esc(x0.fy)}" placeholder="e.g. 2026-27" autocapitalize="off" required></div>
+      <div class="row"><span class="l">Invested Amount</span><span class="pre">₹</span><input name="invested" type="number" inputmode="decimal" step="any" value="${esc(x0.invested ?? '')}" placeholder="0"></div>
+      <div class="row"><span class="l">Withdrawal Amount</span><span class="pre">₹</span><input name="withdrawn" type="number" inputmode="decimal" step="any" value="${esc(x0.withdrawn ?? '')}" placeholder="0"></div>
       <div class="row"><span class="l">Amount</span><span class="pre">₹</span><input name="amount" type="number" inputmode="decimal" step="any" value="${esc(x0.amount)}" placeholder="0" required></div>
       <div class="row"><span class="l">Result</span><select name="pl"><option value="P" ${x0.pl !== 'L' ? 'selected' : ''}>Profit</option><option value="L" ${x0.pl === 'L' ? 'selected' : ''}>Loss</option></select></div>
       <div class="row col"><span class="l">Notes</span><textarea name="note" rows="2">${esc(x0.note)}</textarea></div></div>
@@ -2189,12 +2221,17 @@ function taxForm(id) {
   return { title: ex ? 'Edit Entry' : 'Add Entry', back: '#/tax', html: h, notabs: true,
     after() {
       const form = $('#f');
+      const calc = () => {                                    // both filled → profit / loss worked out for you (you can still change it)
+        const i = form.elements.invested.value, w = form.elements.withdrawn.value; if (i === '' || w === '') return;
+        const g = num(w) - num(i); form.elements.amount.value = Math.round(Math.abs(g) * 100) / 100; form.elements.pl.value = g < 0 ? 'L' : 'P';
+      };
+      form.elements.invested.addEventListener('input', calc); form.elements.withdrawn.addEventListener('input', calc);
       form.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(form), fy = String(fd.get('fy') || '').trim();
         if (!/^\d{4}-\d{2}$/.test(fy)) return toast('Enter the year like 2026-27');
         if (fd.get('amount') === '' || !(num(fd.get('amount')) >= 0)) return toast('Enter the amount');
-        const rec = { id: ex ? ex.id : uid(), fy, amount: num(fd.get('amount')), pl: fd.get('pl'), note: String(fd.get('note') || '').trim(), created: ex?.created };
+        const rec = { ...(ex || {}), id: ex ? ex.id : uid(), fy, invested: fd.get('invested') === '' ? '' : num(fd.get('invested')), withdrawn: fd.get('withdrawn') === '' ? '' : num(fd.get('withdrawn')), amount: num(fd.get('amount')), pl: fd.get('pl'), note: String(fd.get('note') || '').trim(), created: ex?.created };
         const note = await run(() => saveRec('harvest', 'taxsave', rec));
         if (note !== null) { toast(note || 'Saved'); location.hash = '#/tax'; }
       });
@@ -2318,6 +2355,7 @@ function view(p) {
     case 'update': return updatePage(b, c);
     case 'withdraw': return withdrawPage(b);
     case 'invwd': return invwdPage();
+    case 'historical': return historicalPage();
     case 'add': return addPage(b, c);
     case 'form': return formPage(b, c);
     case 'documents': return docsPage(b);
@@ -2394,7 +2432,8 @@ document.addEventListener('click', async e => {
   if (t.id === 'sheet') { if (e.target === t) closeSheet(); return; }
   if (t.dataset.pick) { store.set('theme', t.dataset.pick); applyTheme(); return render(); }
   if (t.dataset.del) {
-    if (!confirm('Delete this asset? This cannot be undone.')) return;
+    const da = S.assets.find(x => x.id === t.dataset.del);
+    if (!confirm(da && HIST_TYPES.includes(da.type) ? 'Delete this asset? It will move to Historical Investment and stay in your yearly totals and Realized Returns.' : 'Delete this asset? This cannot be undone.')) return;
     if (await run(async () => { await removeAsset(t.dataset.del); return true; })) { toast('Deleted'); render(); }
     return;
   }
