@@ -526,10 +526,9 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
 .brown{display:inline-block;filter:sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(.62) contrast(1.1)}
-.sqb{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:24px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
-.sqb:active{transform:scale(.97)}
-.sqb .ico{width:64px;height:64px;border-radius:18px;font-size:32px}
-.sqb b{font-size:17px;font-weight:600}
+.ins2{gap:12px}.ins2 .ih{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0;color:inherit;text-decoration:none;text-align:center}
+.ins2 .ih b{font-size:16px;font-weight:500}.ins2 .ih small{font-size:13px;color:var(--sub)}
+.ins2 .ih:active{opacity:.55}.ins2 .iv{flex:none;width:1px;height:30px;background:var(--sep)}
 .sqg{display:grid;grid-template-columns:1fr 1fr;gap:15px 12px;margin:0 16px 20px}
 .sq{display:flex;align-items:center;gap:10px;min-height:92px;padding:14px 12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
 .sq:active{transform:scale(.97)}
@@ -1140,8 +1139,8 @@ function home() {
 
   const sq = (href, ico, c, name, amt) => `<a class="sq" href="${href}"><span class="ico" style="background:${c}">${ico}</span><span class="sqt"><b>${esc(name)}</b><span>${amt}</span></span></a>`;
   h += `<div class="sqg">${sq('#/funds', '<span class="brown">' + T.fd.ico + '</span>', T.sa.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ffcc00', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
-  const pCover = sum(ofTypes(['term', 'pmed']), a => num(a.data.cover));      // term + medical cover only
-  h += `<div class="group solo hm">${item('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '', '', true)}</div>`;
+  h += `<div class="group solo hm"><div class="item nochev ins2"><span class="ico" style="background:#ff375f">🛡️</span>
+    <a class="ih" href="#/insurance/company"><b>Company</b><small>Insurance</small></a><i class="iv"></i><a class="ih" href="#/insurance/personal"><b>Personal</b><small>Insurance</small></a></div></div>`;
   h += st;
   h += homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
@@ -1291,11 +1290,6 @@ function listPage(key) {
   return { title, back, right: `<a class="plus" href="${addHref}" aria-label="Add">+</a>`, html: h, tab: 'home' };
 }
 
-function insuranceMenu() {
-  const big = (href, ico, c, name) => `<a class="sqb" href="${href}"><span class="ico" style="background:${c}">${ico}</span><b>${esc(name)}</b></a>`;
-  return { title: 'Insurance', back: backHome(), large: 'Insurance', tab: 'home',
-    html: `<div class="sqg">${big('#/insurance/personal', '👤', '#0a84ff', 'Personal')}${big('#/insurance/company', '🏢', '#5e5ce6', 'Company')}</div>` };
-}
 function insuranceList(group) {
   if (!['personal', 'company'].includes(group)) return notFound();
   const items = ofTypes(ORDER[group]);
@@ -1303,7 +1297,7 @@ function insuranceList(group) {
   const annual = sum(items, a => num(a.data.premium) * pdatesOf(a).length);
   let h = items.length ? `<div class="summary ${group === 'company' ? 'one' : ''}"><div><span>Total Cover</span><b>${money(cover)}</b></div>${group === 'personal' ? `<div><span>Yearly Premium</span><b>${money(annual)}</b></div>` : ''}</div>` + items.map(card).join('')
     : `<div class="card"><div class="empty">No policies added yet.</div></div>`;
-  return { title: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance', back: '#/insurance', large: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance',
+  return { title: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance', back: '#/home', large: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance',
     right: `<a class="plus" href="#/add/insurance/${group}">+</a>`, html: h, tab: 'home' };
 }
 
@@ -2480,7 +2474,7 @@ function view(p) {
     case 'goals': return goals();
     case 'goal': return goalForm(b);
     case 'list': return listPage(b);
-    case 'insurance': return b ? insuranceList(b) : insuranceMenu();
+    case 'insurance': return b ? insuranceList(b) : notFound();
     case 'realestate': return listPage('realestate');
     case 'property': return listPage('property');
     case 'gold': return listPage('gold');
