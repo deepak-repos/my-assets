@@ -282,6 +282,11 @@ button.btn{width:calc(100% - 32px)}
 .pad button{height:78px;border-radius:50%;background:var(--fill);font-size:28px;font-weight:400}
 .pad button.x{background:none;font-size:16px}
 #lock .err{color:var(--red);min-height:20px;font-size:14px}
+#lock .bio{display:flex;align-items:center;justify-content:center;gap:8px}#lock .bio svg{width:22px;height:22px}
+.row input.swc{-webkit-appearance:none;appearance:none;flex:none;width:51px;height:31px;min-width:51px;padding:0;margin:0;border-radius:16px;background:var(--fill);position:relative;cursor:pointer;transition:background .2s}
+.row input.swc::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.28);transition:transform .2s}
+.row input.swc:checked{background:#34c759}.row input.swc:checked::after{transform:translateX(20px)}
+.row input.swc:disabled{opacity:.4;cursor:default}
 
 #busy{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.25);display:grid;place-items:center}
 #busy i{width:38px;height:38px;border-radius:50%;border:4px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .8s linear infinite}
@@ -2410,7 +2415,7 @@ function settingsPage(sub) {
   if (!sub) return { title: 'Settings', back: '#/more', large: 'Settings', tab: 'more',
     html: soloList([item('#/settings/appearance', '🎨', '#5e5ce6', 'Appearance', theme[0].toUpperCase() + theme.slice(1)),
       item('#/settings/keys', '🔑', '#ff9f0a', 'Add Keys', remote() ? 'Connected' : 'Not connected'),
-      item('#/settings/lock', '🔒', '#34c759', 'App Lock', store.get('lock') ? 'On' : 'Off')]) };
+      item('#/settings/lock', '🔒', '#34c759', 'App Lock', store.get('lock') ? (store.get('bio') ? 'On · Fingerprint' : 'On') : 'Off')]) };
   if (sub === 'appearance') return { title: 'Appearance', back: '#/settings', large: 'Appearance', tab: 'more',
     html: `<div class="seg">${['auto', 'light', 'dark'].map(x => `<button class="${theme === x ? 'on' : ''}" data-pick="${x}">${x[0].toUpperCase() + x.slice(1)}</button>`).join('')}</div>
       <div class="gfoot">Auto follows your phone's light/dark setting.</div>` };
@@ -2437,8 +2442,22 @@ function settingsPage(sub) {
         <input name="pin" type="password" inputmode="numeric" pattern="\\d{6}" maxlength="6" placeholder="••••••" required></div></div>
         <div class="gfoot">The lock asks for your PIN when you reopen the app. It hides the screen only – it is not encryption.</div>
         <button class="btn" type="submit">${on ? 'Change PIN' : 'Turn On'}</button></form>
+        <div class="group"><label class="row"><span class="l">Unlock with Fingerprint</span><input type="checkbox" class="swc" id="bio" ${store.get('bio') ? 'checked' : ''} disabled></label></div>
+        <div class="gfoot" id="biof">${on ? 'Checking this phone…' : 'Turn on App Lock with a PIN first. The PIN stays as your backup.'}</div>
         ${on ? '<button class="btn redtxt" data-act="lockoff">Turn Off App Lock</button>' : ''}`,
       after() {
+        const sw = $('#bio'), note = $('#biof');
+        if (on) bioSupported().then(ok => {
+          if (!ok) { note.textContent = 'Fingerprint unlock is not available here. It needs a phone with a fingerprint (or face / screen lock) set up, and the app opened over https. Your PIN keeps working.'; if (!store.get('bio')) return; }
+          sw.disabled = false; note.textContent = 'Use your phone\'s fingerprint (or face / screen lock) to open the app. If it does not work, the PIN is always the backup.';
+        });
+        sw.addEventListener('change', async () => {
+          if (!sw.checked) { store.del('bio'); toast('Fingerprint off'); return; }
+          sw.disabled = true;
+          try { await bioEnroll(); toast('Fingerprint on'); }
+          catch (err) { sw.checked = false; store.del('bio'); toast(err && err.name === 'NotAllowedError' ? 'Fingerprint was cancelled' : 'Could not set up fingerprint'); }
+          sw.disabled = false;
+        });
         $('#f').addEventListener('submit', async e => {
           e.preventDefault(); const pin = new FormData(e.target).get('pin');
           if (!/^\d{6}$/.test(pin)) return toast('Enter 6 digits');
@@ -2502,6 +2521,29 @@ function render(goTo) {
 /* ---------------------------------------------------------------------
    App lock
    --------------------------------------------------------------------- */
+/* Fingerprint (or face / screen lock) through the phone's own WebAuthn prompt. Nothing leaves the phone; the PIN stays as the backup. */
+const bioB64 = u => btoa(String.fromCharCode(...new Uint8Array(u))), bioRaw = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function bioSupported() {
+  try { return !!(window.isSecureContext && window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch { return false; }
+}
+const bioOn = () => !!store.get('bio') && !!window.PublicKeyCredential && window.isSecureContext;
+async function bioEnroll() {
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'My Assets' },
+    user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'my-assets', displayName: 'My Assets' },
+    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+    attestation: 'none', timeout: 60000 } });
+  if (!cred) throw new Error('No credential');
+  store.set('bio', bioB64(cred.rawId));
+}
+async function bioVerify() {                         // true only when the phone confirmed the fingerprint / face / screen lock
+  const a = await navigator.credentials.get({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), userVerification: 'required', timeout: 60000,
+    allowCredentials: [{ type: 'public-key', id: bioRaw(store.get('bio')), transports: ['internal'] }] } });
+  return !!a && (new Uint8Array(a.response.authenticatorData)[32] & 4) === 4;     // "user verified" flag
+}
+const BIO_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v2.5c0 2.2-.5 4.2-1.5 6"/><path d="M8.5 12.5c0 2.6-.4 4.6-1.2 6.5"/><path d="M15.5 12c0 3.2-.5 5.7-1.6 8"/><path d="M5.2 10.5a6.9 6.9 0 0 1 13.6 0"/><path d="M5.5 14.5c.3-1.2.5-2.3.5-3.5a6 6 0 0 1 12 0c0 1.3-.1 2.6-.4 3.8"/><path d="M12 8a3 3 0 0 0-3 3"/></svg>';
 async function hashPin(p) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('my-asset:' + p));
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -2513,10 +2555,18 @@ function showLock(opts = {}) {                       // opts.onOk runs after a c
   pin = ''; const L = $('#lock'); L.hidden = false;
   const draw = (err) => {
     L.innerHTML = `<div style="font-size:42px">🔒</div><h2>Enter PIN</h2><div class="dots">${Array.from({ length: LEN }, (_, i) => i).map(i => `<i class="${i < pin.length ? 'f' : ''}"></i>`).join('')}</div><div class="err">${err || ''}</div>
-      <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}<span></span><button data-n="0">0</button><button class="x" data-n="del">⌫</button></div>${opts.cancel ? '<button type="button" class="btn plain" data-lc>Cancel</button>' : ''}`;
+      <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}<span></span><button data-n="0">0</button><button class="x" data-n="del">⌫</button></div>${bioOn() ? `<button type="button" class="btn plain bio" data-bio>${BIO_ICO}Use Fingerprint</button>` : ''}${opts.cancel ? '<button type="button" class="btn plain" data-lc>Cancel</button>' : ''}`;
   };
   draw();
+  const tok = L._tok = {}; let busy = false;
+  const tryBio = async () => {                        // same outcome as a correct PIN
+    if (busy || !bioOn()) return; busy = true;
+    try { if (await bioVerify() && L._tok === tok && !L.hidden) { L.hidden = true; L.innerHTML = ''; opts.onOk && opts.onOk(); } }
+    catch (err) { if (L._tok === tok && !(err && err.name === 'NotAllowedError')) { pin = ''; draw('Fingerprint did not work – use your PIN'); } }
+    busy = false;
+  };
   L.onclick = async e => {
+    if (e.target.closest('[data-bio]')) return tryBio();
     if (e.target.closest('[data-lc]')) { L.hidden = true; L.innerHTML = ''; return opts.cancel && opts.cancel(); }
     const b = e.target.closest('[data-n]'); if (!b) return;
     if (b.dataset.n === 'del') pin = pin.slice(0, -1); else if (pin.length < LEN) pin += b.dataset.n;
@@ -2526,6 +2576,7 @@ function showLock(opts = {}) {                       // opts.onOk runs after a c
     }
     draw();
   };
+  if (bioOn()) setTimeout(tryBio, 300);               // ask for the fingerprint straight away; the PIN pad is right there if it is dismissed
 }
 /* When a field with text in it is focused, put the cursor at the end so Backspace works straight away */
 document.addEventListener('focusin', e => {
@@ -2563,7 +2614,7 @@ document.addEventListener('click', async e => {
       S.hide = !S.hide; store.set('hide', S.hide); return render();
     case 'refresh': return remote() ? sync() : toast('Local mode – nothing to sync');
     case 'disconnect': S.cfg = null; store.del('cfg'); toast('Disconnected'); return render();
-    case 'lockoff': store.del('lock'); store.del('lockLen'); toast('App lock off'); return render();
+    case 'lockoff': store.del('lock'); store.del('lockLen'); store.del('bio'); toast('App lock off'); return render();
   }
 });
 function openSheet() {
