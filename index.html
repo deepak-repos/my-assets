@@ -61,11 +61,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* hero */
-.hero{position:relative;margin:0 16px 16px;padding:18px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
+.hero{position:relative;margin:0 16px 16px;padding:36px 0 0;border-radius:24px;color:#fff;text-align:center;overflow:hidden;
   background:#2A4D75;box-shadow:0 3px 10px rgba(42,77,117,.18)}
 .eye{flex:none;width:36px;height:36px;margin-top:4px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .eye svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.hero .top{display:grid;grid-template-columns:max-content max-content;justify-content:start;column-gap:22px;row-gap:2px;align-items:baseline;padding:0 12px 0 15%;margin-bottom:14px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
+.hero .top{display:grid;grid-template-columns:max-content max-content;justify-content:start;column-gap:22px;row-gap:2px;align-items:baseline;padding:0 12px 0 15%;margin-bottom:32px;white-space:nowrap;text-align:left;color:inherit;text-decoration:none}
 .hero .top .lbl,.hero .top .amt{grid-column:1}
 .hero .top .xp{grid-column:2;grid-row:2;justify-self:center;align-self:baseline;position:relative;margin:0;opacity:1;color:rgba(255,255,255,.475)}
 .hero .top .xp.na{color:rgba(255,255,255,.3)}
@@ -520,7 +520,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .sqg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 16px}
 .sq{display:flex;align-items:center;gap:10px;min-height:92px;padding:14px 12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
 .sq:active{transform:scale(.97)}
-.sq .sqt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px}
+.sq .sqt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:3px}
 .sq .sqt b{font-size:14px;font-weight:600;white-space:nowrap}
 .sq .sqt span{font-size:16px;font-weight:700;letter-spacing:-.3px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .item .v small.xirr.up{color:var(--green)}.item .v small.xirr.dn{color:var(--red)}
@@ -1066,20 +1066,22 @@ function home() {
      <div class="r">${u.amt ? money(u.amt) : '—'}<small>${u.diff === 0 ? 'Today' : u.diff === 1 ? 'Tomorrow' : 'In ' + u.diff + ' days'}</small></div></div>`).join('')
     : `<div class="empty">No premiums due in the next 90 days.</div>`) + `</div></details>`;
   h += '</div>';
-  h += '<div class="card wtile">';
+  const stat = '<div class="hsec">Status</div><div class="card wtile">';
+  let st = stat;
 
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
-  h += `<details class="dtile wt pl"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
+  st += `<details class="dtile wt pl"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
   const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
-  h += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
-  h += '</div>';
+  st += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
+  st += '</div>';
 
   const sq = (href, ico, c, name, amt) => `<a class="sq" href="${href}"><span class="ico" style="background:${c}">${ico}</span><span class="sqt"><b>${esc(name)}</b><span>${amt}</span></span></a>`;
-  h += `<div class="sqg">${sq('#/funds', T.fd.ico, T.fd.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ff9f0a', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
+  h += `<div class="sqg">${sq('#/funds', T.fd.ico, T.sa.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ffcc00', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
   const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
   h += `<div class="group solo hm">${item('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '')}</div>`;
+  h += st;
   h += homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
