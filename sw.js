@@ -4,7 +4,7 @@
    - Never touches the Google Apps Script API or any other cross-origin request,
      so your financial data is never stored by the service worker.
    Bump CACHE when you want to force-refresh old caches. */
-const CACHE = 'my-asset-v37';
+const CACHE = 'my-asset-v38';
 const SHELL = [
   './',
   './index.html',
