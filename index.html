@@ -131,7 +131,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .dtile .body .li small{font-size:12px}
 .dtile .body{padding:0 16px 14px;border-top:.5px solid var(--sep)}
 .dtile.prem .body{padding-left:36px}
-.dtile.prem>summary{font-size:15px}.dtile.prem .dl svg{width:15px;height:15px}
+.dtile.prem>summary{font-size:15px;box-sizing:border-box;height:46px;padding-top:0;padding-bottom:0}   /* with the border the whole tile is 48px */.dtile.prem .dl svg{width:15px;height:15px}
 .card .empty{color:var(--sub);font-size:14px;padding:4px 0}
 .li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:.5px solid var(--sep)}
 .li:first-of-type{border-top:0}
@@ -531,7 +531,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .ins2 .iv+.ih{padding-left:21.5px}   /* icons line up with the Total Funds / Property and Liquid Funds / Gold icons above */
 .ins2 .ii{font-size:24px;line-height:1;width:26px;text-align:center;flex:none;filter:grayscale(1) contrast(1.15)}
 .ins2 .it{display:flex;flex-direction:column;gap:1px;min-width:0}
-.ins2 .it b{font-size:16px;font-weight:500}.ins2 .it small{font-size:13px;color:var(--sub)}
+.ins2 .it b{font-size:14px;font-weight:600}.ins2 .it small{font-size:15px;font-weight:400;color:var(--text)}
 .ins2 .ih:active{opacity:.55}.ins2 .iv{flex:none;width:1px;height:30px;background:var(--sep)}
 .sqg{display:grid;grid-template-columns:1fr 1fr;gap:15px 12px;margin:0 16px 20px}
 .sq{display:flex;align-items:center;gap:10px;min-height:92px;padding:14px 12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);color:inherit;text-decoration:none;transition:transform .15s ease}
