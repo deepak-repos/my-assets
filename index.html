@@ -526,7 +526,8 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyr .fytot{margin-top:2px}.fyr i,.fytot i{font-style:normal}
 .li.fyb{display:grid;grid-template-columns:1fr auto;gap:3px 14px;align-items:baseline}
 .li.fyb>*{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
-.li.fyb>b,.li.fyb>.fytot{text-align:right}.li.fyb>b{font-size:15px}.fytot i{font-style:normal}
+.li.fyb>.fyg{color:var(--sub)}
+.li.fyb>b,.li.fyb>.fytot{text-align:right}.li.fyb>b{font-size:15px;opacity:.65}.fytot i{font-style:normal}
 .row.delrow{width:100%;justify-content:center;border:0;border-top:.5px solid var(--sep);background:transparent;color:var(--red);font:inherit;font-size:16px;font-weight:600;cursor:pointer;-webkit-appearance:none}
 .dtile[data-go]>.body{cursor:pointer}
 </style>
@@ -2188,7 +2189,7 @@ function historicalPage() {
 function invwdPage() {
   const h = fyData().map(o => {
     const rows = [...o.cats.values()].filter(c => c.inv > 0 || c.wd > 0).sort((x, y) => ORDER.investment.indexOf(x.t) - ORDER.investment.indexOf(y.t));
-    const brk = rows.length ? rows.map(c => { const n = Math.round(c.inv - c.wd); return `<div class="li fyb"><span>Invested: ${mm(c.inv)}</span><b>${esc(T[c.t].label)}</b><span>Withdrawn: ${mm(c.wd)}</span><span class="fytot">${n > 0 ? '<i class="pos">(+)</i> ' : n < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(n))}</span></div>`; }).join('') : `<div class="empty">Nothing in this year.</div>`;
+    const brk = rows.length ? rows.map(c => { const n = Math.round(c.inv - c.wd); return `<div class="li fyb"><span class="fyg">Invested: ${mm(c.inv)}</span><b>${esc(T[c.t].label)}</b><span class="fyg">Withdrawn: ${mm(c.wd)}</span><span class="fytot">${n > 0 ? '<i class="pos">(+)</i> ' : n < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(n))}</span></div>`; }).join('') : `<div class="empty">Nothing in this year.</div>`;
     const net = Math.round(o.inv - o.wd);
     return `<details class="acard"><summary class="fysum"><div class="fyl"><span>FY ${esc(o.fy)}</span><b>${net > 0 ? '<i class="pos">(+)</i> ' : net < 0 ? '<i class="neg">(-)</i> ' : ''}${mm(Math.abs(net))}</b></div></summary><div class="body">
       <div class="kv"><span>Total investment</span><b>${mm(o.inv)}</b></div><div class="kv"><span>Total withdrawal</span><b>${mm(o.wd)}</b></div>${brk}</div></details>`;
