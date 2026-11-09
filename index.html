@@ -528,7 +528,6 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .fyc .fyv b{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 .fyc .fyv.two>div:last-child{text-align:right}
 .brown{display:inline-block;filter:sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(.62) contrast(1.1)}
-.group.solo.hm+.hsec{margin-top:20px}   /* the heading right under the Insurance menu is 20px away */
 .hm .item.ins2{position:relative;gap:0;padding:0;height:48px;min-height:48px}
 .ins2 .ih{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;color:inherit;text-decoration:none}
 .ins2 .ii.mid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:24px;line-height:1;pointer-events:none;filter:grayscale(1) contrast(1.15)}   /* single icon where the divider used to be */
@@ -1147,7 +1146,7 @@ function home() {
   h += `<div class="sqg">${sq('#/funds', '<span class="brown">' + T.fd.ico + '</span>', T.sa.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ffcc00', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
   h += `<div class="group solo hm"><div class="item nochev ins2">
     <a class="ih" href="#/insurance/company"><span class="it"><b>Company</b><small>Insurance</small></span></a><a class="ih" href="#/insurance/personal"><span class="it"><b>Personal</b><small>Insurance</small></span></a><span class="ii mid">🛡️</span></div></div>`;
-  h += st + homeGrowth() + homeGoals() + homePurposes();
+  h += st + homeGoals() + homeGrowth() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
 
