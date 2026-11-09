@@ -1060,6 +1060,11 @@ function flowsOf(a) {
   out.push({ t: end, v: curVal(a) });
   return out;
 }
+function gratPrev(a) {                                        // total gratuity up to the previous service year (0 if not applicable)
+  const d = a.data, y = gratYears(d, todayISO()); if (y.done < GRAT_MIN) return 0;
+  const upTo = addYM(d.joinDate, y.paid - 1);
+  return gratSched(d).filter(z => z.date <= upTo).reduce((t, z) => t + z.amt, 0);
+}
 function gratReturn(a) {                                     // gratuity: return = (value now - total up to last year's service) / total up to last year's service
   const d = a.data, y = gratYears(d, todayISO()); if (y.done < GRAT_MIN) return null;
   const upTo = addYM(d.joinDate, y.paid - 1), prev = gratSched(d).filter(z => z.date <= upTo).reduce((t, z) => t + z.amt, 0);
@@ -1067,8 +1072,19 @@ function gratReturn(a) {                                     // gratuity: return
 }
 const assetXirr = a => { if (a.type === 'gratuity') return gratOk(a.data) ? gratReturn(a) : null; const f = flowsOf(a); return f ? xirr(f) : null; };
 function groupXirr(items) {
+  if (items.length && items.every(a => a.type === 'gratuity')) {   // gratuity-only group (Total Funds row, Gratuity page): same return as the asset card, combined
+    const g = items.filter(a => gratOk(a.data) && gratPrev(a) > 0), pv = sum(g, gratPrev);
+    return pv > 0 ? (sum(g, curVal) - pv) / pv : null;
+  }
   const all = [];
-  items.forEach(a => { const f = flowsOf(a); if (f) all.push(...f); });
+  items.forEach(a => {
+    if (a.type === 'gratuity') {                              // gratuity inside a mixed group: money up to last service year, grown to today over one year (same % as its own card)
+      const pv = gratOk(a.data) ? gratPrev(a) : 0, now = Date.now();
+      if (pv > 0) all.push({ t: now - 365 * 864e5, v: -pv }, { t: now, v: curVal(a) });
+      return;
+    }
+    const f = flowsOf(a); if (f) all.push(...f);
+  });
   return all.length ? xirr(all) : null;
 }
 const ofTypes = types => S.assets.filter(a => types.includes(a.type));
