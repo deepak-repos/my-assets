@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="My Asset">
-<meta name="theme-color" content="#f2f2f7">
+<meta name="theme-color" content="#edf0f5">
 <title>My Asset</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -603,6 +603,90 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .adbt button[data-ad="1"]{background:var(--blue);color:#fff}.adbt button.dg{background:var(--red)!important;color:#fff!important}
 .dvbody pre.dvtext{align-self:flex-start;width:100%;box-sizing:border-box;margin:0;padding:14px 16px;white-space:pre-wrap;word-break:break-word;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--text);text-align:left}
 </style>
+<style id="modern">
+/* ===== Modern layer: private-bank ledger look. Layout and sizes above are untouched. ===== */
+:root{
+  --bg:#edf0f5;--card:#fff;--text:#101b2e;--sub:#667289;--sep:rgba(16,27,46,.10);
+  --blue:#2459d3;--green:#0f9d63;--red:#dc3f45;--fill:rgba(16,27,46,.06);--blur:rgba(237,240,245,.78);
+  --brass:#b9924a;--ink-shadow:16,27,46;
+  --shadow:0 0 0 .5px rgba(16,27,46,.07),0 1px 2px rgba(16,27,46,.04),0 10px 22px -12px rgba(16,27,46,.16);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){
+    --bg:#0a0f18;--card:#121a27;--text:#e9eef7;--sub:#8d99ad;--sep:rgba(148,163,184,.15);
+    --blue:#6a95ff;--green:#2fd08a;--red:#ff6b70;--fill:rgba(148,163,184,.14);--blur:rgba(10,15,24,.78);--ink-shadow:0,0,0;
+    --shadow:0 0 0 .5px rgba(148,163,184,.12),0 10px 22px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme=dark]{
+  --bg:#0a0f18;--card:#121a27;--text:#e9eef7;--sub:#8d99ad;--sep:rgba(148,163,184,.15);
+  --blue:#6a95ff;--green:#2fd08a;--red:#ff6b70;--fill:rgba(148,163,184,.14);--blur:rgba(10,15,24,.78);--ink-shadow:0,0,0;
+  --shadow:0 0 0 .5px rgba(148,163,184,.12),0 10px 22px -12px rgba(0,0,0,.6);
+}
+html,body{font-variant-numeric:lining-nums;text-rendering:optimizeLegibility}
+/* tabular figures only where numbers line up in a column, so your tuned widths elsewhere stay put */
+.acard .val,.item .v,.li .r,.li>b,.kv b,.fr1 b,.fr2 span,.fyb2 b,.fyi>b{font-variant-numeric:tabular-nums lining-nums}
+
+/* the one memorable piece: an engraved, banknote-style net-worth tile with a brass edge */
+.hero{border-radius:28px;
+  background:
+    radial-gradient(120% 85% at 100% 0%,rgba(132,184,240,.30),transparent 58%),
+    repeating-radial-gradient(circle at 12% 135%,transparent 0 10px,rgba(255,255,255,.040) 10px 11px),
+    repeating-radial-gradient(circle at 96% -25%,transparent 0 12px,rgba(255,255,255,.036) 12px 13px),
+    linear-gradient(158deg,#1d3a5e 0%,#274c78 52%,#315f90 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 22px 34px -20px rgba(29,58,94,.7),0 3px 8px rgba(29,58,94,.16)}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;pointer-events:none;background:linear-gradient(90deg,transparent 2%,var(--brass) 50%,transparent 98%);opacity:.85}
+.hero .amt{letter-spacing:-1.1px;text-shadow:0 1px 14px rgba(8,22,44,.35)}
+.hero .lbl{letter-spacing:.1px}
+
+/* blue summary tiles on the category pages: same family, calmer */
+.summary{border-radius:24px;background:linear-gradient(158deg,#1f3f66 0%,#2a5280 60%,#31608f 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 16px 28px -18px rgba(29,58,94,.65)}
+
+/* surfaces: radius follows importance, shadow stays on things that float */
+.card{border-radius:22px}
+.group{border-radius:18px}
+.acard{border-radius:18px}
+.sq{border-radius:20px}
+.card.outer{border-radius:18px}
+.btn{border-radius:16px;background:linear-gradient(180deg,#2d66e0,#2152c4);box-shadow:0 8px 16px -8px rgba(36,89,211,.7),inset 0 1px 0 rgba(255,255,255,.22)}
+.btn.sm{border-radius:12px;box-shadow:none}
+.btn.plain,.btn.redtxt,.btn.danger{background:var(--card);box-shadow:var(--shadow)}
+.btn.danger{background:rgba(220,63,69,.12);box-shadow:none}
+.btn.sm.wdo,.btn.sm.edit{box-shadow:none}
+
+/* icon tiles get a little depth */
+.ico{border-radius:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.34),inset 0 -1px 0 rgba(0,0,0,.08),0 3px 8px -4px rgba(var(--ink-shadow),.45);
+  background-image:linear-gradient(160deg,rgba(255,255,255,.26),rgba(255,255,255,0) 60%)}
+.sq .ico{border-radius:12px}
+
+/* headings and lists */
+.hsec{letter-spacing:-.55px}
+.head h1{letter-spacing:-.9px}
+.bar .bt{letter-spacing:-.4px}
+.item .t b{font-weight:600}
+.item .v,.item small,.li small{letter-spacing:.05px}
+.item+.item,.row+.row,.li{border-color:var(--sep)}
+.acard .val,.acard .ttl b{letter-spacing:-.2px}
+
+/* press feedback, the only motion: it answers a touch */
+.item,.acard>summary,.sq,.ppill,#tabbar>*{transition:background-color .15s ease,transform .15s ease,opacity .15s ease}
+.item:active,.acard>summary:active{background:var(--fill)}
+.sq:active{transform:scale(.975)}
+
+/* tab bar: frosted, with a small brass mark under the active tab */
+#tabbar{border-top:.5px solid var(--sep);box-shadow:0 -10px 24px -18px rgba(var(--ink-shadow),.5)}
+#tabbar>*{position:relative}
+#tabbar .on{color:var(--blue);font-weight:600}
+#tabbar .on::after{content:"";position:absolute;bottom:-2px;left:50%;width:16px;height:2.5px;border-radius:2px;background:var(--brass);transform:translateX(-50%)}
+
+/* pills and inputs */
+.ppill{background:var(--fill);color:var(--blue);box-shadow:inset 0 0 0 .5px var(--sep)}
+.bar .back,.bar .right .plus,.eye,.iconbtn{background:var(--card);box-shadow:var(--shadow)}
+.row input:focus,.row select:focus,.row textarea:focus{caret-color:var(--blue)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:8px}
+#lock{background:radial-gradient(120% 70% at 50% 0%,rgba(49,96,144,.22),transparent 60%),var(--bg)}
+</style>
 </head>
 <body>
 <div id="app"></div>
@@ -1016,7 +1100,7 @@ function applyTheme() {
   const th = store.get('theme', 'auto');
   if (th === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', th);
   const dark = th === 'dark' || (th === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches);
-  $('meta[name=theme-color]').setAttribute('content', dark ? '#000000' : '#f2f2f7');
+  $('meta[name=theme-color]').setAttribute('content', dark ? '#0a0f18' : '#edf0f5');
 }
 matchMedia('(prefers-color-scheme:dark)').addEventListener?.('change', applyTheme);
 
