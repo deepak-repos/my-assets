@@ -695,14 +695,7 @@ html,body{font-variant-numeric:lining-nums;text-rendering:optimizeLegibility}
 .acard>summary,.dtile>summary,.item,.sq,.mt,.group .item{transition:transform .28s cubic-bezier(.32,.72,0,1),background-color .2s ease}
 .acard>summary:active,.dtile>summary:active,.sq:active{transform:scale(.985)}
 .item:active{transform:scale(.99)}
-@keyframes pop{from{opacity:0;transform:scale(.9)}60%{opacity:1}to{opacity:1;transform:none}}
-.adbox,.cal{animation:pop .42s cubic-bezier(.34,1.4,.5,1) both}
-#sheet .pane{animation:up .5s cubic-bezier(.32,.72,0,1)}
-.calov,.adlg{animation-duration:.25s}
-.dtile>summary .dr,.acard>summary .chev,.acard>summary::after{transition:transform .45s cubic-bezier(.32,.72,0,1)}
-.acard,.dtile,.summary,.card{transition:box-shadow .45s ease,transform .45s cubic-bezier(.32,.72,0,1)}
-.acard[open]{box-shadow:0 10px 28px -14px rgba(16,27,46,.28)}
-@media (prefers-reduced-motion:reduce){.navold,.navshade{display:none}.adbox,.cal,#sheet .pane{animation:none}}
+@media (prefers-reduced-motion:reduce){.navold,.navshade{display:none}}
 </style>
 </head>
 <body>
@@ -2607,23 +2600,19 @@ let navDir = '';
 function navSlide(ghost, page, dir) {                          // 'push' = forward, 'pop' = back, 'fade' = switch of tab
   const root = $('#app').parentNode, shade = document.createElement('div'); shade.className = 'navshade';
   root.appendChild(ghost);
-  if (dir !== 'fade') { shade.style.zIndex = 31; root.appendChild(shade); }
-  const W = innerWidth, ease = 'cubic-bezier(.32,.72,0,1)', T = dir === 'fade' ? 340 : 560, o = { duration: T, easing: ease, fill: 'both' }, run = [];
+  const W = innerWidth, ease = 'cubic-bezier(.32,.72,0,1)', T = dir === 'fade' ? 260 : 460, o = { duration: T, easing: ease, fill: 'both' }, run = [];
   if (dir === 'fade') {
     run.push(page.animate([{ opacity: 0 }, { opacity: 1 }], o), ghost.animate([{ opacity: 1 }, { opacity: 0 }], { ...o, easing: 'ease-out' }));
-    [...page.children].slice(0, 9).forEach((k, i) => run.push(k.animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 520, delay: i * 35, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' })));
   } else if (dir === 'push') {
-    page.style.position = 'relative'; page.style.zIndex = 32; page.style.background = 'var(--bg)';
-    run.push(page.animate([{ transform: `translateX(${W}px)`, boxShadow: '-14px 0 36px rgba(0,0,0,.22)' }, { transform: 'none', boxShadow: '-14px 0 36px rgba(0,0,0,0)' }], o),
-             ghost.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-W * .3}px) scale(.97)`, opacity: .55 }], o),
-             shade.animate([{ opacity: 0 }, { opacity: .16 }], o));
+    page.style.position = 'relative'; page.style.zIndex = 31; page.style.background = 'var(--bg)';
+    run.push(page.animate([{ transform: `translateX(${W}px)`, boxShadow: '-12px 0 32px rgba(0,0,0,.18)' }, { transform: 'none', boxShadow: '-12px 0 32px rgba(0,0,0,0)' }], o),
+             ghost.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-W * .28}px)`, opacity: .6 }], o));
   } else {
-    ghost.style.zIndex = 33; ghost.style.boxShadow = '-14px 0 36px rgba(0,0,0,.22)';
+    ghost.style.zIndex = 32; ghost.style.boxShadow = '-12px 0 32px rgba(0,0,0,.18)';
     run.push(ghost.animate([{ transform: 'none' }, { transform: `translateX(${W}px)` }], o),
-             page.animate([{ transform: `translateX(${-W * .3}px) scale(.97)`, opacity: .55 }, { transform: 'none', opacity: 1 }], o),
-             shade.animate([{ opacity: .16 }, { opacity: 0 }], o));
+             page.animate([{ transform: `translateX(${-W * .28}px)`, opacity: .6 }, { transform: 'none', opacity: 1 }], o));
   }
-  Promise.all(run.map(x => x.finished.catch(() => 0))).then(() => { ghost.remove(); shade.remove(); page.style.cssText = ''; run.forEach(x => x.cancel()); });
+  Promise.all(run.map(x => x.finished.catch(() => 0))).then(() => { ghost.remove(); page.style.cssText = ''; run.forEach(x => x.cancel()); });
 }
 function render(goTo) {
   const y = goTo === undefined ? $('#app').scrollTop : goTo;
@@ -2791,10 +2780,10 @@ function fold(d) {                                              // smooth open /
   const full = { height: body.offsetHeight + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1 };
   const shut = { height: '0px', paddingTop: '0px', paddingBottom: '0px', opacity: 0 };
   const run = [body.animate(opening ? [shut, full] : [full, shut],
-    { duration: opening ? 640 : 400, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'forwards' })];
+    { duration: opening ? 560 : 340, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'forwards' })];
   [...body.children].slice(0, 14).forEach((k, i) => run.push(k.animate(                     // rows glide in one after another
-    opening ? [{ opacity: 0, transform: 'translateY(-14px) scale(.98)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 1 }, { opacity: 0 }],
-    { duration: opening ? 440 : 180, delay: opening ? 60 + i * 34 : 0, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' })));
+    opening ? [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 1 }, { opacity: 0 }],
+    { duration: opening ? 360 : 160, delay: opening ? 50 + i * 28 : 0, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' })));
   Promise.all(run.map(x => x.finished.catch(() => 0))).then(() => {
     if (!opening) d.open = false;
     run.forEach(x => x.cancel()); body.style.overflow = ''; d._busy = false;
@@ -2993,11 +2982,6 @@ window.addEventListener('hashchange', () => {
   prevHash = curHash; curHash = h; closeSheet(); render(y);
   if (unwind < 0) history.go(unwind);                             // keep the browser's own Back in step with the trail
 });
-(function () {                                                    // swipe in from the left edge = Back, like iOS
-  let x0 = null, y0 = 0;
-  addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX < 22 ? t.clientX : null; y0 = t.clientY; }, { passive: true });
-  addEventListener('touchend', e => { if (x0 == null) return; const t = e.changedTouches[0]; if (t.clientX - x0 > 70 && Math.abs(t.clientY - y0) < 60 && navStack.length > 1) history.back(); x0 = null; }, { passive: true });
-})();
 applyTheme();
 showLock();
 render();
