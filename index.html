@@ -533,6 +533,10 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dtile.wt.pl+.dtile.wt.pl>summary{padding-top:16.7px}     /* and 4px closer to it from the line below */
 /* asset card buttons */
 .btn.wdo{background:rgba(255,149,0,.16);color:#c25e00}
+.rnote{display:block;margin-top:2px;font-size:12px;font-weight:400;color:var(--sub);white-space:normal;text-align:left}
+.btn.wdr{background:rgba(255,59,48,.14);color:#d62f26}.btn.addg{background:rgba(52,199,89,.16);color:#1f8f3f}
+:root[data-theme=dark] .btn.wdr{background:rgba(255,69,58,.22);color:#ff7a72}:root[data-theme=dark] .btn.addg{background:rgba(48,209,88,.22);color:#5fe08a}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .btn.wdr{background:rgba(255,69,58,.22);color:#ff7a72}:root:not([data-theme=light]) .btn.addg{background:rgba(48,209,88,.22);color:#5fe08a}}
 .btn.edit{background:rgba(0,122,255,.13);color:#0a58ca}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .btn.wdo{background:rgba(255,159,10,.2);color:#ffb340}:root:not([data-theme=light]) .btn.edit{background:rgba(10,132,255,.22);color:#4da3ff}}
 :root[data-theme=dark] .btn.wdo{background:rgba(255,159,10,.2);color:#ffb340}:root[data-theme=dark] .btn.edit{background:rgba(10,132,255,.22);color:#4da3ff}
@@ -960,6 +964,7 @@ const byDate = (x, y) => (x.date || '') < (y.date || '') ? -1 : (x.date || '') >
 /* Withdrawals: data.wd = [{id, date:'YYYY-MM-DD', inv, amt, th}]
    th = tax-harvesting withdrawal (money is re-invested, so nothing about the holding changes).
    Standard withdrawals remove `inv` of invested money, oldest investment first. */
+const depOf = a => (Array.isArray(a.data.dep) ? a.data.dep : []).filter(Boolean);
 const wdOf = a => (Array.isArray(a.data.wd) ? a.data.wd : []).filter(Boolean);
 const fdClosed = a => a.type === 'fd' && wdOf(a).length > 0;
 const fyOf = iso => { const y = +String(iso).slice(0, 4), mo = +String(iso).slice(5, 7), st = mo >= 4 ? y : y - 1; return st + '-' + String(st + 1).slice(2); };
@@ -987,6 +992,7 @@ function txAll(a) {                                         // every investment 
   }
   if (a.type === 'fd') return num(d.invested) > 0 ? [{ date: d.investDate || '', amt: num(d.invested) }] : [];
   if (a.type === 'gratuity') return gratSched(d);
+  if (a.type === 'sa') return depOf(a).map(z => ({ date: z.date, amt: num(z.amt) }));   // money you add to the account = investment of that year
   if (T[a.type].cat === 'selfuse') return num(d.purchase) > 0 ? [{ date: d.purchaseDate || '', amt: num(d.purchase) }] : [];
   return [];
 }
@@ -1045,6 +1051,7 @@ function endDate(a) {                                        // an FD stops earn
   return new Date();
 }
 function flowsOf(a) {
+  if (a.type === 'sa') return null;                          // saving accounts are left out of every XIRR
   const list = txOf(a);
   if (!list.length || list.some(z => !z.date)) return null;  // undated money-in: can't compute
   const end = endDate(a).getTime(), ld = z => new Date(z.date + 'T00:00:00').getTime();   // local midnight, same clock as "today"
@@ -1053,7 +1060,12 @@ function flowsOf(a) {
   out.push({ t: end, v: curVal(a) });
   return out;
 }
-const assetXirr = a => { const f = flowsOf(a); return f ? xirr(f) : null; };
+function gratReturn(a) {                                     // gratuity: return = (value now - total up to last year's service) / total up to last year's service
+  const d = a.data, y = gratYears(d, todayISO()); if (y.done < GRAT_MIN) return null;
+  const upTo = addYM(d.joinDate, y.paid - 1), prev = gratSched(d).filter(z => z.date <= upTo).reduce((t, z) => t + z.amt, 0);
+  return prev > 0 ? (curVal(a) - prev) / prev : null;
+}
+const assetXirr = a => { if (a.type === 'gratuity') return gratOk(a.data) ? gratReturn(a) : null; const f = flowsOf(a); return f ? xirr(f) : null; };
 function groupXirr(items) {
   const all = [];
   items.forEach(a => { const f = flowsOf(a); if (f) all.push(...f); });
@@ -1230,7 +1242,7 @@ function netWorthPage() {
   const items = nwItems();
   let h = '';
   if (items.length) {
-    const invOf = a => txOf(a).length ? invVal(a) : curVal(a);        // same rule as Total Funds: no invested figure → no gain counted
+    const invOf = a => a.type !== 'sa' && txOf(a).length ? invVal(a) : curVal(a);        // same rule as Total Funds: no invested figure → no gain counted (saving accounts never show a gain)
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h += `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
       <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${pc.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>`;
@@ -1385,18 +1397,21 @@ function card(a) {
     rows += kv('Total invested', money(invVal(a))) +
       `<div class="kv"><span>Investments (${list.length})</span><b></b></div><div class="txlist">${[...list].sort((p, q) => byDate(q, p)).map(z => kv(z.date ? fmtDate(z.date) : 'No date', money(z.amt))).join('')}</div>`;
   const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
-  const wds = INV_TYPES.includes(a.type) || a.type === 'fd' ? wdOf(a).slice().sort((p, q) => byDate(q, p)) : [];
-  const wdBlock = wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => `<button type="button" class="kv payrow" data-wddel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.th ? ' · Tax harvest' : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap a withdrawal to delete it.</div>` : '';
+  const wds = INV_TYPES.includes(a.type) || a.type === 'fd' || a.type === 'sa' ? wdOf(a).slice().sort((p, q) => byDate(q, p)) : [];
+  const deps = a.type === 'sa' ? depOf(a).slice().sort((p, q) => byDate(q, p)) : [];
+  const depBlock = deps.length ? `<div class="kv"><span>Savings added (${deps.length})</span><b></b></div><div class="txlist">${deps.map(w => `<button type="button" class="kv payrow" data-depdel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.note ? `<small class="rnote">${esc(w.note)}</small>` : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap an entry to delete it.</div>` : '';
+  const wdBlock = wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => `<button type="button" class="kv payrow" data-wddel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.th ? ' · Tax harvest' : ''}${w.note ? `<small class="rnote">${esc(w.note)}</small>` : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap a withdrawal to delete it.</div>` : '';
   const wdBtns = UPD_ONE.includes(a.type) ? `<div class="wdrow"><a class="btn sm wdo" href="#/withdraw/${a.id}">Withdraw</a><a class="btn sm" href="#/update/${a.type}/${a.id}">Update</a></div>`
+    : a.type === 'sa' ? `<div class="wdrow"><a class="btn sm wdr" href="#/withdraw/${a.id}">Withdraw</a><a class="btn sm addg" href="#/save/${a.id}">Add</a></div>`
     : (a.type === 'fd' && !fdClosed(a)) ? `<div class="wdrow"><a class="btn sm wdo" href="#/withdraw/${a.id}">Withdraw</a></div>` : '';
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
     <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
-    <div class="body">${rows}${wdBlock}${docs}<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}${wdBtns ? `<button class="morearr" type="button" aria-label="Show Delete and Edit" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="more2">` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
+    <div class="body">${rows}${depBlock}${wdBlock}${docs}<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}${wdBtns ? `<button class="morearr" type="button" aria-label="Show Delete and Edit" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="more2">` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
     <a class="btn sm edit" href="#/form/${a.type}/${a.id}">Edit</a>${wdBtns ? '</div>' : ''}</div></div></details>`;
 }
 
 function fundCats(types) {                                      // same menu rows as the home screen, plus invested amount and XIRR
-  const C = v => S.hide ? '••••' : fmtCr(v), invOf = a => txOf(a).length ? invVal(a) : curVal(a);
+  const C = v => S.hide ? '••••' : fmtCr(v), invOf = a => a.type !== 'sa' && txOf(a).length ? invVal(a) : curVal(a);
   return types.filter(t => ofTypes([t]).length).map(t => {
     const its = ofTypes([t]), x = groupXirr(its);
     return `<div class="group solo hm"><a class="item" href="#/list/${t}"><span class="ico" style="background:${T[t].c}">${T[t].ico}</span><span class="t"><b>${esc(T[t].label)}</b><small>Invested ${C(sum(its, invOf))}</small></span><span class="v"><b>${C(sum(its, curVal))}</b>${x != null ? `<small class="xirr ${x >= 0 ? 'up' : 'dn'}">XIRR ${pct(x)}</small>` : ''}</span></a></div>`;
@@ -1408,7 +1423,7 @@ function fundsPage(kind) {
   const items = types.flatMap(t => ofTypes([t]));
   let h;
   if (items.length) {
-    const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
+    const invOf = a => a.type !== 'sa' && txOf(a).length ? invVal(a) : curVal(a);          // saving accounts: no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
       <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${pc.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + fundCats([...types.filter(t => t !== 'sa'), ...types.filter(t => t === 'sa')]);   // Savings Account always last
@@ -1701,6 +1716,7 @@ function formPage(type, id) {
             data.current = gratVal(data);
           }
           if (existing && Array.isArray(existing.data.paidPrem)) data.paidPrem = existing.data.paidPrem;
+          if (existing && Array.isArray(existing.data.dep)) data.dep = existing.data.dep;
           if (existing && Array.isArray(existing.data.wd)) data.wd = existing.data.wd;   // withdrawals recorded earlier are kept   // payments recorded earlier are kept
           const asset = { id: existing ? existing.id : uid(), cat: t.cat, type, data, docs: docsOut, created: existing?.created };
           await saveAsset(asset); return true;
@@ -1751,8 +1767,8 @@ function anPrep(a, snapsBy) {
   const created = anDay(new Date(a.created || a.updated || Date.now()).getTime());
   const fallback = snaps.length ? anDay(snaps[0].t) : anDay(Date.now());
   const base = isNaN(created) ? fallback : created;
-  const tx = txAll(a).map(z => { const t = z.date ? anIso(z.date) : NaN; return { t: isNaN(t) ? base : t, amt: z.amt }; });
-  const wds = wdOf(a).filter(w => (!w.th || w.lot) && w.date && !isNaN(anIso(w.date))).map(w => ({ t: anIso(w.date), inv: w.th ? num(w.inv) - num(w.lot.amt) : num(w.inv) }));
+  const tx = a.type === 'sa' ? [] : txAll(a).map(z => { const t = z.date ? anIso(z.date) : NaN; return { t: isNaN(t) ? base : t, amt: z.amt }; });
+  const wds = a.type === 'sa' ? [] : wdOf(a).filter(w => (!w.th || w.lot) && w.date && !isNaN(anIso(w.date))).map(w => ({ t: anIso(w.date), inv: w.th ? num(w.inv) - num(w.lot.amt) : num(w.inv) }));
   const close = a.type === 'fd' && wds.length ? Math.min(...wds.map(w => w.t)) : null;
   const hasTx = tx.length > 0;
   return { a, snaps, tx, wds, close, closedAt: a.data.closed && !isNaN(anIso(a.data.closed)) ? anIso(a.data.closed) : null, hasTx, fd: a.type === 'fd', start: hasTx ? Math.min(...tx.map(z => z.t)) : Math.min(base, fallback) };
@@ -2343,20 +2359,21 @@ function expenseForm(id) {
 }
 
 /* ---- Withdrawals ---- */
-const WD_TYPES = ['mf', 'epf', 'ppf', 'nps', 'fd'], UPD_ONE = ['mf', 'epf', 'ppf', 'nps'];
+const WD_TYPES = ['mf', 'epf', 'ppf', 'nps', 'fd', 'sa'], UPD_ONE = ['mf', 'epf', 'ppf', 'nps'];
 function withdrawPage(id) {
   const a = S.assets.find(x => x.id === id); if (!a || !WD_TYPES.includes(a.type)) return notFound();
-  const fd = a.type === 'fd', back = '#/list/' + a.type;
+  const fd = a.type === 'fd', sav = a.type === 'sa', back = '#/list/' + a.type;
   if (fdClosed(a)) return { title: 'Withdraw ' + ttl(a), back, notabs: true, html: `<div class="card"><div class="empty">This deposit has already been withdrawn.</div></div>` };
   const inv = invVal(a), cur = curVal(a);
   const h = `<form id="f" autocomplete="off">
     <div class="group"><div class="row"><span class="l">Current Value</span><b class="v">${money(cur)}</b></div>
-      <div class="row"><span class="l">Invested Amount</span><b class="v">${money(inv)}</b></div></div>
+      ${sav ? '' : `<div class="row"><span class="l">Invested Amount</span><b class="v">${money(inv)}</b></div>`}</div>
     <div class="group">
       <div class="row"><span class="l">${fd ? 'Amount Received' : 'Withdrawal Amount'}</span><span class="pre">₹</span><input name="amt" type="number" inputmode="decimal" step="any" placeholder="0" required></div>
-      ${fd ? `<div class="row"><span class="l">Investment Amount</span><b class="v">${money(inv)}</b></div>`
+      ${sav ? '' : fd ? `<div class="row"><span class="l">Investment Amount</span><b class="v">${money(inv)}</b></div>`
         : `<div class="row"><span class="l">Investment Amount</span><span class="pre">₹</span><input name="inv" type="number" inputmode="decimal" step="any" placeholder="0" required></div>`}
       <div class="row"><span class="l">Date</span><input name="date" type="date" value="${todayISO()}" required></div>
+      ${sav ? `<div class="row col"><span class="l">Notes</span><textarea name="note" rows="3" placeholder="Add notes…"></textarea></div>` : ''}
       ${a.type === 'mf' ? `<label class="row"><input class="chk" type="checkbox" name="th"><span class="l" style="max-width:none;flex:1">For Tax Harvesting</span></label>` : ''}</div>
     <div class="gfoot" id="wdn" style="margin-top:-10px">${fd ? 'Enter the final amount you received (after any penalty if broken early).' : ''}</div>
     <button class="btn" type="submit">Withdraw</button></form>`;
@@ -2364,6 +2381,7 @@ function withdrawPage(id) {
     after() {
       const f = $('#f'), note = $('#wdn');
       const upd = () => {
+        if (sav) { const am = num(f.elements.amt.value); note.textContent = am > 0 ? money(am) + ' is taken out of the balance and counted as withdrawn in FY ' + fyOf(f.elements.date.value || todayISO()) + '.' : ''; return; }
         const amt = num(f.elements.amt.value), iv = fd ? inv : num(f.elements.inv.value), th = !!(f.elements.th && f.elements.th.checked);
         if (!(amt > 0) || !(iv > 0)) return;
         const g = amt - iv, fy = fyOf(f.elements.date.value || todayISO());
@@ -2373,17 +2391,50 @@ function withdrawPage(id) {
       f.addEventListener('input', upd); f.addEventListener('change', upd);
       f.addEventListener('submit', async e => {
         e.preventDefault();
-        const amt = num(f.elements.amt.value), iv = fd ? inv : num(f.elements.inv.value), date = f.elements.date.value, th = !!(f.elements.th && f.elements.th.checked);
+        const amt = num(f.elements.amt.value), iv = sav ? num(f.elements.amt.value) : fd ? inv : num(f.elements.inv.value), date = f.elements.date.value, th = !!(f.elements.th && f.elements.th.checked);
         if (!(amt > 0)) return toast('Enter the withdrawal amount');
         if (!(iv > 0)) return toast('Enter the investment amount');
         if (!date) return toast('Choose the date');
-        if (!fd && iv > inv + 0.5) return toast('Investment amount is more than what is invested (' + money(inv) + ')');
-        if (!fd && amt > cur + 0.5) return toast('Withdrawal amount is more than the current value (' + money(cur) + ')');
+        if (!fd && !sav && iv > inv + 0.5) return toast('Investment amount is more than what is invested (' + money(inv) + ')');
+        if ((!fd || sav) && amt > cur + 0.5) return toast('Withdrawal amount is more than the current value (' + money(cur) + ')');
         if (fd && !(await askConfirm('Mark as withdrawn?', 'This fixed deposit will be recorded as withdrawn and moved to Realized Returns.', 'Withdraw', false))) return;
-        if (await run(async () => { await doWithdraw(a, { date, amt, inv: iv, th }); return true; })) { toast('Withdrawal saved'); location.hash = back; }
+        if (await run(async () => { await doWithdraw(a, { date, amt, inv: iv, th, note: sav ? f.elements.note.value.trim() : '' }); return true; })) { toast('Withdrawal saved'); location.hash = back; }
       });
     } };
 }
+function savePage(id) {                                         // saving account: add money (counts as that year's investment)
+  const a = S.assets.find(x => x.id === id); if (!a || a.type !== 'sa') return notFound();
+  const back = '#/list/sa';
+  const h = `<form id="f" autocomplete="off">
+    <div class="group"><div class="row"><span class="l">Current Value</span><b class="v">${money(curVal(a))}</b></div></div>
+    <div class="group">
+      <div class="row"><span class="l">Saved Amount</span><span class="pre">₹</span><input name="amt" type="number" inputmode="decimal" step="any" placeholder="0" required></div>
+      <div class="row"><span class="l">Date</span><input name="date" type="date" value="${todayISO()}" required></div>
+      <div class="row col"><span class="l">Notes</span><textarea name="note" rows="3" placeholder="Add notes…"></textarea></div></div>
+    <div class="gfoot" id="wdn" style="margin-top:-10px"></div>
+    <button class="btn" type="submit">Add</button></form>`;
+  return { title: 'Add to ' + ttl(a), back, html: h, notabs: true,
+    after() {
+      const f = $('#f'), note = $('#wdn');
+      const upd = () => { const am = num(f.elements.amt.value); note.textContent = am > 0 ? money(am) + ' is added to the balance and counted as invested in FY ' + fyOf(f.elements.date.value || todayISO()) + '.' : ''; };
+      f.addEventListener('input', upd); f.addEventListener('change', upd);
+      f.addEventListener('submit', async e => {
+        e.preventDefault();
+        const amt = num(f.elements.amt.value), date = f.elements.date.value;
+        if (!(amt > 0)) return toast('Enter the saved amount');
+        if (!date) return toast('Choose the date');
+        const data = { ...a.data, dep: [...depOf(a), { id: uid(), date, amt, ...(f.elements.note.value.trim() ? { note: f.elements.note.value.trim() } : {}) }], current: num(a.data.current) + amt };
+        if (await run(async () => { await saveAsset({ ...a, data }); return true; })) { toast('Saved'); location.hash = back; }
+      });
+    } };
+}
+document.addEventListener('click', async e => {                 // delete a "savings added" entry (takes the money back out of the balance)
+  const t = e.target.closest('[data-depdel]'); if (!t) return;
+  const [id, did] = t.dataset.depdel.split('|'), a = S.assets.find(x => x.id === id), z = a && depOf(a).find(q => q.id === did); if (!z) return;
+  if (!(await askConfirm('Delete this entry?', 'The current value goes down by ' + money(num(z.amt)) + '.', 'Delete'))) return;
+  const data = { ...a.data, dep: depOf(a).filter(q => q.id !== did), current: Math.max(num(a.data.current) - num(z.amt), 0) };
+  if (await run(async () => { await saveAsset({ ...a, data }); return true; })) { toast('Entry deleted'); render(); const d = document.querySelector(`[data-del="${id}"]`); if (d && d.closest('details')) d.closest('details').open = true; }
+});
 /* Tax harvest: the old money (oldest first) is replaced by ONE new investment dated on the harvest day.
    Its amount is chosen so the fund's XIRR is exactly what it was: each old piece is grown at the current XIRR up to today
    (C = sum of piece * (1+r)^years), then C is brought back to the harvest date at the same rate. */
@@ -2397,6 +2448,7 @@ function harvestLot(a, o) {
 }
 async function doWithdraw(a, o) {
   const rec = { id: uid(), date: o.date, inv: o.inv, amt: o.amt, th: !!o.th };
+  if (o.note) rec.note = o.note;
   if (o.th) rec.lot = harvestLot(a, o) || { date: o.date, amt: o.amt };   // no XIRR yet (under 30 days): re-invest the withdrawn amount as is
   const data = { ...a.data, wd: [...wdOf(a), rec] };
   if (!o.th && a.type !== 'fd') data.current = Math.max(num(a.data.current) - o.amt, 0);   // tax harvesting: money goes straight back in, so the current value is unchanged
@@ -2658,6 +2710,7 @@ function view(p) {
     case 'liquid': return fundsPage('liquid');
     case 'update': return updatePage(b, c);
     case 'withdraw': return withdrawPage(b);
+    case 'save': return savePage(b);
     case 'invwd': return b ? fyDetailPage(b) : invwdPage();
     case 'historical': return historicalPage();
     case 'add': return addPage(b, c);
