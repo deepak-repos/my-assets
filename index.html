@@ -818,8 +818,9 @@ const T = {
       tx('accountName','Account Name'), tx('accountNo','Account Number'), TXS, m('current','Current Amount',{req:1}),
       dt('maturityDate','Maturity Date'), tx('purpose','Purpose'), m('monthly','Monthly Contribution Amount'), NOTES, DOCS ] },
   gratuity: { cat:'investment', label:'Gratuity', ico:'🎁', c:'#64d2ff',
-    title:() => 'Gratuity', sub:d => d.companyId ? 'Company ID ' + d.companyId : '',
-    fields:[ tx('companyId','Company ID'), m('current','Current Amount',{req:1}), tx('purpose','Purpose'), NOTES, DOCS ] },
+    title:() => 'Gratuity', sub:d => d.joinDate ? 'Joined ' + fmtShort(d.joinDate) + (gratYears(d, todayISO()).done < GRAT_MIN ? ' · eligible ' + fmtShort(addYM(d.joinDate, GRAT_MIN)) : '') : (d.companyId ? 'Company ID ' + d.companyId : ''),
+    fields:[ tx('companyId','Company ID'), dt('joinDate','Joining Date',{req:1}), m('basic','Basic Pay',{req:1}), dt('raiseFrom','Effective From',{show: () => !!window._gratChg}),
+      { k:'_gv', l:'Gratuity Amount', t:'calc', fn: a => curVal(a) }, tx('purpose','Purpose'), NOTES, DOCS ] },
 
   /* ---- Insurance : personal ---- */
   term:   { cat:'insurance', group:'personal', label:'Term Insurance',    ico:'🛡️', c:'#0a84ff', fields:termFields },
@@ -890,7 +891,47 @@ function fdValue(d, at) {
   if (!mat || isNaN(e) || e <= s) return P;
   return P + (mat - P) * Math.min(1, Math.max(0, (now - s) / (e - s)));
 }
-const curVal = a => a.type === 'fd' ? (fdClosed(a) ? 0 : fdValue(a.data)) : num(a.data.current);
+/* ---- Gratuity (private company, covered by the Payment of Gratuity Act) ----
+   amount = basic pay (monthly, incl. DA) x 15/26 x years of service, max 20 lakh.
+   Years of service: completed years, plus one more when the part-year is MORE than 6 months.
+   Payable only after 5 completed years. Money "invested" = the amount that becomes payable on each joining anniversary from year 5:
+   year 5 = the whole amount, every later year = that year's amount minus last year's, at the basic pay of that time. */
+const GRAT_MIN = 5, GRAT_CAP = 2000000;
+function addYM(iso, years, months) {                              // 'YYYY-MM-DD' + years/months, day clamped to the month end
+  const [y, mo, d] = String(iso).split('-').map(Number), t = new Date(y + years, mo - 1 + (months || 0), 1);
+  return isoOf(new Date(t.getFullYear(), t.getMonth(), Math.min(d, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate())));
+}
+function gratYears(d, iso) {                                      // {done: completed years, paid: years counted for the amount}
+  let done = +String(iso).slice(0, 4) - +String(d.joinDate).slice(0, 4);
+  if (done < 0) return { done: 0, paid: 0 };
+  while (done > 0 && addYM(d.joinDate, done) > iso) done--;
+  return { done, paid: done + (iso > addYM(d.joinDate, done, 6) ? 1 : 0) };
+}
+function gratBasicAt(d, iso) {                                    // basic pay in force on that date (changes affect later years only)
+  const h = (Array.isArray(d.basicHist) ? d.basicHist : []).slice().sort((x, y) => (x.from || '') < (y.from || '') ? -1 : (x.from || '') > (y.from || '') ? 1 : 0);
+  let b = h.length ? num(h[0].amt) : num(d.basic);
+  h.forEach(e => { if ((e.from || '') <= iso) b = num(e.amt); });
+  return b;
+}
+const gratAmt = (basic, yrs) => Math.min(GRAT_CAP, Math.round(basic * 15 / 26 * yrs));
+const gratOk = d => !!d.joinDate && num(d.basic) > 0;
+function gratSched(d) {                                           // [{date, amt}] one entry per anniversary reached so far
+  if (!gratOk(d)) return [];
+  const today = todayISO(), out = []; let prev = 0;
+  for (let n = GRAT_MIN; n < 70; n++) {
+    const ad = addYM(d.joinDate, n); if (ad > today) break;
+    const g = gratAmt(gratBasicAt(d, ad), n);
+    if (g - prev > 0) out.push({ date: ad, amt: g - prev });
+    prev = g;
+  }
+  return out;
+}
+function gratVal(d) {                                             // what would be payable today
+  if (!gratOk(d)) return 0;
+  const t = todayISO(), y = gratYears(d, t);
+  return y.done < GRAT_MIN ? 0 : gratAmt(gratBasicAt(d, t), y.paid);
+}
+const curVal = a => a.type === 'fd' ? (fdClosed(a) ? 0 : fdValue(a.data)) : a.type === 'gratuity' && gratOk(a.data) ? gratVal(a.data) : num(a.data.current);
 const INV_TYPES = ['mf', 'epf', 'ppf', 'nps'];           // investments entered as dated splits
 const CONTRIB = {                                          // standing contribution field per type
   mf:  { k: 'monthlyAmt', lab: 'Monthly SIP' },
@@ -938,6 +979,7 @@ function txAll(a) {                                         // every investment 
     return num(d.invested) > 0 ? [{ date: '', amt: num(d.invested) }] : [];     // older asset saved before dates existed
   }
   if (a.type === 'fd') return num(d.invested) > 0 ? [{ date: d.investDate || '', amt: num(d.invested) }] : [];
+  if (a.type === 'gratuity') return gratSched(d);
   if (T[a.type].cat === 'selfuse') return num(d.purchase) > 0 ? [{ date: d.purchaseDate || '', amt: num(d.purchase) }] : [];
   return [];
 }
@@ -1367,7 +1409,7 @@ function fundsPage(kind) {
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
 }
 const listTitle = key => ({ realestate: 'Property & Gold', property: 'Property', gold: 'Gold' })[key] || T[key].label;
-const UPDATABLE = ['mf', 'sa', 'epf', 'ppf', 'nps', 'gratuity', 'realestate'];
+const UPDATABLE = ['mf', 'sa', 'epf', 'ppf', 'nps', 'realestate'];      // gratuity is calculated, never typed in
 function listPage(key) {
   const types = GROUPS[key]; if (!types) return notFound();
   let items = ofTypes(types);
@@ -1573,6 +1615,17 @@ function formPage(type, id) {
       const raw = () => { const o = {}; new FormData(form).forEach((v, k) => { if (k !== '_docs') o[k] = v; }); return o; };
       const cond = () => { const r = raw(); t.fields.forEach(f => { if (f.show) { const el = form.querySelector(`[data-k="${f.k}"]`); const vis = f.show(r); el.hidden = !vis; } }); };
       form.addEventListener('input', cond); form.addEventListener('change', cond); cond();
+      if (type === 'gratuity') {                                   // gratuity amount is worked out live, never typed
+        const rf = form.elements.raiseFrom, cv = form.querySelector('.calcv'), live = () => {
+          window._gratChg = !!existing && num(d.basic) > 0 && num(form.elements.basic.value) > 0 && num(form.elements.basic.value) !== num(d.basic);   // pay changed → ask from when
+          cond(); if (window._gratChg && rf && !rf.value) rf.value = todayISO();
+          const g = { joinDate: form.elements.joinDate.value, basic: form.elements.basic.value, basicHist: existing ? d.basicHist : null };
+          if (!cv) return;
+          cv.textContent = !gratOk(g) ? '—' : gratYears(g, todayISO()).done < GRAT_MIN ? 'Eligible from ' + fmtShort(addYM(g.joinDate, GRAT_MIN)) : money(gratVal({ ...g, basicHist: null }));
+        };
+        form.addEventListener('input', live); form.addEventListener('change', live); live();
+        window.addEventListener('hashchange', () => { window._gratChg = false; }, { once: true });
+      }
       const box = form.querySelector('.txs'), sumEl = form.querySelector('.txsum');
       const calc = () => { if (!box) return; sumEl.textContent = 'Total invested ' + money([...box.querySelectorAll('.ta')].reduce((tt, i) => tt + num(i.value), 0)); };
       calc(); if (box) box.addEventListener('input', calc);
@@ -1605,6 +1658,7 @@ function formPage(type, id) {
       form.addEventListener('submit', async e => {
         e.preventDefault();
         const r = raw(), data = {};
+        const raiseFrom = type === 'gratuity' ? (r.raiseFrom || '') : '';
         t.fields.forEach(f => {
           if (f.t === 'file' || f.t === 'calc' || f.t === 'txs' || f.t === 'dates' || f.t === 'purposes') return;
           let v = r[f.k] ?? '';
@@ -1612,6 +1666,7 @@ function formPage(type, id) {
           if (f.t === 'number' && v !== '') v = Number(v);
           data[f.k] = typeof v === 'string' ? v.trim() : v;
         });
+        delete data.raiseFrom;
         if (t.fields.some(f => f.t === 'txs')) {
           const list = [...form.querySelectorAll('.txrow')].map(rw => ({ date: rw.querySelector('.td').value, amt: num(rw.querySelector('.ta').value) })).filter(z => z.amt > 0);
           if (list.some(z => !z.date)) return toast('Add a date for every investment');
@@ -1632,6 +1687,12 @@ function formPage(type, id) {
         }
         const ok = await run(async () => {
           const docsOut = existing ? [...(existing.docs || [])] : [];   // files attached earlier stay as they are
+          if (type === 'gratuity') {                               // a pay change counts from the date you give (today if left empty): older anniversaries keep the pay they were recorded with
+            const old = existing ? existing.data : {}, hist = Array.isArray(old.basicHist) ? old.basicHist.slice() : [];
+            if (existing && num(old.basic) > 0 && num(old.basic) !== num(data.basic)) { if (!hist.length) hist.push({ from: '', amt: num(old.basic) }); hist.push({ from: raiseFrom || todayISO(), amt: num(data.basic) }); }
+            if (hist.length) data.basicHist = hist;
+            data.current = gratVal(data);
+          }
           if (existing && Array.isArray(existing.data.paidPrem)) data.paidPrem = existing.data.paidPrem;
           if (existing && Array.isArray(existing.data.wd)) data.wd = existing.data.wd;   // withdrawals recorded earlier are kept   // payments recorded earlier are kept
           const asset = { id: existing ? existing.id : uid(), cat: t.cat, type, data, docs: docsOut, created: existing?.created };
