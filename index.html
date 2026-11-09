@@ -385,6 +385,13 @@ svg.anch{width:100%;height:auto;display:block;touch-action:pan-y;user-select:non
 .an-ld{text-align:right;flex:none}
 .an-ld b{display:block;margin-top:4px;font-size:14.5px;font-weight:600}
 .an-ld em{display:block;font-style:normal;font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.an-it+.an-it{border-top:.5px solid var(--sep)}.an-it .li{border-top:0}
+.an-det{padding:2px 0 12px}
+.an-dr{display:grid;grid-template-columns:minmax(0,1.5fr) 1fr 1fr;gap:8px;align-items:baseline;padding:6px 0;font-size:13.5px;font-variant-numeric:tabular-nums}
+.an-dr span{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.an-dr b{font-weight:600;text-align:right}
+.an-dh span,.an-dh b{color:var(--sub);font-size:12px;font-weight:500}
+.an-dt{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.an-dt em{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
+.an-dt .up{color:var(--green)}.an-dt .dn{color:var(--red)}.an-dt .eq{color:var(--blue)}
 .an-ld .up{color:var(--green)}.an-ld .dn{color:var(--red)}.an-ld .eq{color:var(--blue)}
 .an-more{display:block;width:100%;text-align:center;color:var(--blue);font-weight:600;padding:13px 0 11px;border-top:.5px solid var(--sep)}
 
@@ -1780,9 +1787,14 @@ function anBuild(list, months) {
   P.forEach(p => { if (p.closedAt != null) mark(p.closedAt, true); p.wds.forEach(w => mark(w.t, true)); p.tx.forEach(z => mark(z.t, false)); p.snaps.forEach(s => mark(s.t, true)); });
   ev.forEach((o, d) => days.add(d));
   const pts = [...days].sort((x, y) => x - y).map(d => {
-    let inv = 0, cur = 0; const e = anEnd(d);
-    P.forEach(p => { const v = anVals(p, e); inv += v[0]; cur += v[1]; });
-    return { x: d, inv, cur, ev: ev.get(d) || null };
+    let inv = 0, cur = 0; const e = anEnd(d), by = new Map();
+    P.forEach(p => {
+      const v = anVals(p, e); inv += v[0]; cur += v[1];
+      const k = AN.cat === 'all' ? p.a.type : p.a.id, z = by.get(k) || { k, n: AN.cat === 'all' ? T[p.a.type].label : anLbl(p.a), o: AN.cat === 'all' ? ORDER.investment.indexOf(p.a.type) : 0, inv: 0, cur: 0 };
+      z.inv += v[0]; z.cur += v[1]; by.set(k, z);
+    });
+    const parts = [...by.values()].filter(z => Math.abs(z.inv) > .5 || Math.abs(z.cur) > .5).sort((a, b) => AN.cat === 'all' ? a.o - b.o : b.cur - a.cur);   // categories in the usual order; assets biggest first
+    return { x: d, inv, cur, parts, ev: ev.get(d) || null };
   });
   return { pts, from, today };
 }
@@ -1820,7 +1832,9 @@ function anMark(p) {
   const set = (id, o) => { const el = $('#' + id); if (el) for (const k in o) el.setAttribute(k, o[k]); };
   set('an-v', { x1: p.px, x2: p.px }); set('an-c1', { cx: p.px, cy: p.p1 }); set('an-c2', { cx: p.px, cy: p.p2 });
   const txt = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
-  txt('an-dt', anFmt(p.x)); txt('an-v1', anM(p.inv)); txt('an-v2', anM(p.cur));
+  const dt = $('#an-dt'), c = anChg(p.inv, p.cur), pc = p.inv > 0 ? (p.cur - p.inv) / p.inv * 100 : 0;
+  if (dt) dt.innerHTML = esc(anFmt(p.x)) + `<em class="${c.k}">${c.t}${S.hide ? '' : ' (' + (c.k === 'up' ? '+' : '') + pc.toFixed(1) + '%)'}</em>`;
+  txt('an-v1', anM(p.inv)); txt('an-v2', anM(p.cur));
 }
 function anTip(e) {
   const svg = e.target.closest && e.target.closest('svg.anch');
@@ -1864,8 +1878,10 @@ function anDraw() {
     const rows = pts.filter(p => p.ev).reverse(), shown = rows.slice(0, AN.lim);
     body += `<div class="gtitle an-h">History</div><div class="card an-list">` + (rows.length ? shown.map(p => {
       const c = anChg(p.inv, p.cur);
-      return `<div class="li"><div class="an-lv"><div><span>Current</span><b>${anM(p.cur)}</b></div><div><span>Investment</span><b>${anM(p.inv)}</b></div></div>
-        <div class="an-ld"><em class="${c.k}">${c.t}</em><b>${esc(anFmt(p.x))}</b></div></div>`;
+      const det = (p.parts || []).map(z => `<div class="an-dr"><span>${esc(z.n)}</span><b>${anM(z.cur)}</b><b>${anM(z.inv)}</b></div>`).join('');
+      return `<div class="an-it"><div class="li tap an-hd" data-exp="1" role="button" aria-expanded="false"><div class="an-lv"><div><span>Current</span><b>${anM(p.cur)}</b></div><div><span>Investment</span><b>${anM(p.inv)}</b></div></div>
+        <div class="an-ld"><em class="${c.k}">${c.t}</em><b>${esc(anFmt(p.x))}</b></div></div>
+        <div class="an-det" hidden><div class="an-dr an-dh"><span>${AN.cat === 'all' ? 'Category' : 'Asset'}</span><b>Current</b><b>Investment</b></div>${det}</div></div>`;
     }).join('') + (rows.length > shown.length ? `<button class="an-more" data-more="1">Show more</button>` : '') : `<div class="empty">No entries in this period.</div>`) + `</div>`;
   }
 
@@ -1891,6 +1907,8 @@ const analytics = () => ({ title: 'Analytics', large: 'Analytics', tab: 'analyti
       AN.lim = 40; anDraw();
     });
     root.addEventListener('click', e => {
+      const h = e.target.closest('[data-exp]');                   // tap a history date row: show what makes up that point
+      if (h) { const d = h.nextElementSibling, on = d.hidden; d.hidden = !on; h.setAttribute('aria-expanded', on); h.classList.toggle('open', on); return; }
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.rng !== undefined) { AN.rng = b.dataset.rng; AN.lim = 40; }
       else if (b.dataset.more !== undefined) AN.lim += 40;
