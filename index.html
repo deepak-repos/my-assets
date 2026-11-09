@@ -1147,7 +1147,7 @@ function home() {
   h += `<div class="sqg">${sq('#/funds', '<span class="brown">' + T.fd.ico + '</span>', T.sa.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ffcc00', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
   h += `<div class="group solo hm"><div class="item nochev ins2">
     <a class="ih" href="#/insurance/company"><span class="it"><b>Company</b><small>Insurance</small></span></a><a class="ih" href="#/insurance/personal"><span class="it"><b>Personal</b><small>Insurance</small></span></a><span class="ii mid">🛡️</span></div></div>`;
-  h += homeGrowth() + st + homeGoals() + homePurposes();
+  h += st + homeGrowth() + homeGoals() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
 
