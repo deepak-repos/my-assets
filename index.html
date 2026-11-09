@@ -541,7 +541,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .sq .sqt b{font-size:14px;font-weight:600;white-space:nowrap}
 .sq .sqt span{color:var(--text);font-size:15px;font-weight:400;white-space:nowrap}
 .item .v small.xirr.up{color:var(--green)}.item .v small.xirr.dn{color:var(--red)}
-.acard.fylink{display:flex;align-items:center;gap:12px;padding:14px 16px;min-height:67px;box-sizing:border-box;color:inherit;text-decoration:none;position:relative}
+.acard.fylink{display:flex;align-items:center;gap:14px;padding:27px 18px;color:inherit;text-decoration:none;position:relative}
 .acard.fylink .fyl b{position:absolute;left:max(calc(50% + 26px),172px);top:50%;transform:translateY(-50%);text-align:left}
 .fytop .kv{padding:12px 0;font-size:15.5px}.fytop .kv:last-child{border-bottom:0}.fytop .kv b{font-weight:600}.fytop .kv:last-child b{font-weight:700}.fytop .kv i,.fr1 i{font-style:normal}
 .acard summary.fcs{padding:14px 16px}.fcd{flex:1;min-width:0}
@@ -686,16 +686,6 @@ html,body{font-variant-numeric:lining-nums;text-rendering:optimizeLegibility}
 .row input:focus,.row select:focus,.row textarea:focus{caret-color:var(--blue)}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:8px}
 #lock{background:radial-gradient(120% 70% at 50% 0%,rgba(49,96,144,.22),transparent 60%),var(--bg)}
-/* iOS-style motion: pages push and pop, cards unfold with a spring, taps press in */
-#app{overflow-x:hidden}
-.page.pgin{animation:none}
-.navold{position:fixed;left:0;right:0;overflow:hidden;pointer-events:none;z-index:30;will-change:transform,opacity;background:var(--bg)}
-.navold>.page{will-change:transform}
-.navshade{position:fixed;inset:0;pointer-events:none;z-index:29;background:#000;opacity:0}
-.acard>summary,.dtile>summary,.item,.sq,.mt,.group .item{transition:transform .28s cubic-bezier(.32,.72,0,1),background-color .2s ease}
-.acard>summary:active,.dtile>summary:active,.sq:active{transform:scale(.985)}
-.item:active{transform:scale(.99)}
-@media (prefers-reduced-motion:reduce){.navold,.navshade{display:none}}
 </style>
 </head>
 <body>
@@ -872,7 +862,7 @@ const remote = () => !!(S.cfg && S.cfg.url && S.cfg.key);
 const persist = () => { store.set('assets', S.assets.concat(S.closed)); store.set('history', S.history); store.set('goals', S.goals); store.set('expenses', S.expenses); store.set('harvest', S.harvest); };
 
 const typeOf = a => T[a.type];
-const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company' && !/^#\/insurance\/company/.test(location.hash)) s += ' (Company)'; return s; };
+const ttl = a => { const t = typeOf(a); let s = t.title ? t.title(a.data) : t.label; if (t.group === 'company') s += ' (Company)'; return s; };
 const subOf = a => { if (fdClosed(a)) return 'Withdrawn ' + fmtDate(wdOf(a)[0].date); if (a.type === 'fd' && !/^#\/list\/fd\/?$/.test(location.hash)) return 'Invested ' + money(invVal(a)); if (a.type === 'mf' || a.type === 'ppf' || a.type === 'epf') return 'Invested: ' + money(invVal(a)); const t = typeOf(a); if (t.sub) return t.sub(a.data); return [a.data.provider, a.data.policyNo && '#' + a.data.policyNo].filter(Boolean).join(' · '); };
 
 function fdValue(d, at) {
@@ -1188,7 +1178,7 @@ function netWorthPage() {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);        // same rule as Total Funds: no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h += `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${pc.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>`;
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>`;
   }
   return { title: 'Your Net Worth', back: '#/home', html: h + homeMenus(C, true), tab: 'home' };
 }
@@ -1315,7 +1305,7 @@ function summaryTile(items, types, extra) {
   if (!hasInv) return `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div></div>`;
   const g = cur - inv, p = inv ? (g / inv * 100) : 0, x = groupXirr(items);
   return `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-    ${inv ? `<div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${p.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}${extra || ''}</div>`;
+    ${inv ? `<div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${p.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}${extra || ''}</div>`;
 }
 function showVal(f, v) {
   if (f.t === 'dates') return v.map(fmtDay).join(', ');
@@ -1359,14 +1349,14 @@ function fundCats(types) {                                      // same menu row
 }
 function fundsPage(kind) {
   const liq = kind === 'liquid';
-  const types = liq ? ['mf', 'fd', 'sa'] : ['mf', 'fd', 'nps', 'epf', 'ppf', 'gratuity', 'sa'];
+  const types = liq ? ['mf', 'fd', 'sa'] : ORDER.investment;
   const items = types.flatMap(t => ofTypes([t]));
   let h;
   if (items.length) {
     const invOf = a => txOf(a).length ? invVal(a) : curVal(a);          // savings / gratuity have no invested figure → no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
     h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
-      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${pc.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + fundCats([...types.filter(t => t !== 'sa'), ...types.filter(t => t === 'sa')]);   // Savings Account always last
+      <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> ${fmtCr(Math.abs(g))} (${pc.toFixed(1)}%)</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + fundCats([...types.filter(t => t !== 'sa'), ...types.filter(t => t === 'sa')]);   // Savings Account always last
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
 }
@@ -1390,7 +1380,7 @@ function listPage(key) {
 
 function insuranceList(group) {
   if (!['personal', 'company'].includes(group)) return notFound();
-  const items = ofTypes(ORDER[group]).sort((x, y) => ORDER[group].indexOf(x.type) - ORDER[group].indexOf(y.type));   // fixed type order
+  const items = ofTypes(ORDER[group]);
   const cover = sum(items, a => num(a.data.cover));
   const annual = sum(items, a => num(a.data.premium) * pdatesOf(a).length);
   let h = items.length ? `<div class="summary ${group === 'company' ? 'one' : ''}"><div><span>Total Cover</span><b>${money(cover)}</b></div>${group === 'personal' ? `<div><span>Yearly Premium</span><b>${money(annual)}</b></div>` : ''}</div>` + items.map(card).join('')
@@ -2596,40 +2586,12 @@ function view(p) {
     default: return notFound();
   }
 }
-let navDir = '';
-function navSlide(ghost, page, dir) {                          // 'push' = forward, 'pop' = back, 'fade' = switch of tab
-  const root = $('#app').parentNode, shade = document.createElement('div'); shade.className = 'navshade';
-  root.appendChild(ghost);
-  const W = innerWidth, ease = 'cubic-bezier(.32,.72,0,1)', T = dir === 'fade' ? 260 : 460, o = { duration: T, easing: ease, fill: 'both' }, run = [];
-  if (dir === 'fade') {
-    run.push(page.animate([{ opacity: 0 }, { opacity: 1 }], o), ghost.animate([{ opacity: 1 }, { opacity: 0 }], { ...o, easing: 'ease-out' }));
-  } else if (dir === 'push') {
-    page.style.position = 'relative'; page.style.zIndex = 31; page.style.background = 'var(--bg)';
-    run.push(page.animate([{ transform: `translateX(${W}px)`, boxShadow: '-12px 0 32px rgba(0,0,0,.18)' }, { transform: 'none', boxShadow: '-12px 0 32px rgba(0,0,0,0)' }], o),
-             ghost.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-W * .28}px)`, opacity: .6 }], o));
-  } else {
-    ghost.style.zIndex = 32; ghost.style.boxShadow = '-12px 0 32px rgba(0,0,0,.18)';
-    run.push(ghost.animate([{ transform: 'none' }, { transform: `translateX(${W}px)` }], o),
-             page.animate([{ transform: `translateX(${-W * .28}px)`, opacity: .6 }, { transform: 'none', opacity: 1 }], o));
-  }
-  Promise.all(run.map(x => x.finished.catch(() => 0))).then(() => { ghost.remove(); page.style.cssText = ''; run.forEach(x => x.cancel()); });
-}
 function render(goTo) {
   const y = goTo === undefined ? $('#app').scrollTop : goTo;
   const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const v = view(p);
   const bar = v.nobar ? '' : `<div class="bar"><a class="back" href="${v.back || '#/home'}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a><div class="bt">${esc(v.title || '')}</div><div class="right">${v.right || ''}</div></div>`;
-  const dir = goTo !== undefined ? navDir : '', appEl = $('#app'), oldPg = dir && appEl.querySelector('.page'), still = !matchMedia('(prefers-reduced-motion:reduce)').matches;
-  navDir = '';
-  let ghost = null;
-  if (dir && oldPg && still) {                                  // keep a picture of the page we are leaving, to slide it away
-    const r = appEl.getBoundingClientRect(), sy = appEl.scrollTop;
-    ghost = document.createElement('div'); ghost.className = 'navold';
-    ghost.style.cssText = `top:${r.top}px;height:${r.height}px`;
-    const cl = oldPg.cloneNode(true); cl.classList.add('noanim'); cl.style.transform = `translateY(${-sy}px)`; ghost.appendChild(cl);
-  }
-  appEl.innerHTML = `<div class="page${goTo === undefined || dir ? ' noanim' : ''}${v.tab === 'more' ? ' more' : ''}">${bar}${v.html}</div>`;
-  if (ghost) navSlide(ghost, appEl.firstElementChild, dir);
+  $('#app').innerHTML = `<div class="page${goTo === undefined ? ' noanim' : ''}${v.tab === 'more' ? ' more' : ''}">${bar}${v.html}</div>`;
   // list pages already include their own large title in html
   document.querySelectorAll('#tabbar [data-tab]').forEach(el => el.classList.toggle('on', el.dataset.tab === v.tab));
   $('#tabbar').classList.toggle('off', !!v.notabs); document.body.classList.toggle('notabs', !!v.notabs); tabMeasure();
@@ -2780,7 +2742,7 @@ function fold(d) {                                              // smooth open /
   const full = { height: body.offsetHeight + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1 };
   const shut = { height: '0px', paddingTop: '0px', paddingBottom: '0px', opacity: 0 };
   const run = [body.animate(opening ? [shut, full] : [full, shut],
-    { duration: opening ? 560 : 340, easing: 'cubic-bezier(.32,.72,0,1)', fill: 'forwards' })];
+    { duration: opening ? 460 : 300, easing: opening ? 'cubic-bezier(.22,1,.36,1)' : 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' })];
   [...body.children].slice(0, 14).forEach((k, i) => run.push(k.animate(                     // rows glide in one after another
     opening ? [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 1 }, { opacity: 0 }],
     { duration: opening ? 360 : 160, delay: opening ? 50 + i * 28 : 0, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' })));
@@ -2963,7 +2925,7 @@ try { history.replaceState({ nav: 0 }, ''); } catch (x) {}
 window.addEventListener('hashchange', () => {
   if (skipHash) { skipHash = false; return; }
   const h = location.hash, st = history.state, si = st && typeof st.nav === 'number' ? st.nav : -1;
-  const top = navStack[navStack.length - 1]; top.y = $('#app').scrollTop; const prevLen = navStack.length;
+  const top = navStack[navStack.length - 1]; top.y = $('#app').scrollTop;
   let y = 0, unwind = 0;
   if (si >= 0 && si < navStack.length - 1 && navStack[si].hash === h) {            // Back (arrow, swipe or phone button)
     if (collapseOpen()) { skipHash = true; history.go(navStack.length - 1 - si); return; }   // an open card folds first; stay on this page
@@ -2977,8 +2939,6 @@ window.addEventListener('hashchange', () => {
   if (/^#\/(analytics|goals)\/?$/.test(h)) {                      // entering Analytics / Goals always starts fresh
     Object.assign(AN, { cat: 'all', ast: 'all', rng: 'all', lim: 40 }); GEXP.clear(); y = 0; navStack[navStack.length - 1].y = 0;
   }
-  const rootTab = x => /^#?\/?(home|analytics|goals|more)?\/?$/.test(x || '');
-  navDir = rootTab(curHash) && rootTab(h) ? 'fade' : navStack.length > prevLen ? 'push' : 'pop';
   prevHash = curHash; curHash = h; closeSheet(); render(y);
   if (unwind < 0) history.go(unwind);                             // keep the browser's own Back in step with the trail
 });
