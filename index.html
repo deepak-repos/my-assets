@@ -346,6 +346,7 @@ button.btn{width:calc(100% - 32px)}
 .ghead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 32px 6px}
 .ghead .gl{font-size:13px;color:var(--blue);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ghead .gr .gn{font-size:13px}
+.ghead .gl.gnow{flex:none;max-width:60%}
 .ghead .gr{font-size:12px;color:var(--sub);flex:none;text-transform:uppercase}
 
 /* analytics */
@@ -499,6 +500,11 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .row .calcv{color:var(--sub)}
 .pdh{padding:14px 16px 8px;display:flex;flex-direction:column;gap:2px;border-bottom:.5px solid var(--sep)}.pdh b{font-size:17px}.pdh small{color:var(--sub);font-size:14px}
 .acts .wdrow{flex:1 1 100%;display:flex;gap:10px}
+.acts .morearr{flex:1 1 100%;display:flex;justify-content:center;align-items:center;height:26px;margin:-6px 0 -4px;padding:0;border:0;background:none;color:var(--sub);cursor:pointer}
+.acts .morearr svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.acts .morearr[aria-expanded=true] svg{transform:rotate(180deg)}
+.acts .more2{flex:1 1 100%;display:none;gap:10px}.acts .more2.show{display:flex}
+.acts .more2 .btn{flex:1 1 0;width:auto}
 .acts .wdrow .btn{flex:1 1 0;width:auto}
 .btn.fillb{background:var(--fill);color:var(--blue)}
 .btn.fillb.wdc{color:var(--red)}
@@ -516,6 +522,8 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dtile.wt .dr,.dtile.wt .body{opacity:.75}   /* text in the Investment section is 25% dimmer; the icons keep full strength */
 .dtile.wt .dl{color:color-mix(in srgb,var(--text) 75%,transparent)}.dtile.wt .dl svg{color:var(--text)}
 .dtile.pl>summary{font-size:15px;padding-top:20.7px;padding-bottom:20.7px}   /* Investment tile about 18% taller; text size unchanged */.dtile.pl .dl svg{width:15px;height:15px}.dtile.pl .body{padding-left:36px}
+.dtile.wt.pl:first-child>summary{padding-bottom:16.7px}   /* 4px closer to the thin line below */
+.dtile.wt.pl+.dtile.wt.pl>summary{padding-top:16.7px}     /* and 4px closer to it from the line below */
 /* asset card buttons */
 .btn.wdo{background:rgba(255,149,0,.16);color:#c25e00}
 .btn.edit{background:rgba(0,122,255,.13);color:#0a58ca}
@@ -1336,8 +1344,8 @@ function card(a) {
     : (a.type === 'fd' && !fdClosed(a)) ? `<div class="wdrow"><a class="btn sm wdo" href="#/withdraw/${a.id}">Withdraw</a></div>` : '';
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
     <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
-    <div class="body">${rows}${wdBlock}${docs}<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
-    <a class="btn sm edit" href="#/form/${a.type}/${a.id}">Edit</a></div></div></details>`;
+    <div class="body">${rows}${wdBlock}${docs}<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}${wdBtns ? `<button class="morearr" type="button" aria-label="Show Delete and Edit" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="more2">` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
+    <a class="btn sm edit" href="#/form/${a.type}/${a.id}">Edit</a>${wdBtns ? '</div>' : ''}</div></div></details>`;
 }
 
 function fundCats(types) {                                      // same menu rows as the home screen, plus invested amount and XIRR
@@ -1399,14 +1407,14 @@ function updatePage(key, only) {
   const cal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
   const blocks = items.map(a => {
     const c = CONTRIB[a.type], inv = invVal(a), sip = c ? num(a.data[c.k]) : 0;
-    const cur = `<input class="curin" name="${a.id}__cur" type="number" inputmode="decimal" step="any" placeholder="${c ? 'Current' : 'Current value'}" aria-label="Current value">`;
+    const cur = `<input class="curin" name="${a.id}__cur" type="number" inputmode="decimal" step="any" placeholder="${c ? 'Current' : 'Current value'}" aria-label="Current value" required>`;
     let rows;
     if (c) rows = `<div class="row"><span class="l">Invested so far</span><span class="v">${money(inv)}</span></div>
       <div class="row sp"><div class="lft"><input class="chk" type="checkbox" name="${a.id}__add" ${sip > 0 ? 'checked' : ''} aria-label="Add to investments"><span class="pre">₹</span><input class="sipin" name="${a.id}__sip" type="number" inputmode="decimal" step="any" placeholder="${a.type === 'mf' ? 'SIP' : 'Amount'}" value="${sip || ''}" aria-label="${esc(c.lab)}"></div>
         <b class="v" data-tot>${money(inv + sip)}</b></div>
       <div class="row sp"><label class="dpick" title="Investment date">${cal}<span class="dtxt">${esc(fmtShort(today))}</span><input type="date" name="${a.id}__date" value="${today}" aria-label="Investment date"></label>${cur}</div>`;
     else rows = (T[a.type].cat === 'selfuse' ? `<div class="row"><span class="l">Purchase amount</span><span class="v">${money(inv)}</span></div>` : '') + `<div class="row">${cur}</div>`;
-    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
+    return `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gl gnow">Now: ${money(curVal(a))}</span></div><div class="group" data-id="${a.id}" data-inv="${inv}">${rows}</div>`;
   }).join('');
   const h = `<form id="f">${blocks}<button class="savetile" type="submit">Save Current Value</button></form>`;
   return { title: only ? 'Update ' + ttl(items[0]) : 'Update ' + title, back, html: h, notabs: true,
@@ -1432,6 +1440,7 @@ function updatePage(key, only) {
           const c = CONTRIB[a.type], data = { ...a.data };
           let dirty = false;
           const cur = fd.get(a.id + '__cur');
+          if (cur === null || String(cur).trim() === '' || isNaN(Number(cur))) { const bad = f.elements[a.id + '__cur']; if (bad) { bad.focus(); try { bad.scrollIntoView({ block: 'center' }); } catch (x) {} } return toast('Enter the current value for ' + ttl(a)); }
           if (cur !== null && cur !== '' && Number(cur) !== num(a.data.current)) { data.current = Number(cur); dirty = true; }
           if (c) {
             const sip = num(fd.get(a.id + '__sip')), add = fd.get(a.id + '__add') !== null, date = fd.get(a.id + '__date');
@@ -2731,6 +2740,11 @@ document.addEventListener('click', e => {                       // goal cards: n
 document.addEventListener('click', e => {                       // expanded "Invested so far" tile → Invested & Withdrawn page
   const b = e.target.closest('.dtile[data-go] > .body'); if (b) location.hash = b.parentElement.dataset.go;
 });
+document.addEventListener('click', e => {                       // down arrow on a card: show / hide its Delete and Edit buttons
+  const b = e.target.closest('.morearr'); if (!b) return;
+  const m = b.nextElementSibling, on = !m.classList.contains('show');
+  m.classList.toggle('show', on); b.setAttribute('aria-expanded', on);
+});
 function fold(d) {                                              // smooth open / close of an asset card (<details>)
   const body = d.querySelector('.body');
   if (!body || d._busy) return;
@@ -2942,6 +2956,40 @@ window.addEventListener('hashchange', () => {
   prevHash = curHash; curHash = h; closeSheet(); render(y);
   if (unwind < 0) history.go(unwind);                             // keep the browser's own Back in step with the trail
 });
+/* Number boxes show 1,00,000 while you type. The box holds the grouped text; .value and form data still give the plain number. */
+(function () {
+  const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  const group = t => {                                          // '100000.5' -> '1,00,000.5'
+    t = String(t == null ? '' : t).replace(/,/g, '');
+    const neg = t[0] === '-', m = /^-?(\d*)(\.\d*)?/.exec(t) || [], i = m[1] || '', d = (m[2] || '').slice(0, 9);
+    const g = i.length > 3 ? i.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + i.slice(-3) : i;
+    return (neg ? '-' : '') + g + d;
+  };
+  const plain = t => { t = String(t).replace(/,/g, ''); return /^-?\d*\.?\d*$/.test(t) ? t : t.replace(/[^\d.\-]/g, ''); };
+  const conv = el => {
+    if (el._num) return; el._num = 1;
+    const start = el.value;
+    el.type = 'text'; el.setAttribute('inputmode', 'decimal'); el.setAttribute('autocomplete', 'off'); el.dataset.num = '1';
+    ['step', 'min', 'max'].forEach(a => el.removeAttribute(a));
+    Object.defineProperty(el, 'value', { configurable: true,
+      get() { return plain(desc.get.call(this)); },
+      set(v) { desc.set.call(this, group(v)); } });
+    desc.set.call(el, group(start));
+  };
+  const scan = root => { if (root.nodeType !== 1) return; if (root.matches('input[type=number]')) conv(root); root.querySelectorAll('input[type=number]').forEach(conv); };
+  scan(document.body);
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(scan))).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('input', e => {
+    const el = e.target; if (!el || !el._num) return;
+    const raw = desc.get.call(el), pos = el.selectionStart, before = raw.slice(0, pos).replace(/[^\d.]/g, '').length;
+    const out = group(plain(raw));
+    if (out === raw) return;
+    desc.set.call(el, out);
+    let n = 0, k = 0; for (; k < out.length && n < before; k++) if (/[\d.]/.test(out[k])) n++;
+    try { el.setSelectionRange(k, k); } catch (x) {}
+  }, true);
+  document.addEventListener('formdata', e => { e.target.querySelectorAll('input[data-num][name]').forEach(el => e.formData.set(el.name, el.value)); });
+})();
 applyTheme();
 showLock();
 render();
