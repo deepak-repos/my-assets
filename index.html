@@ -1170,13 +1170,11 @@ const nwItems = () => [...byCat('investment'), ...byCat('selfuse')];
 function homeMenus(C, noIns) {                                    // the menu tiles on the home screen (also used on the Net Worth page)
   const solo = (...args) => `<div class="group solo hm">${item(...args)}</div>`;
   const prop = sum(ofTypes(['house', 'land']), curVal), gld = sum(ofTypes(['gold']), curVal);
-  const rows = ORDER.investment.filter(t => ofTypes([t]).length).map(t =>
-    solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal)))).join('');
+  const tiles = ORDER.investment.filter(t => ofTypes([t]).length).map(t => ({ v: sum(ofTypes([t]), curVal), h: solo('#/list/' + t, T[t].ico, T[t].c, T[t].label, C(sum(ofTypes([t]), curVal))) }))
+    .concat([{ v: prop, h: solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop)) }, { v: gld, h: solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld)) }]);
+  if (noIns) return tiles.sort((x, y) => y.v - x.v).map(x => x.h).join('');           // Net Worth page: biggest current amount on top
   const pCover = sum(ofTypes(ORDER.personal), a => num(a.data.cover));
-  return rows
-    + solo('#/property', '🏡', '#ff9f0a', 'Property', C(prop))
-    + solo('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))
-    + (noIns ? '' : solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : ''));
+  return tiles.map(x => x.h).join('') + solo('#/insurance', '🛡️', '#ff375f', 'Insurance', pCover ? C(pCover) : '');
 }
 function netWorthPage() {
   const C = v => S.hide ? '••••' : fmtCr(v);
