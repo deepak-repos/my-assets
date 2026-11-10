@@ -533,6 +533,8 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dtile.wt.pl+.dtile.wt.pl>summary{padding-top:16.7px}     /* and 4px closer to it from the line below */
 /* asset card buttons */
 .btn.wdo{background:rgba(255,149,0,.16);color:#c25e00}
+.rrt{display:block;color:var(--text)}.rr{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 16px;font-size:15px}.rr+.rr{border-top:.5px solid var(--sep)}
+.rr b{font-weight:600;font-variant-numeric:tabular-nums}.rr .pos{color:var(--green)}.rr .neg{color:var(--red)}
 .rnote{display:block;margin-top:2px;font-size:12px;font-weight:400;color:var(--sub);white-space:normal;text-align:left}
 .btn.wdr{background:rgba(255,59,48,.14);color:#d62f26}.btn.addg{background:rgba(52,199,89,.16);color:#1f8f3f}
 :root[data-theme=dark] .btn.wdr{background:rgba(255,69,58,.22);color:#ff7a72}:root[data-theme=dark] .btn.addg{background:rgba(48,209,88,.22);color:#5fe08a}
@@ -1313,7 +1315,7 @@ function home() {
   h += `<div class="sqg">${sq('#/funds', '<span class="brown">' + T.fd.ico + '</span>', T.sa.c, 'Total Funds', C(funds))}${sq('#/liquid', T.sa.ico, T.sa.c, 'Liquid Funds', C(liquid))}${sq('#/property', '🏡', '#ffcc00', 'Property', C(prop))}${sq('#/gold', '🪙', '#ffcc00', 'Gold', C(gld))}</div>`;
   h += `<div class="group solo hm"><div class="item nochev ins2">
     <a class="ih" href="#/insurance/company"><span class="it"><b>Company</b><small>Insurance</small></span></a><a class="ih" href="#/insurance/personal"><span class="it"><b>Personal</b><small>Insurance</small></span></a><span class="ii mid">🛡️</span></div></div>`;
-  h += st + homeGoals() + homeGrowth() + homePurposes();
+  h += st + homeGoals() + homeGrowth() + homeRealized() + homePurposes();
   return { html: h, tab: 'home', nobar: true };
 }
 
@@ -1362,6 +1364,13 @@ function mfCharts(items) {                                 // Mutual Fund page: 
   return xwrap(h + bar);
 }
 /* ---- Fund purposes (home pills + purpose page) ---- */
+function homeRealized() {                                       // latest 3 financial years: profit / loss booked; tile opens Realized Returns
+  const by = new Map();
+  S.harvest.forEach(x => { const fy = String(x.fy || ''); if (fy) by.set(fy, (by.get(fy) || 0) + (x.pl === 'L' ? -num(x.amount) : num(x.amount))); });
+  const rows = [...by.entries()].sort((a, b) => a[0] < b[0] ? 1 : -1).slice(0, 3); if (!rows.length) return '';
+  return `<div class="hsec">Realized Returns</div><a class="card wtile rrt" href="#/tax" aria-label="Open Realized Returns">${rows.map(([fy, n]) =>
+    `<div class="rr"><span>FY ${esc(fy)}</span><b class="${n < 0 ? 'neg' : 'pos'}">${n < 0 ? '−' : ''}${mm(Math.abs(n))}</b></div>`).join('')}</a>`;
+}
 function homePurposes() {
   const list = purposeList(); if (!list.length) return '';
   return `<div class="hsec">Fund Purpose</div><div class="card"><div class="pp">${list.map(p => `<a class="ppill" href="#/purpose/${encodeURIComponent(p)}">${esc(p)}</a>`).join('')}</div></div>`;
