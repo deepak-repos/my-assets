@@ -528,8 +528,8 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dtile.wt+.dtile.wt{border-top:.5px solid var(--sep)}
 .dtile.wt .dr,.dtile.wt .body{opacity:.75}   /* text in the Investment section is 25% dimmer; the icons keep full strength */
 .dtile.wt .dl{color:color-mix(in srgb,var(--text) 75%,transparent)}.dtile.wt .dl svg{color:var(--text)}
-.dtile.pl>summary{font-size:15px;padding-top:20.7px;padding-bottom:20.7px}   /* Investment tile about 18% taller; text size unchanged */.dtile.pl .dl svg{width:15px;height:15px}.dtile.pl .body{padding-left:36px}
-.dtile.wt.pl:first-child>summary{padding-bottom:16.7px}   /* 4px closer to the thin line below */
+.dtile.pl>summary{white-space:nowrap;font-size:min(15px,3.6vw);padding-top:20.7px;padding-bottom:20.7px}   /* Investment tile about 18% taller; text size unchanged */.dtile.pl .dl svg{width:15px;height:15px}.dtile.pl .body{padding-left:36px}
+.dtile.pl .dl{overflow:hidden;white-space:nowrap}.dtile.wt.pl:first-child>summary{padding-bottom:16.7px}   /* 4px closer to the thin line below */
 .dtile.wt.pl+.dtile.wt.pl>summary{padding-top:16.7px}     /* and 4px closer to it from the line below */
 /* asset card buttons */
 .btn.wdo{background:rgba(255,149,0,.16);color:#c25e00}
