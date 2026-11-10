@@ -1304,9 +1304,9 @@ function home() {
   let st = stat;
 
   const fyNow = fyData()[0], icoCal = '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
-  st += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy}</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
+  st += `<details class="dtile wt pl" data-go="#/invwd"><summary><span class="dl">${icoCal}Invested so far FY ${fyNow.fy} :</span><span class="dr">${M(fyNow.inv - fyNow.wd)}</span></summary><div class="body">${fyCats(fyNow)}</div></details>`;
   const np = nextMonthPayments(), npTot = sum(np.items, x => x.amt);
-  st += `<details class="dtile wt pl"><summary><span class="dl">${icoTrend}Monthly planned investment</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
+  st += `<details class="dtile wt pl"><summary><span class="dl">${icoTrend}Monthly planned investment :</span><span class="dr">${M(npTot)}</span></summary><div class="body">` + (np.items.length ? np.items.map(p =>
     `<div class="li"><div><b>${esc(p.n)}</b></div><div class="r">${M(p.amt)}</div></div>`).join('')
     : `<div class="empty">No contributions scheduled.</div>`) + `</div></details>`;
   st += '</div>';
