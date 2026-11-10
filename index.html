@@ -528,7 +528,7 @@ svg.ansp{margin:8px 0 0;pointer-events:none}
 .dtile.wt+.dtile.wt{border-top:.5px solid var(--sep)}
 .dtile.wt .dr,.dtile.wt .body{opacity:.75}   /* text in the Investment section is 25% dimmer; the icons keep full strength */
 .dtile.wt .dl{color:color-mix(in srgb,var(--text) 75%,transparent)}.dtile.wt .dl svg{color:var(--text)}
-.dtile.pl>summary{white-space:nowrap;font-size:min(15px,3.6vw);padding-top:20.7px;padding-bottom:20.7px}   /* Investment tile about 18% taller; text size unchanged */.dtile.pl .dl svg{width:15px;height:15px}.dtile.pl .body{padding-left:36px}
+.dtile.pl>summary{white-space:nowrap;font-size:14.5px;padding-top:20.7px;padding-bottom:20.7px}   /* Investment tile about 18% taller; text size unchanged */.dtile.pl .dl svg{width:15px;height:15px}.dtile.pl .body{padding-left:36px}
 .dtile.pl .dl{overflow:hidden;white-space:nowrap}.dtile.wt.pl:first-child>summary{padding-bottom:16.7px}   /* 4px closer to the thin line below */
 .dtile.wt.pl+.dtile.wt.pl>summary{padding-top:16.7px}     /* and 4px closer to it from the line below */
 /* asset card buttons */
@@ -3144,6 +3144,16 @@ window.addEventListener('hashchange', () => {
     try { el.setSelectionRange(k, k); } catch (x) {}
   }, true);
   document.addEventListener('formdata', e => { e.target.querySelectorAll('input[data-num][name]').forEach(el => e.formData.set(el.name, el.value)); });
+})();
+(function () {                                                    // Investment tiles stay on one line: text is 14.5px, and shrinks only when a long amount would push it out
+  let q = 0;
+  const fit = () => { q = 0; document.querySelectorAll('.dtile.pl>summary').forEach(sm => {
+    const l = sm.querySelector('.dl'); if (!l) return; let f = 14.5; sm.style.fontSize = '';
+    while (l.scrollWidth > l.clientWidth + .5 && f > 10.5) { f -= .25; sm.style.fontSize = f + 'px'; }
+  }); };
+  const later = () => { if (!q) q = requestAnimationFrame(fit); };
+  new MutationObserver(later).observe(document.body, { childList: true, subtree: true });
+  addEventListener('resize', later); later();
 })();
 applyTheme();
 showLock();
