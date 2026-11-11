@@ -1753,13 +1753,13 @@ function formPage(type, id) {
 
 /* ---- Analytics / Goals placeholders ---- */
 const morePage = () => ({ title: 'More', tab: 'more',
-  html: soloList([item('#/add', '＋', '#0a84ff', 'Add Asset'),
-    item('#/invwd', '📅', '#5e5ce6', 'Invested & Withdrawn'),
+  html: soloList([item('#/invwd', '📅', '#5e5ce6', 'Invested & Withdrawn'),
     item('#/tax', '％', '#30b0c7', 'Realized Returns'),
-    item('#/historical', '🗄️', '#8e8e93', 'Historical Investment'),
+    item('#/historical', '🗄️', '#8e8e93', 'Closed Investments'),
     item('#/expenses', '🧾', '#ff9f0a', 'Monthly Expenses'),
     item('#/calculator', '🧮', '#34c759', 'Calculator'),
     item('#/documents', '📁', '#5856d6', 'Documents'),
+    item('#/add', '＋', '#0a84ff', 'Add Asset'),
     item('#/settings', '⚙️', '#8e8e93', 'Settings')]) });
 /* ---- Analytics ----
    Line chart (with dots) of Investment amount vs Current amount, for all investments,
@@ -2516,7 +2516,7 @@ function fyCats(o) {                                            // home tile: ne
 }
 function historicalPage() {
   const l = S.closed.filter(a => HIST_TYPES.includes(a.type)).sort((x, y) => String(y.data.closed) < String(x.data.closed) ? -1 : 1);
-  if (!l.length) return { title: 'Historical Investment', back: '#/more', tab: 'more', html: `<div class="card"><div class="empty">No closed investments yet. Mutual funds, FDs, NPS, EPF and PPF you delete are kept here.</div></div>` };
+  if (!l.length) return { title: 'Closed Investments', back: '#/more', tab: 'more', html: `<div class="card"><div class="empty">No closed investments yet. Mutual funds, FDs, NPS, EPF and PPF you delete are kept here.</div></div>` };
   const kv = (a, b) => `<div class="kv"><span>${esc(a)}</span><b>${b}</b></div>`;
   const h = l.map(a => {
     const t = typeOf(a), tx = txAll(a).sort(byDate), inv = sum(tx, z => z.amt), wds = wdOf(a).slice().sort((p, q) => byDate(q, p)), out = sum(wds.filter(w => !w.th), w => num(w.amt));
@@ -2525,7 +2525,7 @@ function historicalPage() {
       ${tx.length ? `<div class="kv"><span>Investments (${tx.length})</span><b></b></div><div class="txlist">${[...tx].reverse().map(z => kv(z.date ? fmtDate(z.date) : 'No date', mm(z.amt))).join('')}</div>` : ''}
       ${wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => kv(fmtDate(w.date) + (w.th ? ' · Tax harvest' : ''), mm(num(w.amt)))).join('')}</div>` : ''}</div></details>`;
   }).join('');
-  return { title: 'Historical Investment', back: '#/more', tab: 'more', html: h };
+  return { title: 'Closed Investments', back: '#/more', tab: 'more', html: h };
 }
 const sgn = n => n > 0 ? '<i class="pos">(+)</i> ' : n < 0 ? '<i class="neg">(-)</i> ' : '';
 function invwdPage() {
@@ -2848,7 +2848,7 @@ document.addEventListener('click', async e => {
   if (t.dataset.pick) { store.set('theme', t.dataset.pick); applyTheme(); return render(); }
   if (t.dataset.del) {
     const da = S.assets.find(x => x.id === t.dataset.del);
-    if (!(await (da && HIST_TYPES.includes(da.type) ? askConfirm('Delete asset?', 'It will move to Historical Investment and stay in your yearly totals and Realized Returns.', 'Delete') : askConfirm('Delete asset?', 'This asset and its records will be removed. This cannot be undone.', 'Delete')))) return;
+    if (!(await (da && HIST_TYPES.includes(da.type) ? askConfirm('Delete asset?', 'It will move to Closed Investments and stay in your yearly totals and Realized Returns.', 'Delete') : askConfirm('Delete asset?', 'This asset and its records will be removed. This cannot be undone.', 'Delete')))) return;
     if (await run(async () => { await removeAsset(t.dataset.del); return true; })) { toast('Deleted'); render(); }
     return;
   }
