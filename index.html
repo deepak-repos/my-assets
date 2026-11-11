@@ -38,8 +38,9 @@ body{display:flex;flex-direction:column;height:100dvh}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 #app{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none}
-.page{max-width:600px;margin:0 auto;padding-bottom:calc(24px + env(safe-area-inset-bottom));animation:in .22s ease}
-@keyframes in{from{opacity:0}to{opacity:1}}
+.page{max-width:600px;margin:0 auto;padding-bottom:calc(24px + env(safe-area-inset-bottom));animation:in .38s cubic-bezier(.22,1,.36,1)}
+@keyframes in{from{opacity:0;transform:translateX(-34%)}55%{opacity:1}to{opacity:1;transform:none}}   /* a new page opens from the left edge and settles to the right */
+@media (prefers-reduced-motion:reduce){.page{animation:none}}
 .page.noanim{animation:none}
 
 /* top bar: back / centred title / action, no tile behind it */
