@@ -57,6 +57,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .bar .right .plus::before{width:16px;height:2.4px}.bar .right .plus::after{width:2.4px;height:16px}
 .head{padding:calc(18px + env(safe-area-inset-top)) 20px 14px;display:flex;justify-content:space-between;align-items:flex-start}
 .head h1{margin:0;font-size:32px;font-weight:700;letter-spacing:-.6px}
+.lastu{text-align:center;color:var(--sub);font-size:12.5px;margin:0 16px 10px}
 .head small{display:block;color:var(--sub);font-size:13px;margin-top:2px}
 .iconbtn{width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1263,7 +1264,7 @@ function netWorthPage() {
   if (items.length) {
     const invOf = a => a.type !== 'sa' && txOf(a).length ? invVal(a) : curVal(a);        // same rule as Total Funds: no invested figure → no gain counted (saving accounts never show a gain)
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
-    h += `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
+    h += lastUpd(items) + `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
       <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${pc.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>`;
   }
   return { title: 'Your Net Worth', back: '#/home', html: h + homeMenus(C, true), tab: 'home' };
@@ -1392,12 +1393,16 @@ function purposePage(raw) {
   return { title: disp, back: '#/home', html: h, tab: 'home' };
 }
 
+function lastUpd(items) {                                       // newest "updated" time among the cards on the page, centred above the summary tile
+  const last = items.reduce((mx, a) => (a.updated > mx ? a.updated : mx), ''), t = last ? fmtDT(last) : '';
+  return t ? `<div class="lastu">Last updated ${esc(t)}</div>` : '';
+}
 function summaryTile(items, types, extra) {
   const hasInv = types.some(t => INV_TYPES.includes(t) || T[t].fields.some(f => f.k === 'invested' || f.k === 'purchase'));
   const inv = sum(items, invVal), cur = sum(items, curVal);
-  if (!hasInv) return `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div></div>`;
+  if (!hasInv) return lastUpd(items) + `<div class="summary one"><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div></div>`;
   const g = cur - inv, p = inv ? (g / inv * 100) : 0, x = groupXirr(items);
-  return `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
+  return lastUpd(items) + `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
     ${inv ? `<div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${p.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>` : ''}${extra || ''}</div>`;
 }
 function showVal(f, v) {
@@ -1451,7 +1456,7 @@ function fundsPage(kind) {
   if (items.length) {
     const invOf = a => a.type !== 'sa' && txOf(a).length ? invVal(a) : curVal(a);          // saving accounts: no gain counted
     const inv = sum(items, invOf), cur = sum(items, curVal), g = cur - inv, pc = inv ? g / inv * 100 : 0, x = groupXirr(items);
-    h = `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
+    h = lastUpd(items) + `<div class="summary"><div><span>Investment Amount</span><b>${fmtCr(inv)}</b></div><div><span>Current Amount</span><b>${fmtCr(cur)}</b></div>
       <div class="gain"><span><i class="ar ${g >= 0 ? 'up' : 'dn'}">${g >= 0 ? '▲' : '▼'}</i> (${pc.toFixed(1)}%) ${fmtCr(Math.abs(g))}</span>${x != null ? `<em>XIRR ${pct(x)}</em>` : ''}</div>${catBars(items)}</div>` + fundCats([...types.filter(t => t !== 'sa'), ...types.filter(t => t === 'sa')]);   // Savings Account always last
   } else h = `<div class="card"><div class="empty">Nothing here yet.</div></div>`;
   return { title: liq ? 'Liquid Funds' : 'Total Funds', back: backHome(), html: h, tab: 'home' };
@@ -1479,7 +1484,7 @@ function insuranceList(group) {
   const items = ofTypes(ORDER[group]).sort((x, y) => ORDER[group].indexOf(x.type) - ORDER[group].indexOf(y.type));   // fixed type order
   const cover = sum(items, a => num(a.data.cover));
   const annual = sum(items, a => num(a.data.premium) * pdatesOf(a).length);
-  let h = items.length ? `<div class="summary ${group === 'company' ? 'one' : ''}"><div><span>Total Cover</span><b>${money(cover)}</b></div>${group === 'personal' ? `<div><span>Yearly Premium</span><b>${money(annual)}</b></div>` : ''}</div>` + items.map(card).join('')
+  let h = items.length ? lastUpd(items) + `<div class="summary ${group === 'company' ? 'one' : ''}"><div><span>Total Cover</span><b>${money(cover)}</b></div>${group === 'personal' ? `<div><span>Yearly Premium</span><b>${money(annual)}</b></div>` : ''}</div>` + items.map(card).join('')
     : `<div class="card"><div class="empty">No policies added yet.</div></div>`;
   return { title: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance', back: '#/home', large: (group === 'personal' ? 'Personal' : 'Company') + ' Insurance',
     right: `<a class="plus" href="#/add/insurance/${group}">+</a>`, html: h, tab: 'home' };
