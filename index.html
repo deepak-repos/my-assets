@@ -57,7 +57,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .bar .right .plus::before{width:16px;height:2.4px}.bar .right .plus::after{width:2.4px;height:16px}
 .head{padding:calc(18px + env(safe-area-inset-top)) 20px 14px;display:flex;justify-content:space-between;align-items:flex-start}
 .head h1{margin:0;font-size:32px;font-weight:700;letter-spacing:-.6px}
-.lastu{text-align:center;color:var(--sub);font-size:12.5px;margin:0 16px 10px}
+.lastu{text-align:left;color:var(--sub);font-size:12.5px;margin:0 16px 10px}
 .head small{display:block;color:var(--sub);font-size:13px;margin-top:2px}
 .iconbtn{width:36px;height:36px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue)}
 .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -701,7 +701,8 @@ html,body{font-variant-numeric:lining-nums;text-rendering:optimizeLegibility}
 #tabbar{border-top:.5px solid var(--sep);box-shadow:0 -10px 24px -18px rgba(var(--ink-shadow),.5)}
 #tabbar>*{position:relative}
 #tabbar .on{color:var(--blue);font-weight:600}
-#tabbar .on::after{content:"";position:absolute;bottom:-2px;left:50%;width:16px;height:2.5px;border-radius:2px;background:var(--brass);transform:translateX(-50%)}
+#tabbar .on{color:var(--brass);text-shadow:0 0 6px color-mix(in srgb,var(--brass) 70%,transparent),0 0 14px color-mix(in srgb,var(--brass) 45%,transparent)}   /* selected tab glows brass (no underline) */
+#tabbar .on svg{color:var(--blue);filter:none}   /* the icon keeps its blue; only the label is gold */
 
 /* pills and inputs */
 .ppill{background:var(--fill);color:var(--blue);box-shadow:inset 0 0 0 .5px var(--sep)}
