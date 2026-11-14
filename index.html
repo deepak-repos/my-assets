@@ -223,6 +223,8 @@ button.btn{width:calc(100% - 32px)}
 .btn.sm{display:inline-block;margin:0;padding:9px 18px;font-size:15px;border-radius:10px}
 .btn.danger{background:rgba(255,59,48,.14);color:var(--red)}
 .btn.plain{background:var(--card);color:var(--blue)}
+body.vo .plus,body.vo .wdrow,body.vo a.edit,body.vo [data-depdel],body.vo [data-wddel],body.vo a.btn[href^="#/add"],body.vo a.btn[href^="#/zsync"],body.vo a.item[href="#/add"],body.vo a.item[href^="#/calculator-save"]{display:none!important}
+body.vo a[href^="#/goal/"],body.vo a[href^="#/expense/"],body.vo a[href^="#/taxentry/"],body.vo a[href^="#/form"]{pointer-events:none}
 .zsel{max-width:48%;font-size:14px;padding:7px 8px;border-radius:8px;border:.5px solid var(--sep);background:var(--fill);color:var(--text)}
 .btn.redtxt{background:var(--card);color:var(--red)}
 
@@ -884,6 +886,7 @@ const S = { hide: !!store.get('hide', false), assets: store.get('assets', []), g
 const isClosed = a => !!(a && a.data && a.data.closed);
 function splitClosed(all) { S.closed = all.filter(isClosed); S.assets = all.filter(a => !isClosed(a)); }   // closed = deleted MF/FD/NPS/EPF/PPF kept for history
 splitClosed(S.assets);
+const viewOnly = () => store.get('viewonly', false) === true;
 const remote = () => !!(S.cfg && S.cfg.url && S.cfg.key);
 const persist = () => { store.set('assets', S.assets.concat(S.closed)); store.set('history', S.history); store.set('goals', S.goals); store.set('expenses', S.expenses); store.set('harvest', S.harvest); };
 
@@ -1119,6 +1122,7 @@ async function sync(quiet) {
   if (!remote()) return;
   try {
     const r = await api('list');
+    if (r.role) store.set('viewonly', r.role === 'viewer');
     splitClosed(r.assets || []); S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals;
     if (Array.isArray(r.expenses)) S.expenses = r.expenses; if (Array.isArray(r.harvest)) S.harvest = r.harvest; persist();
     if (!/^#\/(form|update|withdraw|expense\/|taxentry\/|calculator|documents|zsync)/.test(location.hash)) render();
@@ -2270,7 +2274,7 @@ function docSheet(id) {
   const s = $('#sheet'); s.hidden = false;
   s.innerHTML = `<div class="pane"><div class="group"><div class="item nochev" style="min-height:44px"><span class="t"><b style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.name)}</b></span></div>
     ${it.kind === 'file' ? b('view', '👁️', '#0a84ff', 'View') + b('download', '⬇️', '#34c759', 'Download') + `<a class="item nochev" href="${esc(it.url)}" target="_blank" rel="noopener"><span class="ico" style="background:#5856d6">↗</span><span class="t"><b>Open in Drive</b></span></a>` : ''}
-    ${b('rename', '✏️', '#ff9f0a', 'Rename')}</div><button class="cancel" type="button" onclick="closeSheet()">Cancel</button></div>`;
+    ${viewOnly() ? '' : b('rename', '✏️', '#ff9f0a', 'Rename')}</div><button class="cancel" type="button" onclick="closeSheet()">Cancel</button></div>`;
 }
 const b64ToBlob = (b, type) => { const bin = atob(b), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type }); };
 async function docFetch(f) {                                   // {blob, name}; kept in memory for the session so View then Download is one fetch
@@ -2839,6 +2843,7 @@ function zShow() {
 
 function view(p) {
   const [a, b, c] = p;
+  if (viewOnly() && ['goal', 'update', 'withdraw', 'zsync', 'save', 'add', 'form', 'expense', 'taxentry'].includes(a)) { setTimeout(() => { location.hash = '#/home'; toast('View-only access'); }, 0); return home(); }
   switch (a) {
     case undefined: case 'home': return home();
     case 'more': return morePage();
@@ -2876,6 +2881,7 @@ function render(goTo) {
   const y = goTo === undefined ? $('#app').scrollTop : goTo;
   const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const v = view(p);
+  document.body.classList.toggle('vo', viewOnly());
   const bar = v.nobar ? '' : `<div class="bar"><a class="back" href="${v.back || '#/home'}" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a><div class="bt">${esc(v.title || '')}</div><div class="right">${v.right || ''}</div></div>`;
   $('#app').innerHTML = `<div class="page${goTo === undefined ? ' noanim' : ''}${v.tab === 'more' ? ' more' : ''}">${bar}${v.html}</div>`;
   // list pages already include their own large title in html
