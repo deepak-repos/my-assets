@@ -223,7 +223,7 @@ button.btn{width:calc(100% - 32px)}
 .btn.sm{display:inline-block;margin:0;padding:9px 18px;font-size:15px;border-radius:10px}
 .btn.danger{background:rgba(255,59,48,.14);color:var(--red)}
 .btn.plain{background:var(--card);color:var(--blue)}
-body.vo .plus,body.vo .wdrow,body.vo a.edit,body.vo [data-depdel],body.vo [data-wddel],body.vo a.btn[href^="#/add"],body.vo a.btn[href^="#/zsync"],body.vo a.item[href="#/add"],body.vo a.item[href^="#/calculator-save"]{display:none!important}
+body.vo .acts,body.vo .payrow,body.vo .plus,body.vo .wdrow,body.vo a.edit,body.vo [data-depdel],body.vo [data-wddel],body.vo a.btn[href^="#/add"],body.vo a.btn[href^="#/zsync"],body.vo a.item[href="#/add"],body.vo a.item[href^="#/calculator-save"]{display:none!important}
 body.vo a[href^="#/goal/"],body.vo a[href^="#/expense/"],body.vo a[href^="#/taxentry/"],body.vo a[href^="#/form"]{pointer-events:none}
 .zsel{max-width:48%;font-size:14px;padding:7px 8px;border-radius:8px;border:.5px solid var(--sep);background:var(--fill);color:var(--text)}
 .btn.redtxt{background:var(--card);color:var(--red)}
@@ -1428,7 +1428,7 @@ function card(a) {
   const dd = { ...d }; t.fields.forEach(f => { if (f.t === 'dates') dd[f.k] = pdatesOf(a); else if (f.t === 'purposes') { const ps = purposeShares(a); dd[f.k] = ps.map(x => x.n + (ps.length > 1 ? ' (' + x.pct + '%)' : '')); } });
   t.fields.forEach(f => { if (f.t === 'calc') dd[f.k] = f.fn(a); });
   const paid = paidOf(a).reverse();
-  const paidBlock = paid.length ? `<div class="kv"><span>Premiums Paid (${paid.length})</span><b></b></div><div class="txlist">${paid.map(z => `<button type="button" class="kv payrow" data-payedit="${a.id}|${z.date}"><span>${esc(fmtDate(z.date))}</span><b>${money(num(z.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap a payment to edit or delete it.</div>` : '';
+  const paidBlock = paid.length ? `<div class="kv"><span>Premiums Paid (${paid.length})</span><b></b></div><div class="txlist">${paid.map(z => `<button type="button" class="kv payrow" data-payedit="${a.id}|${z.date}"><span>${esc(fmtDate(z.date))}</span><b>${money(num(z.amt))}</b></button>`).join('')}</div>${viewOnly() ? '' : '<div class="txsum" style="margin:4px 0 0">Tap a payment to edit or delete it.</div>'}` : '';
   let rows = t.fields.map(f => (f.t !== 'file' && f.t !== 'txs' && dd[f.k] !== '' && dd[f.k] != null && !(Array.isArray(dd[f.k]) && !dd[f.k].length) ? kv(f.l, showVal(f, dd[f.k])) : '') + (f.t === 'dates' ? paidBlock : '')).join('');
   if (INV_TYPES.includes(a.type) && list.length)
     rows += kv('Total invested', money(invVal(a))) +
@@ -1436,15 +1436,15 @@ function card(a) {
   const docs = (a.docs || []).filter(z => /^https:\/\//.test(z.url)).map(z => `<a class="doc" href="${esc(z.url)}" target="_blank" rel="noopener">📎 ${esc(z.name)}</a>`).join('');
   const wds = INV_TYPES.includes(a.type) || a.type === 'fd' || a.type === 'sa' ? wdOf(a).slice().sort((p, q) => byDate(q, p)) : [];
   const deps = a.type === 'sa' ? depOf(a).slice().sort((p, q) => byDate(q, p)) : [];
-  const depBlock = deps.length ? `<div class="kv"><span>Savings added (${deps.length})</span><b></b></div><div class="txlist">${deps.map(w => `<button type="button" class="kv payrow" data-depdel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.note ? `<small class="rnote">${esc(w.note)}</small>` : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap an entry to delete it.</div>` : '';
-  const wdBlock = wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => `<button type="button" class="kv payrow" data-wddel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.th ? ' · Tax harvest' : ''}${w.note ? `<small class="rnote">${esc(w.note)}</small>` : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div><div class="txsum" style="margin:4px 0 0">Tap a withdrawal to delete it.</div>` : '';
+  const depBlock = deps.length ? `<div class="kv"><span>Savings added (${deps.length})</span><b></b></div><div class="txlist">${deps.map(w => `<button type="button" class="kv payrow" data-depdel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.note ? `<small class="rnote">${esc(w.note)}</small>` : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div>${viewOnly() ? '' : '<div class="txsum" style="margin:4px 0 0">Tap an entry to delete it.</div>'}` : '';
+  const wdBlock = wds.length ? `<div class="kv"><span>Withdrawals (${wds.length})</span><b></b></div><div class="txlist">${wds.map(w => `<button type="button" class="kv payrow" data-wddel="${a.id}|${w.id}"><span>${esc(fmtDate(w.date))}${w.th ? ' · Tax harvest' : ''}${w.note ? `<small class="rnote">${esc(w.note)}</small>` : ''}</span><b>${money(num(w.amt))}</b></button>`).join('')}</div>${viewOnly() ? '' : '<div class="txsum" style="margin:4px 0 0">Tap a withdrawal to delete it.</div>'}` : '';
   const wdBtns = UPD_ONE.includes(a.type) ? `<div class="wdrow"><a class="btn sm wdo" href="#/withdraw/${a.id}">Withdraw</a><a class="btn sm" href="#/update/${a.type}/${a.id}">Update</a></div>`
     : a.type === 'sa' ? `<div class="wdrow"><a class="btn sm wdr" href="#/withdraw/${a.id}">Withdraw</a><a class="btn sm addg" href="#/save/${a.id}">Add</a></div>`
     : (a.type === 'fd' && !fdClosed(a)) ? `<div class="wdrow"><a class="btn sm wdo" href="#/withdraw/${a.id}">Withdraw</a></div>` : '';
   return `<details class="acard"><summary><span class="ico" style="background:${t.c}">${t.ico}</span>
     <span class="ttl"><b>${esc(ttl(a))}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="val">${esc(right)}${xl}</span></summary>
-    <div class="body">${rows}${depBlock}${wdBlock}${docs}<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}${wdBtns ? `<button class="morearr" type="button" aria-label="Show Delete and Edit" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="more2">` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
-    <a class="btn sm edit" href="#/form/${a.type}/${a.id}">Edit</a>${wdBtns ? '</div>' : ''}</div></div></details>`;
+    <div class="body">${rows}${depBlock}${wdBlock}${docs}${viewOnly() ? '' : `<div class="acts">${wdBtns}${ins && t.group === 'personal' ? `<button class="btn sm mp" type="button" data-markpaid="${a.id}">Mark Premium Paid</button>` : ''}${wdBtns ? `<button class="morearr" type="button" aria-label="Show Delete and Edit" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="more2">` : ''}<button class="btn sm danger" data-del="${a.id}">Delete</button>
+    <a class="btn sm edit" href="#/form/${a.type}/${a.id}">Edit</a>${wdBtns ? '</div>' : ''}</div>`}</div></details>`;
 }
 
 function fundCats(types) {                                      // same menu rows as the home screen, plus invested amount and XIRR
