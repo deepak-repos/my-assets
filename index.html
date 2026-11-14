@@ -223,6 +223,7 @@ button.btn{width:calc(100% - 32px)}
 .btn.sm{display:inline-block;margin:0;padding:9px 18px;font-size:15px;border-radius:10px}
 .btn.danger{background:rgba(255,59,48,.14);color:var(--red)}
 .btn.plain{background:var(--card);color:var(--blue)}
+.zsel{max-width:48%;font-size:14px;padding:7px 8px;border-radius:8px;border:.5px solid var(--sep);background:var(--fill);color:var(--text)}
 .btn.redtxt{background:var(--card);color:var(--red)}
 
 /* forms */
@@ -1120,7 +1121,7 @@ async function sync(quiet) {
     const r = await api('list');
     splitClosed(r.assets || []); S.history = r.history || []; if (Array.isArray(r.goals)) S.goals = r.goals;
     if (Array.isArray(r.expenses)) S.expenses = r.expenses; if (Array.isArray(r.harvest)) S.harvest = r.harvest; persist();
-    if (!/^#\/(form|update|withdraw|expense\/|taxentry\/|calculator|documents)/.test(location.hash)) render();
+    if (!/^#\/(form|update|withdraw|expense\/|taxentry\/|calculator|documents|zsync)/.test(location.hash)) render();
     if (!quiet) toast('Synced');
   } catch (e) { toast(quiet ? 'Offline – showing saved data' : e.message); }
 }
@@ -1476,7 +1477,7 @@ function listPage(key) {
   const title = listTitle(key);
   const back = backHome();
   const addHref = key === 'realestate' ? '#/add/selfuse' : key === 'property' ? '#/add/property' : key === 'gold' ? '#/form/gold' : (items.length && UPDATABLE.includes(key)) ? '#/update/' + key : '#/form/' + key;
-  let h = '' + (items.length ? summaryTile(items, types, key === 'mf' ? mfCharts(items) : '') + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
+  let h = '' + (items.length ? summaryTile(items, types, key === 'mf' ? mfCharts(items) : '') + (key === 'mf' ? `<a class="btn plain" href="#/zsync" style="margin-top:0">Update from Zerodha</a>` : '') + items.map(card).join('') : `<div class="card"><div class="empty">Nothing here yet.</div></div>`);
   return { title, back, right: `<a class="plus" href="${addHref}" aria-label="Add">+</a>`, html: h, tab: 'home' };
 }
 
@@ -1749,6 +1750,8 @@ function formPage(type, id) {
           }
           if (existing && Array.isArray(existing.data.paidPrem)) data.paidPrem = existing.data.paidPrem;
           if (existing && Array.isArray(existing.data.dep)) data.dep = existing.data.dep;
+          if (existing && existing.data.isin) data.isin = existing.data.isin;            // hidden Zerodha link + already-synced order ids survive an edit
+          if (existing && Array.isArray(existing.data.zids)) data.zids = existing.data.zids;
           if (existing && Array.isArray(existing.data.wd)) data.wd = existing.data.wd;   // withdrawals recorded earlier are kept   // payments recorded earlier are kept
           const asset = { id: existing ? existing.id : uid(), cat: t.cat, type, data, docs: docsOut, created: existing?.created };
           await saveAsset(asset); return true;
@@ -2723,6 +2726,115 @@ function settingsPage(sub) {
 /* ---------------------------------------------------------------------
    Router / renderer
    --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   Zerodha Coin sync  (Mutual Fund page > Update from Zerodha)
+   Changes only: data.current, data.monthlyAmt (+ freq), NEW dated purchases in data.tx, data.isin, data.zids.
+   Withdrawals (data.wd) and tax-harvest records are never touched; SELL orders are ignored.
+   --------------------------------------------------------------------- */
+const Z = { raw: null, P: null, gap: null };
+const zWords = s => String(s || '').toLowerCase().replace(/direct|plan|growth|fund|option|idcw|[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1);
+const zScore = (a, b) => { const x = new Set(zWords(a)); return zWords(b).filter(w => x.has(w)).length; };
+const r2 = v => Math.round(v * 100) / 100;
+
+function zPlan(raw, cards) {
+  const byIsin = new Map(cards.filter(a => a.data.isin).map(a => [a.data.isin, a]));
+  const hold = new Map();
+  raw.holdings.forEach(h => { const o = hold.get(h.isin) || { isin: h.isin, fund: h.fund, value: 0 }; o.value += h.units * h.nav; hold.set(h.isin, o); });   // several folios of one fund add up
+  const sipM = new Map();
+  raw.sips.filter(s => s.status === 'ACTIVE' && s.type !== 'SELL').forEach(s => {
+    const f = s.freq === 'weekly' ? 52 / 12 : s.freq === 'quarterly' ? 1 / 3 : 1;
+    sipM.set(s.isin, (sipM.get(s.isin) || 0) + s.amount * f);
+  });
+  const buys = raw.orders.filter(o => o.type === 'BUY' && o.status === 'COMPLETE' && o.amount > 0);
+  const lines = [], unmatched = [], missing = [];
+  byIsin.forEach((a, isin) => {
+    const h = hold.get(isin);
+    if (!h) { missing.push(a); return; }
+    const seen = new Set(a.data.zids || []), old = txAll(a);
+    const ords = buys.filter(o => o.isin === isin && !seen.has(o.id)).map(o => ({ ...o,
+      dup: old.some(z => z.date && o.date && Math.abs((new Date(o.date) - new Date(z.date)) / 864e5) <= 3 && Math.abs(z.amt - o.amount) < 1) }));   // probably typed in by hand already
+    lines.push({ a, isin, cur: r2(h.value), sip: sipM.has(isin) ? Math.round(sipM.get(isin)) : null, ords });
+  });
+  hold.forEach((h, isin) => { if (!byIsin.has(isin)) unmatched.push({ ...h, value: r2(h.value), n: buys.filter(o => o.isin === isin).length }); });
+  lines.sort((x, y) => y.cur - x.cur);
+  return { lines, unmatched, missing };
+}
+
+function zsyncPage() {
+  const last = store.get('zlast', ''), gap = last ? Math.floor((Date.now() - new Date(last + 'T00:00:00')) / 864e5) : null;
+  return { title: 'Update from Zerodha', back: '#/list/mf', notabs: true,
+    html: `<div id="zbody"><div class="empty-s">Contacting Zerodha…</div></div>`,
+    after() { zLoad(gap); } };
+}
+async function zLoad(gap) {
+  const box = $('#zbody'); if (!box) return;
+  if (!remote()) { box.innerHTML = `<div class="warn">Connect your Google Sheet in <a href="#/settings/keys">Settings › Add Keys</a> first – the Zerodha login runs through your script.</div>`; return; }
+  box.innerHTML = `<div class="empty-s">Contacting Zerodha…</div>`;
+  let r;
+  try { r = await api('zsync'); }
+  catch (e) { if ($('#zbody')) $('#zbody').innerHTML = `<div class="warn">${esc(/Unknown action/i.test(e.message) ? 'Update Code.gs and deploy it as a new version first.' : e.message)}</div><button class="btn plain" type="button" id="zretry">Try again</button>`; const b = $('#zretry'); if (b) b.onclick = () => zLoad(gap); return; }
+  if (!$('#zbody')) return;                                   // user left the page meanwhile
+  if (r.needLogin) {
+    if (!/^https:\/\/kite\.zerodha\.com\//.test(r.loginUrl || '')) { box.innerHTML = `<div class="warn">Unexpected login address from the script.</div>`; return; }
+    box.innerHTML = `<div class="warn">Zerodha needs a fresh login (it lasts until about 6 AM tomorrow). Log in, then come back here and tap Continue.</div>
+      <a class="btn" href="${esc(r.loginUrl)}" target="_blank" rel="noopener">Log in to Zerodha</a><button class="btn plain" type="button" id="zcont">Continue</button>`;
+    $('#zcont').onclick = () => zLoad(gap); return;
+  }
+  Z.raw = r; Z.gap = gap;
+  box.onchange = async e => {
+    const sel = e.target.closest('[data-zlink]'); if (!sel || !sel.value) return;
+    const a = S.assets.find(x => x.id === sel.value), u = Z.P.unmatched.find(x => x.isin === sel.dataset.zlink);
+    if (!a || !u) return;
+    if (!(await askConfirm('Link this fund?', `${u.fund} will be linked to “${ttl(a)}”. From now on its current amount and new purchases come from Zerodha.`, 'Link', false))) { sel.value = ''; return; }
+    if (await run(async () => { await saveAsset({ ...a, data: { ...a.data, isin: u.isin } }); return true; })) zShow();
+  };
+  box.onclick = async e => {
+    if (!e.target.closest('#zapply')) return;
+    const changed = [];
+    Z.P.lines.forEach((L, i) => {
+      const a = L.a, data = { ...a.data }; let dirty = false;                         // data.wd (withdrawals) is carried over untouched
+      if (num(a.data.current) !== L.cur) { data.current = L.cur; dirty = true; }
+      if (L.sip != null && L.sip !== num(a.data.monthlyAmt)) { data.monthlyAmt = L.sip; data.freq = 'Monthly'; dirty = true; }
+      const picked = L.ords.filter((o, j) => { const c = box.querySelector(`[data-zo="${i}:${j}"]`); return c && c.checked; });
+      if (picked.length) {
+        const list = txAll(a).map(z => ({ ...z })); picked.forEach(o => list.push({ date: o.date, amt: o.amount })); list.sort(byDate);
+        data.tx = list; data.invested = list.reduce((t, z) => t + z.amt, 0); dirty = true;
+      }
+      if (L.ords.length) { data.zids = [...(a.data.zids || []), ...L.ords.map(o => o.id)].slice(-400); dirty = true; }   // shown once = never offered again
+      if (dirty) changed.push({ ...a, data });
+    });
+    if (!changed.length) { store.set('zlast', todayISO()); return toast('Already up to date'); }
+    if (await run(async () => { await bulkSave(changed); return true; })) { store.set('zlast', todayISO()); toast('Updated from Zerodha'); location.hash = '#/list/mf'; }
+  };
+  zShow();
+}
+function zShow() {
+  const box = $('#zbody'); if (!box) return;
+  const cards = ofTypes(['mf']), P = Z.P = zPlan(Z.raw, cards);
+  let h = Z.gap == null ? `<div class="warn">First sync: purchases from the last 7 days are listed below. Ones that look like entries you already made are left unticked.</div>`
+    : Z.gap > 6 ? `<div class="warn">Last synced ${Z.gap} days ago. Zerodha only returns the last 7 days of orders, so older purchases can’t be fetched – add any you missed by hand.</div>` : '';
+  P.lines.forEach((L, i) => {
+    const a = L.a, was = num(a.data.current), d = L.cur - was;
+    h += `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gl gnow">${d ? (d > 0 ? '+' : '−') + money(Math.abs(d)) : 'No change'}</span></div><div class="group">
+      <div class="row"><span class="l">Current amount</span><span class="v">${money(was)} → ${money(L.cur)}</span></div>`;
+    if (L.sip != null && L.sip !== num(a.data.monthlyAmt)) h += `<div class="row"><span class="l">Monthly SIP</span><span class="v">${money(num(a.data.monthlyAmt))} → ${money(L.sip)}</span></div>`;
+    L.ords.forEach((o, j) => { h += `<label class="row"><input class="chk" type="checkbox" data-zo="${i}:${j}" ${o.dup ? '' : 'checked'}><span class="l" style="flex:1;max-width:none">Bought ${esc(fmtDate(o.date))}${o.dup ? ' · looks already added' : ''}</span><b class="v">${money(o.amount)}</b></label>`; });
+    h += `</div>`;
+  });
+  if (P.unmatched.length) {
+    const free = cards.filter(a => !a.data.isin);
+    h += `<div class="ghead"><span class="gl">Not linked to a card yet</span></div><div class="group">` + P.unmatched.map(u => {
+      const opts = free.slice().sort((x, y) => zScore(u.fund, ttl(y)) - zScore(u.fund, ttl(x))).map(a => `<option value="${a.id}">${esc(ttl(a))}</option>`).join('');
+      return `<div class="row" style="padding-top:8px;padding-bottom:8px;flex-wrap:wrap"><span class="l" style="flex:1;max-width:none">${esc(u.fund)}<small class="rnote">${money(u.value)}${u.n ? ' · ' + u.n + ' new purchase' + (u.n > 1 ? 's' : '') : ''}</small></span>
+        <select class="zsel" data-zlink="${esc(u.isin)}"><option value="">Link to…</option>${opts}</select></div>`;
+    }).join('') + `</div>`;
+  }
+  if (P.missing.length) h += `<div class="txsum" style="margin:0 16px 16px">Not in your Zerodha holdings, left unchanged: ${esc(P.missing.map(ttl).join(', '))}.</div>`;
+  if (!P.lines.length) h += `<div class="card"><div class="empty">${P.unmatched.length ? 'Link your fund cards above to start.' : 'No mutual fund holdings found.'}</div></div>`;
+  else h += `<button class="savetile" type="button" id="zapply">Apply updates</button>`;
+  box.innerHTML = h;
+}
+
 function view(p) {
   const [a, b, c] = p;
   switch (a) {
@@ -2742,6 +2854,7 @@ function view(p) {
     case 'liquid': return fundsPage('liquid');
     case 'update': return updatePage(b, c);
     case 'withdraw': return withdrawPage(b);
+    case 'zsync': return zsyncPage();
     case 'save': return savePage(b);
     case 'invwd': return b ? fyDetailPage(b) : invwdPage();
     case 'historical': return historicalPage();
@@ -3174,7 +3287,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!had) { had = true; return; }                          // first ever install: nothing to refresh
     if (reloaded) return; reloaded = true;
-    const busy = /^#\/(form|update|withdraw|add)\b/.test(location.hash);   // never reload under a half-filled form; it updates on the next open
+    const busy = /^#\/(form|update|withdraw|add|zsync)\b/.test(location.hash);   // never reload under a half-filled form; it updates on the next open
     if (!busy) location.reload();
   });
   window.addEventListener('load', () => {
