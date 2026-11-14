@@ -5,7 +5,7 @@
    - Never touches the Google Apps Script API or any other cross-origin request,
      so your financial data is never stored by the service worker.
    Bump CACHE whenever you replace this file (any change to sw.js makes phones install the new worker). */
-const CACHE = 'my-asset-v57';
+const CACHE = 'my-asset-v58';
 const SHELL = [
   './',
   './index.html',
