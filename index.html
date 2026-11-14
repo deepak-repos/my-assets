@@ -2739,7 +2739,7 @@ const r2 = v => Math.round(v * 100) / 100;
 function zPlan(raw, cards) {
   const byIsin = new Map(cards.filter(a => a.data.isin).map(a => [a.data.isin, a]));
   const hold = new Map();
-  raw.holdings.forEach(h => { const o = hold.get(h.isin) || { isin: h.isin, fund: h.fund, value: 0 }; o.value += h.units * h.nav; hold.set(h.isin, o); });   // several folios of one fund add up
+  raw.holdings.forEach(h => { const o = hold.get(h.isin) || { isin: h.isin, fund: h.fund, value: 0, units: 0, nav: 0, navDate: '' }; o.value += h.units * h.nav; o.units += h.units; o.nav = h.nav; if ((h.navDate || '') > o.navDate) o.navDate = h.navDate; hold.set(h.isin, o); });   // several folios of one fund add up
   const sipM = new Map();
   raw.sips.filter(s => s.status === 'ACTIVE' && s.type !== 'SELL').forEach(s => {
     const f = s.freq === 'weekly' ? 52 / 12 : s.freq === 'quarterly' ? 1 / 3 : 1;
@@ -2753,7 +2753,7 @@ function zPlan(raw, cards) {
     const seen = new Set(a.data.zids || []), old = txAll(a);
     const ords = buys.filter(o => o.isin === isin && !seen.has(o.id)).map(o => ({ ...o,
       dup: old.some(z => z.date && o.date && Math.abs((new Date(o.date) - new Date(z.date)) / 864e5) <= 3 && Math.abs(z.amt - o.amount) < 1) }));   // probably typed in by hand already
-    lines.push({ a, isin, cur: r2(h.value), sip: sipM.has(isin) ? Math.round(sipM.get(isin)) : null, ords });
+    lines.push({ a, isin, units: h.units, nav: h.nav, navDate: h.navDate, cur: r2(h.value), sip: sipM.has(isin) ? Math.round(sipM.get(isin)) : null, ords });
   });
   hold.forEach((h, isin) => { if (!byIsin.has(isin)) unmatched.push({ ...h, value: r2(h.value), n: buys.filter(o => o.isin === isin).length }); });
   lines.sort((x, y) => y.cur - x.cur);
@@ -2816,7 +2816,9 @@ function zShow() {
   P.lines.forEach((L, i) => {
     const a = L.a, was = num(a.data.current), d = L.cur - was;
     h += `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gl gnow">${d ? (d > 0 ? '+' : '−') + money(Math.abs(d)) : 'No change'}</span></div><div class="group">
-      <div class="row"><span class="l">Current amount</span><span class="v">${money(was)} → ${money(L.cur)}</span></div>`;
+      <div class="row"><span class="l">Current amount</span><span class="v">${money(was)} → ${money(L.cur)}</span></div>
+      <div class="row"><span class="l">Units × NAV</span><span class="v">${S.hide ? '••••' : (Math.round(L.units * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }) + ' × ₹' + L.nav.toLocaleString('en-IN', { maximumFractionDigits: 4 })}</span></div>
+      <div class="row"><span class="l">NAV date</span><span class="v">${L.navDate ? esc(fmtDate(L.navDate)) : 'Not given by Zerodha'}</span></div>`;
     if (L.sip != null && L.sip !== num(a.data.monthlyAmt)) h += `<div class="row"><span class="l">Monthly SIP</span><span class="v">${money(num(a.data.monthlyAmt))} → ${money(L.sip)}</span></div>`;
     L.ords.forEach((o, j) => { h += `<label class="row"><input class="chk" type="checkbox" data-zo="${i}:${j}" ${o.dup ? '' : 'checked'}><span class="l" style="flex:1;max-width:none">Bought ${esc(fmtDate(o.date))}${o.dup ? ' · looks already added' : ''}</span><b class="v">${money(o.amount)}</b></label>`; });
     h += `</div>`;
