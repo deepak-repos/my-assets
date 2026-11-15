@@ -2951,7 +2951,7 @@ function showLock(opts = {}) {                       // opts.onOk runs after a c
     }
     draw();
   };
-  if (bioOn()) setTimeout(tryBio, 300);               // ask for the fingerprint straight away; the PIN pad is right there if it is dismissed
+  // No automatic fingerprint prompt: the app PIN pad shows first, and the phone's fingerprint dialog (which offers the phone's own PIN) opens only when the fingerprint button is tapped.
 }
 /* When a field with text in it is focused, put the cursor at the end so Backspace works straight away */
 document.addEventListener('focusin', e => {
