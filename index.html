@@ -225,6 +225,7 @@ button.btn{width:calc(100% - 32px)}
 .btn.plain{background:var(--card);color:var(--blue)}
 body.vo .acts,body.vo .payrow,body.vo .plus,body.vo .wdrow,body.vo a.edit,body.vo [data-depdel],body.vo [data-wddel],body.vo a.btn[href^="#/add"],body.vo a.btn[href^="#/zsync"],body.vo a.item[href="#/add"],body.vo a.item[href^="#/calculator-save"]{display:none!important}
 body.vo a[href^="#/goal/"],body.vo a[href^="#/expense/"],body.vo a[href^="#/taxentry/"],body.vo a[href^="#/form"]{pointer-events:none}
+.mk{-webkit-text-security:disc}
 .zsel{max-width:48%;font-size:14px;padding:7px 8px;border-radius:8px;border:.5px solid var(--sep);background:var(--fill);color:var(--text)}
 .btn.redtxt{background:var(--card);color:var(--red)}
 
@@ -2086,7 +2087,7 @@ function goalForm(id) {
   const sources = (g0.sources && g0.sources.length ? g0.sources : [blank()]).map(x => ({ ...x }));
   const optsFor = x => x.mode === 'category' ? GOAL_CATS
     : x.mode === 'purpose' ? purposeList().map(p => [p, p])
-    : [['__all', 'All investments (combined)'], ...invAssets().map(a => [a.id, `${ttl(a)} · ${fmtCr(curVal(a))}`])];
+    : [['__all', 'All investments (combined)'], ...invAssets().map(a => [a.id, `${ttl(a)} · ${S.hide ? '••••' : fmtCr(curVal(a))}`])];
   const srcHTML = (x, i) => `<div class="gtitle">What counts towards it${sources.length > 1 ? ' · ' + (i + 1) : ''}</div><div class="group" data-i="${i}">
       <div class="row"><span class="l">Counts</span><select data-f="mode">${[['all', 'All Investment'], ['category', 'Investment Category'], ['purpose', 'Purpose Wise']].map(([v, l]) => `<option value="${v}" ${v === x.mode ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="row"><span class="l">Choose</span><select data-f="ref"><option value="">${x.mode === 'purpose' && !purposeList().length ? 'No purposes added yet' : 'Select'}</option>${optsFor(x).map(([v, l]) => `<option value="${esc(v)}" ${v === x.ref ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
@@ -2095,7 +2096,7 @@ function goalForm(id) {
   const h = `<form id="f" autocomplete="off"><div class="group">
       <div class="row"><span class="l">Goal Name</span><input name="name" value="${esc(g0.name)}" placeholder="e.g. Child education" required></div>
       <div class="row"><span class="l">Goal Type</span><select name="type">${GOAL_TYPES.map(([t]) => `<option ${t === g0.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
-      <div class="row"><span class="l">Target Amount</span><span class="pre">₹</span><input name="target" type="number" inputmode="decimal" step="any" value="${esc(g0.target)}" placeholder="0" required></div></div>
+      <div class="row"><span class="l">Target Amount</span><span class="pre">₹</span><input name="target" ${S.hide && existing ? 'type="text" class="mk"' : 'type="number"'} inputmode="decimal" step="any" value="${esc(g0.target)}" placeholder="0" required></div></div>
     <div id="srcs"></div>
     <button type="button" class="btn plain srcadd">Add a Source</button>
     <button class="btn" type="submit">Save Goal</button>${existing ? '<button type="button" class="btn redtxt goaldel">Delete Goal</button>' : ''}</form>`;
@@ -3259,6 +3260,7 @@ window.addEventListener('hashchange', () => {
       get() { return plain(desc.get.call(this)); },
       set(v) { desc.set.call(this, group(v)); } });
     desc.set.call(el, group(start));
+    if (S.hide && start) el.classList.add('mk');             // eye icon on: pre-filled amounts show as dots (empty fields stay plain so new entries are easy to type)
   };
   const scan = root => { if (root.nodeType !== 1) return; if (root.matches('input[type=number]')) conv(root); root.querySelectorAll('input[type=number]').forEach(conv); };
   scan(document.body);
