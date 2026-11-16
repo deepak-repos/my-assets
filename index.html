@@ -283,14 +283,12 @@ body.vo a[href^="#/goal/"],body.vo a[href^="#/expense/"],body.vo a[href^="#/taxe
 #lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px}
 #lock h2{margin:0;font-size:20px}
 .dots{display:flex;gap:16px}.dots i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--text)}.dots i.f{background:var(--text)}
-.pad{display:grid;grid-template-columns:repeat(3,78px);gap:14px}
-.pad button{height:78px;border-radius:50%;background:var(--fill);font-size:28px;font-weight:400}
+.pad{display:grid;grid-template-columns:repeat(3,68px);gap:12px}
+.pad button{height:68px;border-radius:50%;background:var(--fill);font-size:26px;font-weight:400}
 .pad button.x{background:none;font-size:16px}
 #lock .err{color:var(--red);min-height:20px;font-size:14px}
-.pad.hasbio{grid-template-columns:repeat(3,92px);justify-items:center;align-items:center}
-.pad.hasbio button:not(.bt){width:78px;height:78px}
-.pad button.bt{width:92px;height:92px;border-radius:20px;background:var(--blue);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 4px;font-size:11.5px;font-weight:600;white-space:nowrap;transition:transform .15s ease}
-.pad button.bt:active{transform:scale(.96)}.pad button.bt svg{width:38px;height:38px}
+#lock button.bt{width:92px;height:92px;border-radius:20px;background:var(--blue);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 4px;font-size:11.5px;font-weight:600;white-space:nowrap;transition:transform .15s ease}
+#lock button.bt:active{transform:scale(.96)}#lock button.bt svg{width:38px;height:38px}
 .row input.swc{-webkit-appearance:none;appearance:none;flex:none;width:51px;height:31px;min-width:51px;padding:0;margin:0;border-radius:16px;background:var(--fill);position:relative;cursor:pointer;transition:background .2s}
 .row input.swc::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.28);transition:transform .2s}
 .row input.swc:checked{background:#34c759}.row input.swc:checked::after{transform:translateX(20px)}
@@ -2933,7 +2931,7 @@ function showLock(opts = {}) {                       // opts.onOk runs after a c
   pin = ''; const L = $('#lock'); L.hidden = false;
   const draw = (err) => {
     L.innerHTML = `<div style="font-size:42px">🔒</div><h2>Enter PIN</h2><div class="dots">${Array.from({ length: LEN }, (_, i) => i).map(i => `<i class="${i < pin.length ? 'f' : ''}"></i>`).join('')}</div><div class="err">${err || ''}</div>
-      <div class="pad${bioOn() ? ' hasbio' : ''}">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}${bioOn() ? `<button data-n="0">0</button><button type="button" class="bt" data-bio>${BIO_ICO}<span>Use Fingerprint</span></button>` : `<span></span><button data-n="0">0</button>`}<button class="x" data-n="del">⌫</button></div>${opts.cancel ? '<button type="button" class="btn plain" data-lc>Cancel</button>' : ''}`;
+      <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-n="${n}">${n}</button>`).join('')}<span></span><button data-n="0">0</button><button class="x" data-n="del">⌫</button></div>${bioOn() ? `<button type="button" class="bt" data-bio>${BIO_ICO}<span>Use Fingerprint</span></button>` : ''}${opts.cancel ? '<button type="button" class="btn plain" data-lc>Cancel</button>' : ''}`;
   };
   draw();
   const tok = L._tok = {}; let busy = false;
