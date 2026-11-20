@@ -2822,8 +2822,8 @@ function zTotHTML(useDom) {                                   // totals tile: su
     const base = invVal(L.a); c0 += num(L.a.data.current); c1 += L.cur; i0 += base;
     i1 += base + L.ords.reduce((t, o, j) => { const c = useDom && box && box.querySelector(`[data-zo="${i}:${j}"]`); return t + ((c ? c.checked : !o.dup) ? o.amount : 0); }, 0);
   });
-  return `<div class="group" id="ztot"><div class="row zrow"><span class="l">Current amount</span><span class="v">${money(c0)} → ${money(c1)}</span></div>
-    <div class="row zrow"><span class="l">Invested amount</span><span class="v">${money(i0)} → ${money(i1)}</span></div></div>`;
+  return `<div class="group" id="ztot"><div class="row zrow"><span class="l">Total Current</span><span class="v">${money(c0)} → ${money(c1)}</span></div>
+    <div class="row zrow"><span class="l">Total Invested</span><span class="v">${money(i0)} → ${money(i1)}</span></div></div>`;
 }
 function zFit(root) {                                          // keep "old → new" on one line: shrink the value text in 0.1px steps until it fits
   root.querySelectorAll('.zrow').forEach(row => {
