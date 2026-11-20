@@ -226,6 +226,7 @@ button.btn{width:calc(100% - 32px)}
 body.vo .acts,body.vo .payrow,body.vo .plus,body.vo .wdrow,body.vo a.edit,body.vo [data-depdel],body.vo [data-wddel],body.vo a.btn[href^="#/add"],body.vo a.btn[href^="#/zsync"],body.vo a.item[href="#/add"],body.vo a.item[href^="#/calculator-save"]{display:none!important}
 body.vo a[href^="#/goal/"],body.vo a[href^="#/expense/"],body.vo a[href^="#/taxentry/"],body.vo a[href^="#/form"]{pointer-events:none}
 .mk{-webkit-text-security:disc}
+.ghead .gl.zup{color:var(--green)}.ghead .gl.zdn{color:var(--red)}.ghead .gl.zeq{color:var(--blue)}
 .zrow .l{white-space:nowrap;max-width:none}.zrow .v{white-space:nowrap;min-width:0}
 .zsel{max-width:48%;font-size:14px;padding:7px 8px;border-radius:8px;border:.5px solid var(--sep);background:var(--fill);color:var(--text)}
 .btn.redtxt{background:var(--card);color:var(--red)}
@@ -2823,7 +2824,7 @@ function zTotHTML(useDom) {                                   // totals tile: su
     i1 += base + L.ords.reduce((t, o, j) => { const c = useDom && box && box.querySelector(`[data-zo="${i}:${j}"]`); return t + ((c ? c.checked : !o.dup) ? o.amount : 0); }, 0);
   });
   const d = c1 - c0;
-  return `<div class="ghead"><span class="gl">Mutual Fund</span><span class="gl gnow">${d ? (d > 0 ? '+' : '−') + money(Math.abs(d)) : 'No change'}</span></div><div class="group" id="ztot"><div class="row zrow"><span class="l">Total Current</span><span class="v">${money(c0)} → ${money(c1)}</span></div>
+  return `<div class="ghead"><span class="gl">Mutual Fund</span><span class="gl gnow ${d > 0 ? 'zup' : d < 0 ? 'zdn' : 'zeq'}">${d ? (d > 0 ? '+' : '−') + money(Math.abs(d)) : 'No change'}</span></div><div class="group" id="ztot"><div class="row zrow"><span class="l">Total Current</span><span class="v">${money(c0)} → ${money(c1)}</span></div>
     <div class="row zrow"><span class="l">Total Invested</span><span class="v">${money(i0)} → ${money(i1)}</span></div></div>`;
 }
 function zFit(root) {                                          // keep "old → new" on one line: shrink the value text in 0.1px steps until it fits
@@ -2840,7 +2841,7 @@ function zShow() {
     : Z.gap > 6 ? `<div class="warn">Last synced ${Z.gap} days ago. Zerodha only returns the last 7 days of orders, so older purchases can’t be fetched – add any you missed by hand.</div>` : '');
   P.lines.forEach((L, i) => {
     const a = L.a, was = num(a.data.current), d = L.cur - was;
-    h += `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gl gnow">${d ? (d > 0 ? '+' : '−') + money(Math.abs(d)) : 'No change'}</span></div><div class="group">
+    h += `<div class="ghead"><span class="gl">${esc(ttl(a))}</span><span class="gl gnow ${d > 0 ? 'zup' : d < 0 ? 'zdn' : 'zeq'}">${d ? (d > 0 ? '+' : '−') + money(Math.abs(d)) : 'No change'}</span></div><div class="group">
       <div class="row zrow"><span class="l">Current amount</span><span class="v">${money(was)} → ${money(L.cur)}</span></div>
       <div class="row zrow"><span class="l">Units × NAV</span><span class="v">${S.hide ? '••••' : (Math.round(L.units * 1000) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 }) + ' × ₹' + L.nav.toLocaleString('en-IN', { maximumFractionDigits: 4 })}</span></div>${L.navDate ? `
       <div class="row"><span class="l">NAV date</span><span class="v">${esc(fmtDate(L.navDate))}</span></div>` : ''}`;
